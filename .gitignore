@@ -1,0 +1,26 @@
+## .NET Core / Visual Studio GitIgnore
+[Oo]bj/
+[Bb]in/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Entity Framework Core Migrations Design-time files (Optional, but good if needed)
+# *.sqlite
+
+## User-specific properties files (Very Important to prevent leaking local DB connections & secrets)
+**/appsettings.Development.json
+**/appsettings.json
+*.env
+*.secret
+
+## OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
