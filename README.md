@@ -1,107 +1,203 @@
 <div align="center">
 
-# 🏫 Smart Teacher ERP & Center Management System
-### *The Next-Generation, Zero-Hardware Educational Center & Tutor Enterprise Solution*
+<br />
+
+# 🏫 Smart Teacher ERP
+
+### Center Management System
+
+**The next-generation, zero-hardware enterprise solution for educational centers & private tutors**
+
+<br />
 
 <p align="center">
   <img src="https://img.shields.io/badge/.NET%2010-512BD4?style=for-the-badge&logo=.net&logoColor=white" alt=".NET 10" />
   <img src="https://img.shields.io/badge/C%23-239120?style=for-the-badge&logo=c-sharp&logoColor=white" alt="C#" />
   <img src="https://img.shields.io/badge/SQL%20Server-CC2927?style=for-the-badge&logo=microsoft-sql-server&logoColor=white" alt="SQL Server" />
   <img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter" />
-  <img src="https://img.shields.io/badge/Architecture-Clean%20%2F%2520Onion-blue?style=for-the-badge" alt="Clean Architecture" />
+  <img src="https://img.shields.io/badge/Architecture-Clean%20%2F%20Onion-blue?style=for-the-badge" alt="Clean Architecture" />
 </p>
 
-*Built with enterprise-grade architecture to eliminate manual data entry, enforce strict financial privacy, and automate hybrid anti-cheat attendance with zero hardware costs.*
+<p align="center">
+  <b>Zero manual data entry</b> &nbsp;•&nbsp; <b>Strict financial privacy</b> &nbsp;•&nbsp; <b>Hybrid anti-cheat attendance</b>
+</p>
+
+<p align="center">
+  <a href="#-vision">Vision</a> •
+  <a href="#%EF%B8%8F-architecture">Architecture</a> •
+  <a href="#%EF%B8%8F-core-features">Features</a> •
+  <a href="#%EF%B8%8F-database-schema">Database</a> •
+  <a href="#-getting-started">Getting Started</a> •
+  <a href="#-author">Author</a>
+</p>
 
 </div>
 
----
-
-## 🎯 Architectural Vision & Objective
-
-Managing private educational centers (سناتر) usually suffers from massive data entry friction, financial leaks, and complex attendance tracking. **Smart Teacher ERP** is engineered from scratch to solve these exact enterprise pain points through robust backend design, strict security policies, and high scalability.
+<br />
 
 ---
 
-## 🏛️ System Architecture (Clean / Onion Architecture)
+## 🎯 Vision
 
-The solution strictly adheres to **Clean Architecture** principles, maintaining absolute separation of concerns across layers:
+> Managing private educational centers (**سناتر**) usually suffers from **massive data-entry friction**, **financial leaks**, and **complex attendance tracking**.
+
+**Smart Teacher ERP** is engineered from scratch to solve exactly these enterprise pain points through robust backend design, strict security policies, and high scalability.
+
+<table align="center">
+  <tr>
+    <td align="center" width="33%">
+      <h3>⌨️</h3>
+      <b>Zero Data Entry</b><br/>
+      <sub>Less typing, fewer errors</sub>
+    </td>
+    <td align="center" width="33%">
+      <h3>💰</h3>
+      <b>Financial Privacy</b><br/>
+      <sub>Money is visible only to those trusted with it</sub>
+    </td>
+    <td align="center" width="33%">
+      <h3>📍</h3>
+      <b>Anti-Cheat Attendance</b><br/>
+      <sub>Geofenced, fake-GPS-proof</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
+## 🏛️ Architecture
+
+The solution strictly follows **Clean / Onion Architecture**, keeping an absolute separation of concerns across layers.
+
+```mermaid
+flowchart TB
+    API["🌐 <b>TeacherERP.API</b><br/>Web API Endpoints & Middlewares"]
+    INF["🔧 <b>TeacherERP.Infrastructure</b><br/>EF Core 10 • SQL Server • ASP.NET Identity • Integrations"]
+    APP["⚙️ <b>TeacherERP.Application</b><br/>Use Cases • CQRS • DTOs • Repository Interfaces"]
+    DOM["💎 <b>TeacherERP.Domain</b><br/>Entities • Enums • Value Objects • Factory Methods"]
+
+    API --> INF
+    API --> APP
+    INF --> APP
+    APP --> DOM
+
+    style DOM fill:#512BD4,color:#fff,stroke:#2d1a7a
+    style APP fill:#239120,color:#fff,stroke:#145214
+    style INF fill:#CC2927,color:#fff,stroke:#7a1816
+    style API fill:#02569B,color:#fff,stroke:#013258
+```
+
+### 📦 Solution Structure
 
 ```text
- 📂 TeacherERP.sln
- ┣━ 📂 TeacherERP.Domain         # Core Entities, Enums, Value Objects, & Factory Methods (Zero Dependencies)
- ┣━ 📂 TeacherERP.Application    # Business Use Cases, CQRS, DTOs, & Repository Interfaces
- ┣━ 📂 TeacherERP.Infrastructure # EF Core 10, SQL Server, ASP.NET Identity, & External Integrations
- ┗━ 📂 TeacherERP.API            # Presentation Layer (Web API Endpoints & Middlewares)
+📂 TeacherERP.sln
+ ┣━ 📂 TeacherERP.Domain          # Core entities, enums, value objects & factory methods (zero dependencies)
+ ┣━ 📂 TeacherERP.Application     # Business use cases, CQRS, DTOs & repository interfaces
+ ┣━ 📂 TeacherERP.Infrastructure  # EF Core 10, SQL Server, ASP.NET Identity & external integrations
+ ┗━ 📂 TeacherERP.API             # Presentation layer (Web API endpoints & middlewares)
+```
 
-🛡️ Core Features & Technical Highlights
-1. 🔒 Advanced Security & Session Control
-ASP.NET Core Identity Integration: Uses custom ApplicationUser inheriting from IdentityUser<Guid> to manage students, assistants, and super admins seamlessly.
+---
 
-JWT & Secure Refresh Token Rotation: Features device-informed session tracking, allowing instant token revocation (e.g., forcefully logging out a terminated assistant in real-time).
+## 🛡️ Core Features
 
-2. 📍 Hybrid Anti-Cheat Attendance System
-Self-Scan via GPS Geofencing: Students scan the center's QR code, and the backend validates their geographic coordinates against the center's latitude/longitude with strict Mock Location (Fake GPS) rejection.
+### 🔒 1. Advanced Security & Session Control
 
-Offline/Alternative Fallbacks: Assistants can scan static student QR cards or log manual entries for emergency cases.
+| | Capability | Details |
+|:-:|---|---|
+| 👤 | **ASP.NET Core Identity** | Custom `ApplicationUser` inheriting from `IdentityUser<Guid>` to manage students, assistants, and super admins seamlessly. |
+| 🔑 | **JWT & Refresh Token Rotation** | Device-informed session tracking that allows **instant token revocation** — e.g. forcefully logging out a terminated assistant in real time. |
 
-Smart Compensation Flow: Handles student makeup classes via pending requests requiring assistant approval.
+### 📍 2. Hybrid Anti-Cheat Attendance System
 
-Auto-Suspension Engine: Automatically penalizes students after consecutive absences.
+| | Capability | Details |
+|:-:|---|---|
+| 🛰️ | **Self-Scan via GPS Geofencing** | Students scan the center's QR code; the backend validates their coordinates against the center's latitude/longitude, with strict **Mock Location (Fake GPS) rejection**. |
+| 📴 | **Offline / Alternative Fallbacks** | Assistants can scan static student QR cards or log manual entries for emergency cases. |
+| 🔄 | **Smart Compensation Flow** | Makeup classes are handled through pending requests that require assistant approval. |
+| 🚫 | **Auto-Suspension Engine** | Automatically penalizes students after consecutive absences. |
 
-3. 💰 Strict Financial Ledger & Privacy
-Granular Financial Delegation: Assistants have restricted visibility over funds and debts unless explicit financial delegation (HasFinancialDelegation == true) is granted by the Super Admin.
+### 💰 3. Strict Financial Ledger & Privacy
 
-Flexible Payment Types: Supports per-session, monthly subscriptions, and debt settlements.
+| | Capability | Details |
+|:-:|---|---|
+| 🧾 | **Granular Financial Delegation** | Assistants have restricted visibility over funds and debts **unless** the Super Admin explicitly grants `HasFinancialDelegation == true`. |
+| 💳 | **Flexible Payment Types** | Supports per-session payments, monthly subscriptions, and debt settlements. |
+| 📲 | **Digital Receipts** | Manages InstaPay / E-wallet receipts that require Super Admin approval. |
 
-Digital Receipts: Manages InstaPay/E-wallet receipts requiring Super Admin approval.
+---
 
-🗄️ Database ER Schema Overview
-Managed via Entity Framework Core 10 with optimized Fluent API configurations to prevent multiple cascade path anomalies in SQL Server:
+## 🗄️ Database Schema
 
-AspNetUsers / ApplicationUser (Unified user base with role traits)
+Managed via **Entity Framework Core 10** with optimized Fluent API configurations to prevent *multiple cascade path* anomalies in SQL Server.
 
-RefreshTokens (Secure session management)
+| Table | Purpose |
+|---|---|
+| 👥 **`AspNetUsers` / `ApplicationUser`** | Unified user base with role traits |
+| 🔐 **`RefreshTokens`** | Secure session management |
+| ⚙️ **`TenantSettings`** | Geofencing configuration and attendance modes |
+| 🏷️ **`Groups`** | Class structures with recurring schedule days |
+| 🔗 **`GroupAdmins`** | Many-to-many mapping of assistants to strict group boundaries |
+| 📅 **`Sessions`** | Auto-generated class instances tracking board images and homework timelines |
+| ✅ **`AttendanceRecords`** | Hybrid verification logs |
+| 💵 **`Transactions`** | Smart financial ledger |
 
-TenantSettings (Geofencing configuration and attendance modes)
+---
 
-Groups (Class structures with recurring schedule days)
+## 🚀 Getting Started
 
-GroupAdmins (Many-to-many relationship mapping assistants to strict group boundaries)
+### 📋 Prerequisites
 
-Sessions (Auto-generated class instances tracking board images and homework timelines)
+| Requirement | Link |
+|---|---|
+| **.NET 10 SDK** | [Download](https://dotnet.microsoft.com/download) |
+| **SQL Server** | [Download](https://www.microsoft.com/sql-server/sql-server-downloads) |
+| **Git** | [Download](https://git-scm.com/downloads) |
 
-AttendanceRecords (Hybrid verification logs)
+### ⚡ Installation & Run
 
-Transactions (Smart financial ledger)
+**1️⃣ Clone the repository**
 
-🚀 Getting Started Locally
-Prerequisites
-.NET 10 SDK
-
-SQL Server
-
-Git
-
-Installation & Run
-Clone the repository:
-
-Bash
-git clone [https://github.com/Ahmed-Al-Desouki/TeacherERP.git](https://github.com/Ahmed-Al-Desouki/TeacherERP.git)
+```bash
+git clone https://github.com/Ahmed-Al-Desouki/TeacherERP.git
 cd TeacherERP
-Configure your connection string in appsettings.json under TeacherERP.API.
+```
 
-Apply database migrations:
+**2️⃣ Configure the connection string**
 
-Bash
+Set your connection string in `appsettings.json` under `TeacherERP.API`.
+
+**3️⃣ Apply database migrations**
+
+```bash
 dotnet ef database update --project TeacherERP.Infrastructure --startup-project TeacherERP.API
-Run the API:
+```
 
-Bash
+**4️⃣ Run the API**
+
+```bash
 dotnet run --project TeacherERP.API/TeacherERP.API.csproj
-👨‍💻 Author
-Ahmed Al-Desouki
-    
-.NET Developer & Software Architect
+```
 
-GitHub Profile
+---
+
+## 👨‍💻 Author
+
+<div align="center">
+
+<a href="https://github.com/Ahmed-Al-Desouki">
+  <img src="https://github.com/Ahmed-Al-Desouki.png" width="110" style="border-radius:50%" alt="Ahmed Al-Desouki" />
+</a>
+
+### Ahmed Al-Desouki
+**.NET Developer & Software Architect**
+
+<a href="https://github.com/Ahmed-Al-Desouki">
+  <img src="https://img.shields.io/badge/GitHub-Ahmed--Al--Desouki-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Profile" />
+</a>
+
+<br /><br />
+
+<sub>⭐ If you find this project interesting, consider giving it a star!</sub>
+
+</div>
