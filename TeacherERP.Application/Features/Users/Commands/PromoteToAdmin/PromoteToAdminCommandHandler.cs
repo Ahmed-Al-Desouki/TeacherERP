@@ -1,21 +1,42 @@
 ﻿using MediatR;
-using TeacherERP.Application.Interfaces;
+using Microsoft.AspNetCore.Identity;
+using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Users.Commands.PromoteToAdmin
 {
     public class PromoteToAdminCommandHandler : IRequestHandler<PromoteToAdminCommand, Result<bool>>
     {
-        private readonly IIdentityService _identityService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public PromoteToAdminCommandHandler(IIdentityService identityService)
+        public PromoteToAdminCommandHandler(UserManager<ApplicationUser> userManager)
         {
-            _identityService = identityService;
+            _userManager = userManager;
         }
 
         public async Task<Result<bool>> Handle(PromoteToAdminCommand request, CancellationToken cancellationToken)
         {
-            return await _identityService.PromoteToAdminAsync(request.UserId, cancellationToken);
+            var user = await _userManager.FindByIdAsync(request.UserId.ToString());
+            if (user == null)
+            {
+                return Result<bool>.Failure(new Error("User.NotFound", "User not found."));
+            }
+
+            if (await _userManager.IsInRoleAsync(user, "Student"))
+            {
+                await _userManager.RemoveFromRoleAsync(user, "Student");
+            }
+
+            if (!await _userManager.IsInRoleAsync(user, "Admin"))
+            {
+                var result = await _userManager.AddToRoleAsync(user, "Admin");
+                if (!result.Succeeded)
+                {
+                    return Result<bool>.Failure(new Error("User.PromotionFailed", result.Errors.First().Description));
+                }
+            }
+
+            return Result<bool>.Success(true);
         }
     }
 }

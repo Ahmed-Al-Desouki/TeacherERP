@@ -1,5 +1,5 @@
-﻿using TeacherERP.Domain.Shared;
-using TeacherERP.Domain.Entities;
+﻿using TeacherERP.Domain.Entities;
+using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Interfaces
 {
@@ -8,6 +8,5 @@ namespace TeacherERP.Application.Interfaces
         Task<Result<bool>> CheckEmailExistsAsync(string email, CancellationToken cancellationToken);
         Task<Result<Guid>> CreateUserAsync(ApplicationUser user, string password, string role, CancellationToken cancellationToken);
         Task<Result<ApplicationUser>> ValidateCredentialsAsync(string email, string password, CancellationToken cancellationToken);
-        Task<Result<bool>> PromoteToAdminAsync(Guid userId, CancellationToken cancellationToken);
     }
 }

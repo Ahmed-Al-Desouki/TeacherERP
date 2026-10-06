@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TeacherERP.Application.Features.Users.Commands.CreateStudent;
 using TeacherERP.Application.Features.Users.Commands.PromoteToAdmin;
+using TeacherERP.Application.Features.Users.Commands.PromoteToSuperAdmin;
 using TeacherERP.Application.Features.Users.Commands.VerifyOtp;
 
 namespace TeacherERP.API.Controllers
@@ -34,16 +35,6 @@ namespace TeacherERP.API.Controllers
         {
             var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result, new { Message = "Email verified successfully." });
-        }
-
-        [HttpPost("{id}/promote-to-admin")]
-        [Authorize(Roles = "SuperAdmin")] // حماية تامة بحيث لا يستطيع تنفيذها سوى المدرس الرئيسي
-        public async Task<IActionResult> PromoteToAdmin(Guid id, CancellationToken cancellationToken)
-        {
-            var command = new PromoteToAdminCommand(id);
-            var result = await _mediator.Send(command, cancellationToken);
-
-            return ToResponse(result, new { Message = "User has been successfully promoted to Admin." });
         }
     }
 }

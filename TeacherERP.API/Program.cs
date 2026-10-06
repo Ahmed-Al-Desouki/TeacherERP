@@ -6,6 +6,7 @@ using System.Text;
 using TeacherERP.API.Middlewares;
 using TeacherERP.Application;
 using TeacherERP.Infrastructure;
+using TeacherERP.Infrastructure.Data.TeacherERP.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -70,6 +71,13 @@ builder.Services.AddAuthentication(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var configuration = services.GetRequiredService<IConfiguration>();
+    await ProductionDbSeeder.SeedAsync(services, configuration);
+}
 
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
