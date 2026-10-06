@@ -1,49 +1,57 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Memory;
+using TeacherERP.Application.Features.Users.Commands.CreateStudent;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Users.Commands.VerifyOtp
 {
-    public class VerifyOtpCommandHandler : IRequestHandler<VerifyOtpCommand, Result<bool>>
+    public class VerifyOtpCommandHandler : IRequestHandler<VerifyOtpCommand, Result<Guid>>
     {
-        private readonly IOtpService _otpService;
-        private readonly UserManager<ApplicationUser> _userManager; // أضفنا UserManager هنا
+        private readonly IMemoryCache _cache;
+        private readonly IIdentityService _identityService;
 
-        public VerifyOtpCommandHandler(IOtpService otpService, UserManager<ApplicationUser> userManager)
+        // لم نعد بحاجة لـ UserManager أو OtpService هنا، نعتمد على الـ Cache و IdentityService
+        public VerifyOtpCommandHandler(IMemoryCache cache, IIdentityService identityService)
         {
-            _otpService = otpService;
-            _userManager = userManager;
+            _cache = cache;
+            _identityService = identityService;
         }
 
-        public async Task<Result<bool>> Handle(VerifyOtpCommand request, CancellationToken cancellationToken)
+        public async Task<Result<Guid>> Handle(VerifyOtpCommand request, CancellationToken cancellationToken)
         {
-            // 1. التحقق من صحة وصلاحية الـ OTP
-            var isValid = await _otpService.VerifyOtpAsync(request.StudentId, request.OtpCode, cancellationToken);
-
-            if (!isValid)
+            // 1. جلب البيانات المعلقة من الـ Cache
+            if (!_cache.TryGetValue($"Reg_{request.Email}", out CachedRegistrationData? cachedData) || cachedData == null)
             {
-                return Result<bool>.Failure(new Error("Otp.Invalid", "The verification code is invalid or has expired."));
+                return Result<Guid>.Failure(new Error("Otp.Expired", "OTP has expired or email is incorrect. Please register again."));
             }
 
-            // 2. جلب المستخدم بواسطة الـ Id
-            var user = await _userManager.FindByIdAsync(request.StudentId.ToString());
-            if (user == null)
+            // 2. التحقق من مطابقة الرمز
+            if (cachedData.OtpCode != request.OtpCode)
             {
-                return Result<bool>.Failure(new Error("User.NotFound", "User not found."));
+                return Result<Guid>.Failure(new Error("Otp.Invalid", "The verification code is invalid."));
             }
 
-            // 3. تغيير حالة الإيميل إلى مؤكد (True)
-            user.EmailConfirmed = true;
-            var updateResult = await _userManager.UpdateAsync(user);
+            // 3. الرمز صحيح! الآن نقوم بإنشاء كيان الطالب
+            var student = ApplicationUser.CreateStudent(cachedData.FullName, cachedData.Email, cachedData.PhoneNumber);
 
-            if (!updateResult.Succeeded)
+            // نجعل حسابه مفعلاً مسبقاً لأنه أثبت ملكية الإيميل للتو
+            student.EmailConfirmed = true;
+
+            // 4. حفظ المستخدم في قاعدة البيانات عبر IdentityService
+            var creationResult = await _identityService.CreateUserAsync(student, cachedData.Password, "Student", cancellationToken);
+
+            if (creationResult.IsFailure)
             {
-                return Result<bool>.Failure(new Error("User.UpdateFailed", "Failed to confirm email address."));
+                return creationResult; // إرجاع الفشل إذا حدث خطأ أثناء الإنشاء (مثلاً باسورد ضعيف)
             }
 
-            return Result<bool>.Success(true);
+            // 5. مسح البيانات من الـ Cache لمنع إعادة استخدام نفس الرمز
+            _cache.Remove($"Reg_{request.Email}");
+
+            // 6. إرجاع الـ ID الخاص بالمستخدم الجديد بنجاح
+            return Result<Guid>.Success(student.Id);
         }
     }
 }

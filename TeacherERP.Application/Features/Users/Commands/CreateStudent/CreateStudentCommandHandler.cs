@@ -1,56 +1,59 @@
 ﻿using MediatR;
 using Hangfire;
-using TeacherERP.Domain.Entities;
-using TeacherERP.Domain.Shared;
+using Microsoft.Extensions.Caching.Memory;
 using TeacherERP.Application.Interfaces;
+using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Users.Commands.CreateStudent
 {
-    // مسؤول حصرياً عن الـ Business Logic
-    public class CreateStudentCommandHandler : IRequestHandler<CreateStudentCommand, Result<Guid>>
+    public class CreateStudentCommandHandler : IRequestHandler<CreateStudentCommand, Result<string>>
     {
         private readonly IIdentityService _identityService;
-        private readonly IOtpService _otpService;
+        private readonly IMemoryCache _cache; // استخدمنا الكاش لحفظ البيانات مؤقتاً
         private readonly IBackgroundJobClient _backgroundJobClient;
 
         public CreateStudentCommandHandler(
             IIdentityService identityService,
-            IOtpService otpService,
+            IMemoryCache cache,
             IBackgroundJobClient backgroundJobClient)
         {
             _identityService = identityService;
-            _otpService = otpService;
+            _cache = cache;
             _backgroundJobClient = backgroundJobClient;
         }
 
-        public async Task<Result<Guid>> Handle(CreateStudentCommand request, CancellationToken cancellationToken)
+        public async Task<Result<string>> Handle(CreateStudentCommand request, CancellationToken cancellationToken)
         {
-            // 1. التحقق من عدم وجود الإيميل مسبقاً (قاعدة عمل / Business Rule)
+            // 1. التحقق من عدم وجود الإيميل في قاعدة البيانات مسبقاً
             var emailExistsResult = await _identityService.CheckEmailExistsAsync(request.Email, cancellationToken);
             if (emailExistsResult.Value)
             {
-                return Result<Guid>.Failure(new Error("User.EmailExists", "This email is already registered."));
+                return Result<string>.Failure(new Error("User.EmailExists", "This email is already registered."));
             }
 
-            // 2. إنشاء الكيان عبر دالة المصنع لضمان صحة الحالة[cite: 3]
-            var student = ApplicationUser.CreateStudent(request.FullName, request.Email, request.PhoneNumber);
+            // 2. توليد OTP عشوائي (6 أرقام)
+            var otpCode = new Random().Next(100000, 999999).ToString();
 
-            // 3. إنشاء المستخدم وإعطائه الصلاحية عبر Identity Service المعزولة
-            var creationResult = await _identityService.CreateUserAsync(student, request.Password, "Student", cancellationToken);
-            if (creationResult.IsFailure)
+            // 3. تخزين بيانات التسجيل بالكامل في الـ Cache لمدة 10 دقائق
+            var cacheData = new CachedRegistrationData
             {
-                return creationResult; // إرجاع الفشل مباشرة
-            }
+                FullName = request.FullName,
+                Email = request.Email,
+                PhoneNumber = request.PhoneNumber,
+                Password = request.Password,
+                OtpCode = otpCode
+            };
 
-            // 4. توليد الـ OTP
-            var otpCode = await _otpService.GenerateAndSaveOtpAsync(student.Id, cancellationToken);
+            _cache.Set($"Reg_{request.Email}", cacheData, TimeSpan.FromMinutes(10));
 
-            // 5. جدولة الإيميل في الخلفية (Fire-and-Forget) لضمان سرعة الاستجابة
+            // 4. إرسال الإيميل في الخلفية
             _backgroundJobClient.Enqueue<IEmailService>(emailService =>
-                emailService.SendOtpEmailAsync(student.Email, otpCode));
+                emailService.SendOtpEmailAsync(request.Email, otpCode));
 
-            // 6. إرجاع المعرف (Guid) الخاص بالطالب كنجاح
-            return Result<Guid>.Success(student.Id);
+            // 5. إرجاع الإيميل بنجاح للخطوة التالية
+            return Result<string>.Success(request.Email);
         }
     }
+
+
 }

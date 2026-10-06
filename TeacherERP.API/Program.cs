@@ -1,4 +1,6 @@
 using Hangfire;
+using Hangfire.Dashboard;
+using Hangfire.Dashboard.BasicAuthorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -7,6 +9,7 @@ using TeacherERP.API.Middlewares;
 using TeacherERP.Application;
 using TeacherERP.Infrastructure;
 using TeacherERP.Infrastructure.Data.TeacherERP.Infrastructure.Data;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +34,8 @@ builder.Services.AddSwaggerGen(c =>
         [new OpenApiSecuritySchemeReference("Bearer", document)] = []
     });
 });
+
+builder.Services.AddMemoryCache();
 
 // Clean Architecture Extensions
 builder.Services.AddApplicationServices();
@@ -84,12 +89,19 @@ app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+
 }
 
+app.UseSwagger();
+app.UseSwaggerUI();
+
 // تفعيل Hangfire Dashboard لمراقبة المهام
-app.UseHangfireDashboard("/hangfire");
+//app.UseHangfireDashboard("/hangfire");
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    // استخدام الفلتر المحلي لفتح اللوحة على بيئة الإنتاج
+    Authorization = new[] { new TemporaryAllowAllAuthorizationFilter() }
+});
 
 app.UseHttpsRedirection();
 
@@ -99,3 +111,13 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+
+public class TemporaryAllowAllAuthorizationFilter : IDashboardAuthorizationFilter
+{
+    public bool Authorize(DashboardContext context)
+    {
+        // إرجاع True يسمح بفتح اللوحة من أي جهاز (بدون باسورد مؤقتاً للتجربة)
+        return true;
+    }
+}

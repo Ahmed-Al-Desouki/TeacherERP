@@ -2,8 +2,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TeacherERP.Application.Features.Users.Commands.CreateStudent;
-using TeacherERP.Application.Features.Users.Commands.PromoteToAdmin;
-using TeacherERP.Application.Features.Users.Commands.PromoteToSuperAdmin;
 using TeacherERP.Application.Features.Users.Commands.VerifyOtp;
 
 namespace TeacherERP.API.Controllers
@@ -22,11 +20,12 @@ namespace TeacherERP.API.Controllers
         {
             var result = await _mediator.Send(command, cancellationToken);
 
-            // استخدام الدالة الموحدة مع تمرير بيانات النجاح المخصصة
+            // تعديل: الـ result.Value هنا هو الإيميل (string) وليس الـ Id
+            // تعديل: الرسالة يجب أن توضح أن الحساب معلق على التفعيل
             return ToResponse(result, new
             {
-                StudentId = result.Value,
-                Message = "Student created successfully. OTP sent to email."
+                Email = result.Value,
+                Message = "Registration initiated. OTP sent to email. Please verify to create your account."
             });
         }
 
@@ -34,7 +33,12 @@ namespace TeacherERP.API.Controllers
         public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
-            return ToResponse(result, new { Message = "Email verified successfully." });
+
+            // تعديل: الـ result.Value هنا أصبح الـ Guid الخاص بالطالب بعد ما اتكارييت فعلياً
+            return ToResponse(result, new
+            {
+                Message = "Email verified and account created successfully."
+            });
         }
     }
 }
