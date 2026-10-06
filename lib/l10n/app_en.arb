@@ -1,0 +1,17 @@
+{
+  "appName": "Smart Teacher ERP",
+  "login": "Login",
+  "register": "Student Registration",
+  "fullName": "Full Name",
+  "email": "Email Address",
+  "phoneNumber": "Phone Number",
+  "password": "Password",
+  "confirmPassword": "Confirm Password",
+  "verifyOtp": "Verify Code",
+  "enterOtpCode": "Enter the verification code sent to your email",
+  "dontHaveAccount": "Don't have an account?",
+  "alreadyHaveAccount": "Already have an account?",
+  "fieldRequired": "This field is required",
+  "invalidEmail": "Invalid email address",
+  "invalidPhone": "Invalid phone number"
+}

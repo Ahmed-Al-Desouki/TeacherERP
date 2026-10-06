@@ -1,0 +1,17 @@
+{
+  "appName": "Smart Teacher ERP",
+  "login": "تسجيل الدخول",
+  "register": "إنشاء حساب طالب",
+  "fullName": "الاسم ثلاثي",
+  "email": "البريد الإلكتروني",
+  "phoneNumber": "رقم الهاتف",
+  "password": "كلمة المرور",
+  "confirmPassword": "تأكيد كلمة المرور",
+  "verifyOtp": "تأكيد الرمز",
+  "enterOtpCode": "أدخل رمز التحقق المرسل لبريدك",
+  "dontHaveAccount": "ليس لديك حساب؟",
+  "alreadyHaveAccount": "لديك حساب بالفعل؟",
+  "fieldRequired": "هذا الحقل مطلوب",
+  "invalidEmail": "البريد الإلكتروني غير صالح",
+  "invalidPhone": "رقم الهاتف غير صالح"
+}
