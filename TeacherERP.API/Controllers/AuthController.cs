@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn;
 using TeacherERP.Application.Features.Users.Commands.Auth.Login;
 
 namespace TeacherERP.API.Controllers
@@ -17,8 +18,13 @@ namespace TeacherERP.API.Controllers
         public async Task<IActionResult> Login([FromBody] LoginCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
+            return ToResponse(result);
+        }
 
-            // استخدام الدالة الموحدة مباشرة لإرجاع الـ AuthResponseDto
+        [HttpPost("google")]
+        public async Task<IActionResult> GoogleSignIn([FromBody] GoogleSignInCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result);
         }
     }

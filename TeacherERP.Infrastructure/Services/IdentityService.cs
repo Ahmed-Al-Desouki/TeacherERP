@@ -30,12 +30,7 @@ namespace TeacherERP.Infrastructure.Services
                 return Result<Guid>.Failure(new Error("User.CreationFail", result.Errors.First().Description));
             }
 
-            if (!await _roleManager.RoleExistsAsync(role))
-            {
-                await _roleManager.CreateAsync(new IdentityRole<Guid>(role));
-            }
-
-            await _userManager.AddToRoleAsync(user, role);
+            await AssignRoleAsync(user, role);
             return Result<Guid>.Success(user.Id);
         }
 
@@ -55,6 +50,52 @@ namespace TeacherERP.Infrastructure.Services
             }
 
             return Result<ApplicationUser>.Success(user);
+        }
+
+        public async Task<Result<ApplicationUser?>> FindByEmailAsync(string email, CancellationToken cancellationToken)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            return Result<ApplicationUser?>.Success(user);
+        }
+
+        public async Task<Result<ApplicationUser?>> FindByExternalLoginAsync(string provider, string providerKey, CancellationToken cancellationToken)
+        {
+            var user = await _userManager.FindByLoginAsync(provider, providerKey);
+            return Result<ApplicationUser?>.Success(user);
+        }
+
+        public async Task<Result<Guid>> CreateExternalUserAsync(ApplicationUser user, string role, CancellationToken cancellationToken)
+        {
+            // إنشاء بدون باسورد: الدخول يتم عبر مزود خارجي (Google)
+            var result = await _userManager.CreateAsync(user);
+            if (!result.Succeeded)
+            {
+                return Result<Guid>.Failure(new Error("User.CreationFail", result.Errors.First().Description));
+            }
+
+            await AssignRoleAsync(user, role);
+            return Result<Guid>.Success(user.Id);
+        }
+
+        public async Task<Result<bool>> LinkExternalLoginAsync(ApplicationUser user, string provider, string providerKey, CancellationToken cancellationToken)
+        {
+            var result = await _userManager.AddLoginAsync(user, new UserLoginInfo(provider, providerKey, provider));
+            if (!result.Succeeded)
+            {
+                return Result<bool>.Failure(new Error("User.ExternalLoginLinkFail", result.Errors.First().Description));
+            }
+
+            return Result<bool>.Success(true);
+        }
+
+        private async Task AssignRoleAsync(ApplicationUser user, string role)
+        {
+            if (!await _roleManager.RoleExistsAsync(role))
+            {
+                await _roleManager.CreateAsync(new IdentityRole<Guid>(role));
+            }
+
+            await _userManager.AddToRoleAsync(user, role);
         }
     }
 }

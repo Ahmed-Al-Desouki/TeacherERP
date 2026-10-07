@@ -35,7 +35,7 @@ namespace TeacherERP.Infrastructure
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<AppDbContext>();
 
-            // 3. قراءة وتسجيل إعدادات MailSettings و JwtSettings بشكل مباشر وآمن بدون مشاكل الـ Configure
+            // 3. قراءة وتسجيل الإعدادات بشكل مباشر وآمن بدون مشاكل الـ Configure
             var mailSettings = new MailSettings();
             configuration.GetSection("MailSettings").Bind(mailSettings);
             services.AddSingleton(Options.Create(mailSettings));
@@ -43,6 +43,10 @@ namespace TeacherERP.Infrastructure
             var jwtSettings = new JwtSettings();
             configuration.GetSection("JwtSettings").Bind(jwtSettings);
             services.AddSingleton(Options.Create(jwtSettings));
+
+            var googleAuthSettings = new GoogleAuthSettings();
+            configuration.GetSection("GoogleAuthSettings").Bind(googleAuthSettings);
+            services.AddSingleton(Options.Create(googleAuthSettings));
 
             // 4. تفعيل الـ In-Memory Cache للـ OTP
             services.AddMemoryCache();
@@ -54,6 +58,8 @@ namespace TeacherERP.Infrastructure
             services.AddTransient<IEmailService, EmailService>();
             services.AddTransient<IOtpService, OtpService>();
             services.AddScoped<IJwtProvider, JwtProvider>();
+            services.AddScoped<IAuthSessionService, AuthSessionService>();
+            services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 
             return services;
         }
