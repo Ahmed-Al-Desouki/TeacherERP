@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace TeacherERP.Application.Interfaces
+﻿namespace TeacherERP.Application.Interfaces
 {
-
-    // 3. خدمة إرسال الإيميلات (سيتم تنفيذها في طبقة Infrastructure)
+    // خدمة إرسال الإيميلات (تُنفَّذ في طبقة Infrastructure)
     public interface IEmailService
     {
         // تستدعى في الـ Background (Hangfire/FireAndForget) حتى لا تبطئ الـ API
         Task SendOtpEmailAsync(string toEmail, string otpCode);
         Task SendNewLoginAlertAsync(string toEmail, string deviceInfo, DateTime loginTime);
+        Task SendPasswordResetOtpAsync(string toEmail, string otpCode);
+        Task SendPasswordChangedAlertAsync(string toEmail, DateTime changedAt);
     }
 }

@@ -88,6 +88,22 @@ namespace TeacherERP.Infrastructure.Services
             return Result<bool>.Success(true);
         }
 
+        public async Task<Result<bool>> ResetPasswordAsync(ApplicationUser user, string newPassword, CancellationToken cancellationToken)
+        {
+            // التوكن يُولَّد ويُستهلك داخل نفس الطلب، فلا يتأثر بإعادة تشغيل التطبيق
+            // وتعمل أيضاً للحسابات التي لا تملك باسورد (القادمة من Google)
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(" ", result.Errors.Select(e => e.Description));
+                return Result<bool>.Failure(new Error("Auth.PasswordResetFail", errors));
+            }
+
+            return Result<bool>.Success(true);
+        }
+
         private async Task AssignRoleAsync(ApplicationUser user, string role)
         {
             if (!await _roleManager.RoleExistsAsync(role))

@@ -33,7 +33,8 @@ namespace TeacherERP.Infrastructure
                 options.Password.RequireLowercase = false;
             })
             .AddRoles<IdentityRole<Guid>>()
-            .AddEntityFrameworkStores<AppDbContext>();
+            .AddEntityFrameworkStores<AppDbContext>()
+            .AddDefaultTokenProviders(); // مطلوب لتوليد توكن استرجاع الباسورد
 
             // 3. قراءة وتسجيل الإعدادات بشكل مباشر وآمن بدون مشاكل الـ Configure
             var mailSettings = new MailSettings();
@@ -57,6 +58,7 @@ namespace TeacherERP.Infrastructure
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddTransient<IEmailService, EmailService>();
             services.AddTransient<IOtpService, OtpService>();
+            services.AddTransient<IResetGrantService, ResetGrantService>();
             services.AddScoped<IJwtProvider, JwtProvider>();
             services.AddScoped<IAuthSessionService, AuthSessionService>();
             services.AddScoped<IGoogleAuthService, GoogleAuthService>();

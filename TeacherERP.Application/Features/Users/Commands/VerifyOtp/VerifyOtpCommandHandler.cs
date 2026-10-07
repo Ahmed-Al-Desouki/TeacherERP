@@ -11,26 +11,28 @@ namespace TeacherERP.Application.Features.Users.Commands.VerifyOtp
     {
         private readonly IMemoryCache _cache;
         private readonly IIdentityService _identityService;
+        private readonly IOtpService _otpService;
 
-        // لم نعد بحاجة لـ UserManager أو OtpService هنا، نعتمد على الـ Cache و IdentityService
-        public VerifyOtpCommandHandler(IMemoryCache cache, IIdentityService identityService)
+        public VerifyOtpCommandHandler(IMemoryCache cache, IIdentityService identityService, IOtpService otpService)
         {
             _cache = cache;
             _identityService = identityService;
+            _otpService = otpService;
         }
 
         public async Task<Result<Guid>> Handle(VerifyOtpCommand request, CancellationToken cancellationToken)
         {
-            // 1. جلب البيانات المعلقة من الـ Cache
+            // 1. جلب البيانات المعلقة من الـ Cache (قبل التحقق من الكود، حتى لا يُستهلك الكود بلا داعٍ)
             if (!_cache.TryGetValue($"Reg_{request.Email}", out CachedRegistrationData? cachedData) || cachedData == null)
             {
                 return Result<Guid>.Failure(new Error("Otp.Expired", "OTP has expired or email is incorrect. Please register again."));
             }
 
-            // 2. التحقق من مطابقة الرمز
-            if (cachedData.OtpCode != request.OtpCode)
+            // 2. التحقق من الكود (يشمل حد المحاولات والقفل)
+            var otpResult = await _otpService.VerifyAsync(OtpPurpose.Registration, request.Email, request.OtpCode, cancellationToken);
+            if (otpResult.IsFailure)
             {
-                return Result<Guid>.Failure(new Error("Otp.Invalid", "The verification code is invalid."));
+                return Result<Guid>.Failure(otpResult.Error);
             }
 
             // 3. الرمز صحيح! الآن نقوم بإنشاء كيان الطالب
@@ -47,7 +49,7 @@ namespace TeacherERP.Application.Features.Users.Commands.VerifyOtp
                 return creationResult; // إرجاع الفشل إذا حدث خطأ أثناء الإنشاء (مثلاً باسورد ضعيف)
             }
 
-            // 5. مسح البيانات من الـ Cache لمنع إعادة استخدام نفس الرمز
+            // 5. مسح البيانات من الـ Cache
             _cache.Remove($"Reg_{request.Email}");
 
             // 6. إرجاع الـ ID الخاص بالمستخدم الجديد بنجاح

@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Mail;
+using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using TeacherERP.Application.Interfaces;
@@ -32,6 +33,16 @@ namespace TeacherERP.Infrastructure.Services
             await SendEmailAsync(toEmail, subject, body);
         }
 
+        public async Task SendPasswordResetOtpAsync(string toEmail, string otpCode)
+        {
+            await SendEmailAsync(toEmail, "Reset your password | استرجاع كلمة المرور", EmailTemplates.PasswordResetOtp(otpCode));
+        }
+
+        public async Task SendPasswordChangedAlertAsync(string toEmail, DateTime changedAt)
+        {
+            await SendEmailAsync(toEmail, "Your password was changed | تم تغيير كلمة المرور", EmailTemplates.PasswordChanged(changedAt));
+        }
+
         private async Task SendEmailAsync(string toEmail, string subject, string body)
         {
             try
@@ -46,7 +57,9 @@ namespace TeacherERP.Infrastructure.Services
                 {
                     From = new MailAddress(_mailSettings.Mail, _mailSettings.DisplayName),
                     Subject = subject,
+                    SubjectEncoding = Encoding.UTF8,
                     Body = body,
+                    BodyEncoding = Encoding.UTF8,
                     IsBodyHtml = true
                 };
                 mailMessage.To.Add(toEmail);
