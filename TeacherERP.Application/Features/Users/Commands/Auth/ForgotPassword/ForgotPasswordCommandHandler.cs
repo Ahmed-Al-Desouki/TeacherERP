@@ -7,16 +7,16 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.ForgotPassword
 {
     public class ForgotPasswordCommandHandler : IRequestHandler<ForgotPasswordCommand, Result<ForgotPasswordResponseDto>>
     {
-        private readonly IIdentityService _identityService;
+        private readonly IUserAccountService _userAccountService;
         private readonly IOtpService _otpService;
         private readonly IBackgroundJobClient _backgroundJobClient;
 
         public ForgotPasswordCommandHandler(
-            IIdentityService identityService,
+            IUserAccountService userAccountService,
             IOtpService otpService,
             IBackgroundJobClient backgroundJobClient)
         {
-            _identityService = identityService;
+            _userAccountService = userAccountService;
             _otpService = otpService;
             _backgroundJobClient = backgroundJobClient;
         }
@@ -33,7 +33,7 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.ForgotPassword
             var otp = otpResult.Value!;
 
             // 2. الإيميل يُرسل فعلياً فقط إذا كان الحساب موجوداً
-            var userResult = await _identityService.FindByEmailAsync(request.Email, cancellationToken);
+            var userResult = await _userAccountService.FindByEmailAsync(request.Email, cancellationToken);
             var user = userResult.Value;
 
             if (user is not null)

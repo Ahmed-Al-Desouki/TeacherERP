@@ -10,13 +10,13 @@ namespace TeacherERP.Application.Features.Users.Commands.VerifyOtp
     public class VerifyOtpCommandHandler : IRequestHandler<VerifyOtpCommand, Result<Guid>>
     {
         private readonly IMemoryCache _cache;
-        private readonly IIdentityService _identityService;
+        private readonly IUserAccountService _userAccountService;
         private readonly IOtpService _otpService;
 
-        public VerifyOtpCommandHandler(IMemoryCache cache, IIdentityService identityService, IOtpService otpService)
+        public VerifyOtpCommandHandler(IMemoryCache cache, IUserAccountService userAccountService, IOtpService otpService)
         {
             _cache = cache;
-            _identityService = identityService;
+            _userAccountService = userAccountService;
             _otpService = otpService;
         }
 
@@ -41,8 +41,8 @@ namespace TeacherERP.Application.Features.Users.Commands.VerifyOtp
             // نجعل حسابه مفعلاً مسبقاً لأنه أثبت ملكية الإيميل للتو
             student.EmailConfirmed = true;
 
-            // 4. حفظ المستخدم في قاعدة البيانات عبر IdentityService
-            var creationResult = await _identityService.CreateUserAsync(student, cachedData.Password, "Student", cancellationToken);
+            // 4. حفظ المستخدم في قاعدة البيانات
+            var creationResult = await _userAccountService.CreateUserAsync(student, cachedData.Password, "Student", cancellationToken);
 
             if (creationResult.IsFailure)
             {

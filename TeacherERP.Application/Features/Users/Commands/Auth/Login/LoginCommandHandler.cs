@@ -7,19 +7,19 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.Login
 {
     public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<AuthResponseDto>>
     {
-        private readonly IIdentityService _identityService;
+        private readonly ICredentialService _credentialService;
         private readonly IAuthSessionService _authSessionService;
 
-        public LoginCommandHandler(IIdentityService identityService, IAuthSessionService authSessionService)
+        public LoginCommandHandler(ICredentialService credentialService, IAuthSessionService authSessionService)
         {
-            _identityService = identityService;
+            _credentialService = credentialService;
             _authSessionService = authSessionService;
         }
 
         public async Task<Result<AuthResponseDto>> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
             // 1. التحقق من صحة بيانات الدخول واسترجاع المستخدم
-            var userResult = await _identityService.ValidateCredentialsAsync(request.Email, request.Password, cancellationToken);
+            var userResult = await _credentialService.ValidateCredentialsAsync(request.Email, request.Password, cancellationToken);
             if (userResult.IsFailure)
             {
                 return Result<AuthResponseDto>.Failure(userResult.Error);

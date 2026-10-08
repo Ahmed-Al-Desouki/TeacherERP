@@ -53,7 +53,9 @@ namespace TeacherERP.Infrastructure
             services.AddMemoryCache();
 
             // 5. تسجيل الخدمات والمستودعات
-            services.AddScoped<IIdentityService, IdentityService>();
+            services.AddScoped<IUserAccountService, UserAccountService>();
+            services.AddScoped<ICredentialService, CredentialService>();
+            services.AddScoped<IExternalLoginService, ExternalLoginService>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
             services.AddTransient<IEmailService, EmailService>();

@@ -7,20 +7,23 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.ResetPassword
 {
     public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand, Result<bool>>
     {
-        private readonly IIdentityService _identityService;
+        private readonly IUserAccountService _userAccountService;
+        private readonly ICredentialService _credentialService;
         private readonly IResetGrantService _resetGrantService;
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IBackgroundJobClient _backgroundJobClient;
 
         public ResetPasswordCommandHandler(
-            IIdentityService identityService,
+            IUserAccountService userAccountService,
+            ICredentialService credentialService,
             IResetGrantService resetGrantService,
             IRefreshTokenRepository refreshTokenRepository,
             IUnitOfWork unitOfWork,
             IBackgroundJobClient backgroundJobClient)
         {
-            _identityService = identityService;
+            _userAccountService = userAccountService;
+            _credentialService = credentialService;
             _resetGrantService = resetGrantService;
             _refreshTokenRepository = refreshTokenRepository;
             _unitOfWork = unitOfWork;
@@ -38,7 +41,7 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.ResetPassword
             }
 
             // 2. جلب المستخدم
-            var userResult = await _identityService.FindByEmailAsync(request.Email, cancellationToken);
+            var userResult = await _userAccountService.FindByEmailAsync(request.Email, cancellationToken);
             var user = userResult.Value;
             if (user is null)
             {
@@ -46,7 +49,7 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.ResetPassword
             }
 
             // 3. تغيير الباسورد (يتحقق من سياسة Identity ويحدّث الـ SecurityStamp)
-            var resetResult = await _identityService.ResetPasswordAsync(user, request.NewPassword, cancellationToken);
+            var resetResult = await _credentialService.ResetPasswordAsync(user, request.NewPassword, cancellationToken);
             if (resetResult.IsFailure)
             {
                 return Result<bool>.Failure(resetResult.Error);

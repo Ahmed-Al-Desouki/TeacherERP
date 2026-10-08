@@ -12,16 +12,19 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn
         private const string StudentRole = "Student";
 
         private readonly IGoogleAuthService _googleAuthService;
-        private readonly IIdentityService _identityService;
+        private readonly IUserAccountService _userAccountService;
+        private readonly IExternalLoginService _externalLoginService;
         private readonly IAuthSessionService _authSessionService;
 
         public GoogleSignInCommandHandler(
             IGoogleAuthService googleAuthService,
-            IIdentityService identityService,
+            IUserAccountService userAccountService,
+            IExternalLoginService externalLoginService,
             IAuthSessionService authSessionService)
         {
             _googleAuthService = googleAuthService;
-            _identityService = identityService;
+            _userAccountService = userAccountService;
+            _externalLoginService = externalLoginService;
             _authSessionService = authSessionService;
         }
 
@@ -35,13 +38,13 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn
             var googleUser = googleResult.Value!;
 
             // 2. البحث بمعرّف جوجل الثابت (Subject)
-            var linkedResult = await _identityService.FindByExternalLoginAsync(GoogleProvider, googleUser.Subject, cancellationToken);
+            var linkedResult = await _externalLoginService.FindByExternalLoginAsync(GoogleProvider, googleUser.Subject, cancellationToken);
             var user = linkedResult.Value;
 
             if (user is null)
             {
                 // 3. البحث بالإيميل (حساب موجود بباسورد) وإلا إنشاء طالب جديد
-                var emailResult = await _identityService.FindByEmailAsync(googleUser.Email, cancellationToken);
+                var emailResult = await _userAccountService.FindByEmailAsync(googleUser.Email, cancellationToken);
                 user = emailResult.Value;
 
                 if (user is null)
@@ -49,13 +52,13 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn
                     user = ApplicationUser.CreateStudent(googleUser.FullName, googleUser.Email);
                     user.EmailConfirmed = true; // جوجل أثبتت ملكية الإيميل
 
-                    var creationResult = await _identityService.CreateExternalUserAsync(user, StudentRole, cancellationToken);
+                    var creationResult = await _userAccountService.CreateExternalUserAsync(user, StudentRole, cancellationToken);
                     if (creationResult.IsFailure)
                         return Result<AuthResponseDto>.Failure(creationResult.Error);
                 }
 
                 // 4. ربط حساب جوجل بالمستخدم
-                var linkResult = await _identityService.LinkExternalLoginAsync(user, GoogleProvider, googleUser.Subject, cancellationToken);
+                var linkResult = await _externalLoginService.LinkExternalLoginAsync(user, GoogleProvider, googleUser.Subject, cancellationToken);
                 if (linkResult.IsFailure)
                     return Result<AuthResponseDto>.Failure(linkResult.Error);
             }

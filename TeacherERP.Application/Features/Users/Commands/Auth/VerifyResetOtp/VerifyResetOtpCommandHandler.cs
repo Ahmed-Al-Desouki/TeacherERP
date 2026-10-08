@@ -7,16 +7,16 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.VerifyResetOtp
     public class VerifyResetOtpCommandHandler : IRequestHandler<VerifyResetOtpCommand, Result<ResetTokenDto>>
     {
         private readonly IOtpService _otpService;
-        private readonly IIdentityService _identityService;
+        private readonly IUserAccountService _userAccountService;
         private readonly IResetGrantService _resetGrantService;
 
         public VerifyResetOtpCommandHandler(
             IOtpService otpService,
-            IIdentityService identityService,
+            IUserAccountService userAccountService,
             IResetGrantService resetGrantService)
         {
             _otpService = otpService;
-            _identityService = identityService;
+            _userAccountService = userAccountService;
             _resetGrantService = resetGrantService;
         }
 
@@ -30,7 +30,7 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.VerifyResetOtp
             }
 
             // 2. لا يُمنح تصريح إلا لحساب موجود فعلاً
-            var userResult = await _identityService.FindByEmailAsync(request.Email, cancellationToken);
+            var userResult = await _userAccountService.FindByEmailAsync(request.Email, cancellationToken);
             if (userResult.Value is null)
             {
                 return Result<ResetTokenDto>.Failure(new Error("Otp.Invalid", "The verification code is invalid."));
