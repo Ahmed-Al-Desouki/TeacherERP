@@ -47,7 +47,6 @@ namespace TeacherERP.Application.Features.Users.Commands.CreateStudent
             {
                 FullName = request.FullName,
                 Email = request.Email,
-                PhoneNumber = request.PhoneNumber,
                 Password = request.Password
             };
 

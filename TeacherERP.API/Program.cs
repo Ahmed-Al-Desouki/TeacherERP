@@ -1,6 +1,5 @@
 using Hangfire;
 using Hangfire.Dashboard;
-using Hangfire.Dashboard.BasicAuthorization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -95,15 +94,18 @@ if (app.Environment.IsDevelopment())
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// تفعيل Hangfire Dashboard لمراقبة المهام
-//app.UseHangfireDashboard("/hangfire");
+// HTTPS قبل اللوحة، حتى لا تُرسل بيانات الدخول عبر اتصال غير مشفر
+app.UseHttpsRedirection();
+
+// لوحة Hangfire محمية بـ Basic Auth (البيانات من قسم HangfireDashboard في الإعدادات)
+var dashboardSettings = builder.Configuration.GetSection("HangfireDashboard");
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
 {
-    // استخدام الفلتر المحلي لفتح اللوحة على بيئة الإنتاج
-    Authorization = new[] { new TemporaryAllowAllAuthorizationFilter() }
+    Authorization = new IDashboardAuthorizationFilter[]
+    {
+        new HangfireBasicAuthFilter(dashboardSettings["Username"] ?? string.Empty, dashboardSettings["Password"] ?? string.Empty)
+    }
 });
-
-app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -111,13 +113,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
-
-public class TemporaryAllowAllAuthorizationFilter : IDashboardAuthorizationFilter
-{
-    public bool Authorize(DashboardContext context)
-    {
-        // إرجاع True يسمح بفتح اللوحة من أي جهاز (بدون باسورد مؤقتاً للتجربة)
-        return true;
-    }
-}

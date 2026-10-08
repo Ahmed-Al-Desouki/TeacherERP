@@ -46,7 +46,7 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn
 
                 if (user is null)
                 {
-                    user = ApplicationUser.CreateStudent(googleUser.FullName, googleUser.Email, string.Empty);
+                    user = ApplicationUser.CreateStudent(googleUser.FullName, googleUser.Email);
                     user.EmailConfirmed = true; // جوجل أثبتت ملكية الإيميل
 
                     var creationResult = await _identityService.CreateExternalUserAsync(user, StudentRole, cancellationToken);

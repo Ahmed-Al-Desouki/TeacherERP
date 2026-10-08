@@ -36,7 +36,7 @@ namespace TeacherERP.Application.Features.Users.Commands.VerifyOtp
             }
 
             // 3. الرمز صحيح! الآن نقوم بإنشاء كيان الطالب
-            var student = ApplicationUser.CreateStudent(cachedData.FullName, cachedData.Email, cachedData.PhoneNumber);
+            var student = ApplicationUser.CreateStudent(cachedData.FullName, cachedData.Email);
 
             // نجعل حسابه مفعلاً مسبقاً لأنه أثبت ملكية الإيميل للتو
             student.EmailConfirmed = true;

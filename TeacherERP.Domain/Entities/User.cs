@@ -43,9 +43,10 @@ namespace TeacherERP.Domain.Entities
         private ApplicationUser() { }
 
         /// <summary>
-        /// مصنع (Factory Method) لإنشاء طالب جديد بطريقة آمنة وبحالة مبدئية صحيحة
+        /// مصنع (Factory Method) لإنشاء طالب جديد بطريقة آمنة وبحالة مبدئية صحيحة.
+        /// رقم الموبايل وبيانات ولي الأمر تُستكمل لاحقاً من خلال إكمال البروفايل.
         /// </summary>
-        public static ApplicationUser CreateStudent(string fullName, string email, string phoneNumber)
+        public static ApplicationUser CreateStudent(string fullName, string email)
         {
             return new ApplicationUser
             {
@@ -53,7 +54,6 @@ namespace TeacherERP.Domain.Entities
                 FullName = fullName,
                 Email = email,
                 UserName = email,
-                PhoneNumber = phoneNumber,
                 Status = StudentStatus.Active,
                 CurrentBalance = 0,
                 StaticQrCode = Guid.NewGuid().ToString() // يمكن استبدالها بخوارزمية توليد أكواد أقصر
@@ -103,4 +103,3 @@ namespace TeacherERP.Domain.Entities
     public enum StudentStatus { Active, Suspended, Blacklisted }
 
 }
-

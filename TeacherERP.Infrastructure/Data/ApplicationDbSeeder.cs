@@ -3,13 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using TeacherERP.Domain.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestPlatform.TestHost;
 
 namespace TeacherERP.Infrastructure.Data
 {
-
-
-
     namespace TeacherERP.Infrastructure.Data
     {
         public static class ProductionDbSeeder
@@ -18,7 +14,7 @@ namespace TeacherERP.Infrastructure.Data
             {
                 using var scope = serviceProvider.CreateScope();
                 var services = scope.ServiceProvider;
-                var logger = services.GetRequiredService<ILogger<Program>>();
+                var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(nameof(ProductionDbSeeder));
 
                 try
                 {
@@ -53,8 +49,8 @@ namespace TeacherERP.Infrastructure.Data
                     var existingAdmin = await userManager.FindByEmailAsync(email);
                     if (existingAdmin == null)
                     {
-                        // إنشاء كيان المستخدم مباشرة كإداري
-                        var superAdminUser = ApplicationUser.CreateStudent(fullName, email, phoneNumber);
+                        // إنشاء كيان المستخدم كإداري (وليس كطالب)، والمدرس الرئيسي له صلاحية الأموال
+                        var superAdminUser = ApplicationUser.CreateAdmin(fullName, email, phoneNumber, hasFinancialDelegation: true);
                         superAdminUser.EmailConfirmed = true; // تفعيل الحساب تلقائياً للإنتاج
 
                         var createResult = await userManager.CreateAsync(superAdminUser, password);
@@ -79,5 +75,3 @@ namespace TeacherERP.Infrastructure.Data
         }
     }
 }
- 
-    

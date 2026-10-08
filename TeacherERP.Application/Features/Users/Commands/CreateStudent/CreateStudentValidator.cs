@@ -15,13 +15,11 @@ namespace TeacherERP.Application.Features.Users.Commands.CreateStudent
                 .NotEmpty().WithMessage("Email is required.")
                 .EmailAddress().WithMessage("A valid email is required.");
 
-            RuleFor(x => x.PhoneNumber)
-                .NotEmpty().WithMessage("Phone number is required.")
-                .Matches(@"^(\+201|01)[0-9]{9}$").WithMessage("A valid phone number is required.");
-
+            // نفس سياسة Identity (6 أحرف على الأقل + رقم) حتى لا يُرفض الباسورد بعد التحقق من الـ OTP
             RuleFor(x => x.Password)
                 .NotEmpty().WithMessage("Password is required.")
-                .MinimumLength(6).WithMessage("Password must be at least 6 characters.");
+                .MinimumLength(6).WithMessage("Password must be at least 6 characters.")
+                .Matches("[0-9]").WithMessage("Password must contain at least one digit.");
         }
     }
 }
