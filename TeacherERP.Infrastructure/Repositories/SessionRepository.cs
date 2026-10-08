@@ -24,7 +24,7 @@ namespace TeacherERP.Infrastructure.Repositories
             var now = DateTime.UtcNow;
 
             return _context.LoginSessions
-                .Where(s => s.Id == userId
+                .Where(s => s.UserId == userId
                             && s.RevokedAt == null
                             && s.RefreshExpiresAt > now
                             && s.AbsoluteExpiresAt > now)

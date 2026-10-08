@@ -19,7 +19,7 @@ namespace TeacherERP.Domain.Entities
     /// </summary>
     public class LoginSession : BaseEntity
     {
-        //public Guid UserId { get; private set; }
+        public Guid UserId { get; private set; }
         public ApplicationUser User { get; private set; }
 
         /// <summary>معرّف ثابت للجهاز يرسله التطبيق (UUID محفوظ في التخزين الآمن)</summary>
@@ -61,7 +61,7 @@ namespace TeacherERP.Domain.Entities
 
             return new LoginSession
             {
-                Id = userId,
+                UserId = userId,
                 DeviceId = deviceId,
                 DeviceName = deviceName,
                 RefreshTokenHash = refreshTokenHash,

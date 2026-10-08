@@ -31,7 +31,7 @@ namespace TeacherERP.Infrastructure.Data
             builder.Entity<ApplicationUser>()
                 .HasMany(u => u.LoginSessions)
                 .WithOne(s => s.User)
-                .HasForeignKey(s => s.Id)
+                .HasForeignKey(s => s.UserId)
                 .OnDelete(DeleteBehavior.Cascade); // إذا حُذف المستخدم، تُحذف جلساته
 
             builder.Entity<LoginSession>(entity =>
@@ -42,7 +42,7 @@ namespace TeacherERP.Infrastructure.Data
                 entity.Property(s => s.PreviousRefreshTokenHash).HasMaxLength(64);
 
                 // للبحث السريع عن جلسات المستخدم وجهازه
-                entity.HasIndex(s => new { s.Id, s.DeviceId });
+                entity.HasIndex(s => new { s.UserId, s.DeviceId });
             });
 
             // 2. علاقة إعدادات السنتر مع المدرس/SuperAdmin (One-to-One)

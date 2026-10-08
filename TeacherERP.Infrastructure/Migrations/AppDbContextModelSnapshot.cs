@@ -335,6 +335,7 @@ namespace TeacherERP.Infrastructure.Migrations
             modelBuilder.Entity("TeacherERP.Domain.Entities.LoginSession", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("AbsoluteExpiresAt")
@@ -377,9 +378,12 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Id", "DeviceId");
+                    b.HasIndex("UserId", "DeviceId");
 
                     b.ToTable("LoginSessions");
                 });
@@ -595,7 +599,7 @@ namespace TeacherERP.Infrastructure.Migrations
                 {
                     b.HasOne("TeacherERP.Domain.Entities.ApplicationUser", "User")
                         .WithMany("LoginSessions")
-                        .HasForeignKey("Id")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
