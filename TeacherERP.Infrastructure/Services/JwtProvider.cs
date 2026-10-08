@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using TeacherERP.Application.Interfaces;
+using TeacherERP.Application.Sessions;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Infrastructure.Settings;
 
@@ -22,16 +23,16 @@ namespace TeacherERP.Infrastructure.Services
             _userManager = userManager;
         }
 
-        public async Task<(string Token, string JwtId)> GenerateAccessTokenAsync(ApplicationUser user)
+        public async Task<string> GenerateAccessTokenAsync(ApplicationUser user, Guid sessionId)
         {
-            var jwtId = Guid.NewGuid().ToString();
             var claims = new List<Claim>
             {
                 new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
-                new(JwtRegisteredClaimNames.Jti, jwtId),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new(ClaimTypes.Name, user.FullName)
+                new(ClaimTypes.Name, user.FullName),
+                new(AuthClaimTypes.SessionId, sessionId.ToString())
             };
 
             // إضافة الأدوار (Roles) الخاصة بالمستخدم
@@ -55,9 +56,8 @@ namespace TeacherERP.Infrastructure.Services
 
             var tokenHandler = new JwtSecurityTokenHandler();
             var securityToken = tokenHandler.CreateToken(tokenDescriptor);
-            var tokenString = tokenHandler.WriteToken(securityToken);
 
-            return (tokenString, jwtId);
+            return tokenHandler.WriteToken(securityToken);
         }
 
         public string GenerateRefreshToken()

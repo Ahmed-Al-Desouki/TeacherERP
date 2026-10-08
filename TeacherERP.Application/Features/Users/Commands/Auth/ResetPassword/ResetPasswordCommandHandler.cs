@@ -1,6 +1,7 @@
 ﻿using Hangfire;
 using MediatR;
 using TeacherERP.Application.Interfaces;
+using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Users.Commands.Auth.ResetPassword
@@ -10,23 +11,20 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.ResetPassword
         private readonly IUserAccountService _userAccountService;
         private readonly ICredentialService _credentialService;
         private readonly IResetGrantService _resetGrantService;
-        private readonly IRefreshTokenRepository _refreshTokenRepository;
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly ISessionManager _sessionManager;
         private readonly IBackgroundJobClient _backgroundJobClient;
 
         public ResetPasswordCommandHandler(
             IUserAccountService userAccountService,
             ICredentialService credentialService,
             IResetGrantService resetGrantService,
-            IRefreshTokenRepository refreshTokenRepository,
-            IUnitOfWork unitOfWork,
+            ISessionManager sessionManager,
             IBackgroundJobClient backgroundJobClient)
         {
             _userAccountService = userAccountService;
             _credentialService = credentialService;
             _resetGrantService = resetGrantService;
-            _refreshTokenRepository = refreshTokenRepository;
-            _unitOfWork = unitOfWork;
+            _sessionManager = sessionManager;
             _backgroundJobClient = backgroundJobClient;
         }
 
@@ -55,9 +53,8 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.ResetPassword
                 return Result<bool>.Failure(resetResult.Error);
             }
 
-            // 4. إلغاء كل الجلسات القديمة
-            await _refreshTokenRepository.RevokeAllForUserAsync(user.Id, cancellationToken);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            // 4. إلغاء كل الجلسات القديمة (على كل الأجهزة)
+            await _sessionManager.RevokeAllForUserAsync(user.Id, SessionRevokeReason.PasswordReset, cancellationToken);
 
             // 5. إبطال التصريح (بعد نجاح كل ما سبق، فتبقى إعادة المحاولة ممكنة عند أي خطأ)
             _resetGrantService.Revoke(request.Email);

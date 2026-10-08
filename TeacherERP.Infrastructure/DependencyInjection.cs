@@ -57,12 +57,11 @@ namespace TeacherERP.Infrastructure
             services.AddScoped<ICredentialService, CredentialService>();
             services.AddScoped<IExternalLoginService, ExternalLoginService>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
-            services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+            services.AddScoped<ISessionRepository, SessionRepository>();
             services.AddTransient<IEmailService, EmailService>();
             services.AddTransient<IOtpService, OtpService>();
             services.AddTransient<IResetGrantService, ResetGrantService>();
             services.AddScoped<IJwtProvider, JwtProvider>();
-            services.AddScoped<IAuthSessionService, AuthSessionService>();
             services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 
             return services;

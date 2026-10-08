@@ -14,7 +14,7 @@ namespace TeacherERP.Infrastructure.Data
         }
 
         // تسجيل الجداول في قاعدة البيانات
-        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<LoginSession> LoginSessions { get; set; }
         public DbSet<TenantSettings> TenantSettings { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<Session> Sessions { get; set; }
@@ -27,12 +27,23 @@ namespace TeacherERP.Infrastructure.Data
             // سطر إجباري لتوليد جداول الـ Identity بشكل سليم
             base.OnModelCreating(builder);
 
-            // 1. علاقة المستخدم مع RefreshTokens (One-to-Many)
+            // 1. علاقة المستخدم مع جلسات الدخول (One-to-Many)
             builder.Entity<ApplicationUser>()
-                .HasMany(u => u.RefreshTokens)
-                .WithOne(rt => rt.User)
-                .HasForeignKey(rt => rt.UserId)
-                .OnDelete(DeleteBehavior.Cascade); // إذا حُذف المستخدم، تُحذف الجلسات
+                .HasMany(u => u.LoginSessions)
+                .WithOne(s => s.User)
+                .HasForeignKey(s => s.Id)
+                .OnDelete(DeleteBehavior.Cascade); // إذا حُذف المستخدم، تُحذف جلساته
+
+            builder.Entity<LoginSession>(entity =>
+            {
+                entity.Property(s => s.DeviceId).HasMaxLength(128).IsRequired();
+                entity.Property(s => s.DeviceName).HasMaxLength(256).IsRequired();
+                entity.Property(s => s.RefreshTokenHash).HasMaxLength(64).IsRequired();
+                entity.Property(s => s.PreviousRefreshTokenHash).HasMaxLength(64);
+
+                // للبحث السريع عن جلسات المستخدم وجهازه
+                entity.HasIndex(s => new { s.Id, s.DeviceId });
+            });
 
             // 2. علاقة إعدادات السنتر مع المدرس/SuperAdmin (One-to-One)
             builder.Entity<TenantSettings>()

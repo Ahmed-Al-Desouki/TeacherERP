@@ -14,18 +14,18 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn
         private readonly IGoogleAuthService _googleAuthService;
         private readonly IUserAccountService _userAccountService;
         private readonly IExternalLoginService _externalLoginService;
-        private readonly IAuthSessionService _authSessionService;
+        private readonly ISessionManager _sessionManager;
 
         public GoogleSignInCommandHandler(
             IGoogleAuthService googleAuthService,
             IUserAccountService userAccountService,
             IExternalLoginService externalLoginService,
-            IAuthSessionService authSessionService)
+            ISessionManager sessionManager)
         {
             _googleAuthService = googleAuthService;
             _userAccountService = userAccountService;
             _externalLoginService = externalLoginService;
-            _authSessionService = authSessionService;
+            _sessionManager = sessionManager;
         }
 
         public async Task<Result<AuthResponseDto>> Handle(GoogleSignInCommand request, CancellationToken cancellationToken)
@@ -70,7 +70,7 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn
             }
 
             // 6. إصدار الجلسة
-            var response = await _authSessionService.IssueAsync(user, request.DeviceInfo, cancellationToken);
+            var response = await _sessionManager.IssueAsync(user, request.DeviceId, request.DeviceInfo, cancellationToken);
             return Result<AuthResponseDto>.Success(response);
         }
     }

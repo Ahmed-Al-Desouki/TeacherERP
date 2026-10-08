@@ -8,12 +8,12 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.Login
     public class LoginCommandHandler : IRequestHandler<LoginCommand, Result<AuthResponseDto>>
     {
         private readonly ICredentialService _credentialService;
-        private readonly IAuthSessionService _authSessionService;
+        private readonly ISessionManager _sessionManager;
 
-        public LoginCommandHandler(ICredentialService credentialService, IAuthSessionService authSessionService)
+        public LoginCommandHandler(ICredentialService credentialService, ISessionManager sessionManager)
         {
             _credentialService = credentialService;
-            _authSessionService = authSessionService;
+            _sessionManager = sessionManager;
         }
 
         public async Task<Result<AuthResponseDto>> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -33,8 +33,8 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.Login
                 return Result<AuthResponseDto>.Failure(new Error("Auth.AccountSuspended", "This account is suspended or blacklisted."));
             }
 
-            // 3. إصدار الجلسة (التوكنز + حفظ الـ Refresh Token + تنبيه الدخول)
-            var response = await _authSessionService.IssueAsync(user, request.DeviceInfo, cancellationToken);
+            // 3. إصدار الجلسة (التوكنز + حفظ الجلسة + تنبيه الدخول)
+            var response = await _sessionManager.IssueAsync(user, request.DeviceId, request.DeviceInfo, cancellationToken);
             return Result<AuthResponseDto>.Success(response);
         }
     }

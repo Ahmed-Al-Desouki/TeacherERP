@@ -3,5 +3,6 @@ using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Users.Commands.Auth.Login
 {
-    public record LoginCommand(string Email, string Password, string DeviceInfo) : IRequest<Result<AuthResponseDto>>;
+    // DeviceId: معرّف ثابت للجهاز من التطبيق، DeviceInfo: اسم الجهاز للعرض
+    public record LoginCommand(string Email, string Password, string DeviceId, string DeviceInfo) : IRequest<Result<AuthResponseDto>>;
 }

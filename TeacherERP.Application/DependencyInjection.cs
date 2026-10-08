@@ -1,6 +1,8 @@
 ﻿using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using TeacherERP.Application.Behaviors;
+using TeacherERP.Application.Interfaces;
+using TeacherERP.Application.Sessions;
 
 namespace TeacherERP.Application
 {
@@ -18,6 +20,8 @@ namespace TeacherERP.Application
             });
 
             services.AddValidatorsFromAssembly(assembly);
+
+            services.AddScoped<ISessionManager, SessionManager>();
 
             return services;
         }

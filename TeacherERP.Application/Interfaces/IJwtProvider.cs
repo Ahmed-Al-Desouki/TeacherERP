@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using TeacherERP.Domain.Entities;
+﻿using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
 {
     public interface IJwtProvider
     {
-        Task<(string Token, string JwtId)> GenerateAccessTokenAsync(ApplicationUser user);
+
+        //Task<string> GenerateAccessTokenAsync(ApplicationUser user, Guid sessionId);
+        // التوكن مرتبط بالجلسة عبر Claim باسم session_id
+        Task<string> GenerateAccessTokenAsync(ApplicationUser user, Guid sessionId);
         string GenerateRefreshToken();
     }
 }

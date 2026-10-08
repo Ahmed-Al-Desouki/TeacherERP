@@ -37,7 +37,7 @@ namespace TeacherERP.Domain.Entities
         // --- العلاقات (Navigation Properties) ---
         public ICollection<AttendanceRecord> Attendances { get; private set; }
         public ICollection<Transaction> Transactions { get; private set; }
-        public ICollection<RefreshToken> RefreshTokens { get; private set; }
+        public ICollection<LoginSession> LoginSessions { get; private set; }
 
         /// <summary>منشئ فارغ مطلوب من قِبل Entity Framework Core</summary>
         private ApplicationUser() { }
