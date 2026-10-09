@@ -39,11 +39,11 @@ namespace TeacherERP.API.Controllers
             return ToResponse(result);
         }
 
-        [Authorize]
+        // بدون Authorize: الـ Refresh Token نفسه يثبت ملكية الجلسة، فيعمل حتى لو انتهى الـ Access Token
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout(CancellationToken cancellationToken)
+        public async Task<IActionResult> Logout([FromBody] LogoutCommand command, CancellationToken cancellationToken)
         {
-            var result = await _mediator.Send(new LogoutCommand(), cancellationToken);
+            var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result, new { Message = "Logged out successfully." });
         }
 

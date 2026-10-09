@@ -160,6 +160,46 @@ namespace TeacherERP.Application.Sessions
                 new AuthResponseDto(accessToken, $"{session.Id:N}.{newSecret}", session.RefreshExpiresAt));
         }
 
+        public async Task<Result<bool>> RevokeByRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken)
+        {
+            var invalidToken = Result<bool>.Failure(
+                new Error("Auth.InvalidRefreshToken", "The refresh token is invalid."));
+
+            if (!TryParse(refreshToken, out var sessionId, out var secret))
+            {
+                return invalidToken;
+            }
+
+            var session = await _sessionRepository.GetByIdAsync(sessionId, cancellationToken);
+            if (session is null)
+            {
+                return invalidToken;
+            }
+
+            // حامل التوكن الحالي أو السابق هو صاحب الجلسة (السابق يسمح بالخروج لو ضاع التوكن الجديد بعد تجديد)
+            var presentedHash = TokenHasher.Hash(secret);
+            var isCurrent = TokenHasher.Matches(presentedHash, session.RefreshTokenHash);
+            var isPrevious = session.PreviousRefreshTokenHash is not null
+                             && TokenHasher.Matches(presentedHash, session.PreviousRefreshTokenHash);
+
+            if (!isCurrent && !isPrevious)
+            {
+                return invalidToken;
+            }
+
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+            // الجلسة المنتهية أصلاً: ننجح بدون تغيير (Idempotent)
+            if (session.IsActive(now))
+            {
+                session.Revoke(SessionRevokeReason.UserLogout, now);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                _sessionValidator.Invalidate(session.Id);
+            }
+
+            return Result<bool>.Success(true);
+        }
+
         public async Task<Result<bool>> RevokeSessionAsync(Guid userId, Guid sessionId, SessionRevokeReason reason, CancellationToken cancellationToken)
         {
             var session = await _sessionRepository.GetByIdAsync(sessionId, cancellationToken);

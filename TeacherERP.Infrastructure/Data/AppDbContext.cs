@@ -55,6 +55,25 @@ namespace TeacherERP.Infrastructure.Data
                 entity.HasIndex(s => new { s.UserId, s.DeviceId });
             });
 
+            // بروفايل الطالب: الجنس وبيانات ولي الأمر (في نفس جدول المستخدمين) وفرادة موبايل الطالب
+            builder.Entity<ApplicationUser>(entity =>
+            {
+                entity.Property(u => u.Gender).HasConversion<string>().HasMaxLength(16);
+
+                entity.OwnsOne(u => u.Guardian, guardian =>
+                {
+                    guardian.Property(g => g.Name).HasMaxLength(100).IsRequired();
+                    guardian.Property(g => g.PhoneNumber).HasMaxLength(20).IsRequired();
+                    guardian.Property(g => g.Relation).HasConversion<string>().HasMaxLength(32).IsRequired();
+                });
+
+                // Identity يجعل PhoneNumber بطول max، ولازم طول محدد لإنشاء Index عليه
+                entity.Property(u => u.PhoneNumber).HasMaxLength(20);
+
+                // فهرس فريد مُرشَّح (الحقل اختياري، فالقيم الفارغة لا تتعارض)
+                entity.HasIndex(u => u.PhoneNumber).IsUnique().HasFilter("[PhoneNumber] IS NOT NULL");
+            });
+
             // 2. علاقة إعدادات السنتر مع المدرس/SuperAdmin (One-to-One)
             builder.Entity<TenantSettings>()
                 .HasOne<ApplicationUser>()

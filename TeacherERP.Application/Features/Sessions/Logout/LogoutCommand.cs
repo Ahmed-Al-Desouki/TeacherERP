@@ -3,6 +3,6 @@ using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Sessions.Logout
 {
-    // إنهاء الجلسة الحالية (الجهاز الذي أرسل الطلب)
-    public record LogoutCommand : IRequest<Result<bool>>;
+    // إنهاء الجلسة المرتبطة بالـ Refresh Token (الجهاز الحالي)
+    public record LogoutCommand(string RefreshToken) : IRequest<Result<bool>>;
 }

@@ -10,6 +10,9 @@ namespace TeacherERP.Application.Interfaces
         Task<AuthResponseDto> IssueAsync(ApplicationUser user, string deviceId, string deviceName, CancellationToken cancellationToken);
         Task<Result<AuthResponseDto>> RefreshAsync(string refreshToken, CancellationToken cancellationToken);
 
+        // إلغاء الجلسة المرتبطة بالـ Refresh Token (يعمل حتى بعد انتهاء الـ Access Token)
+        Task<Result<bool>> RevokeByRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken);
+
         // إلغاء جلسة واحدة تخص المستخدم (Session.NotFound لو غير موجودة أو تخص غيره، ونجاح لو منتهية أصلاً)
         Task<Result<bool>> RevokeSessionAsync(Guid userId, Guid sessionId, SessionRevokeReason reason, CancellationToken cancellationToken);
 

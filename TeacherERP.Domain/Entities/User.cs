@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Transactions;
 using TeacherERP.Domain.Entities;
+using TeacherERP.Domain.Shared;
+using TeacherERP.Domain.ValueObjects;
 
 namespace TeacherERP.Domain.Entities
 {
@@ -13,6 +15,9 @@ namespace TeacherERP.Domain.Entities
     /// </summary>
     public class ApplicationUser : IdentityUser<Guid>
     {
+        /// <summary>عدد الحقول الإلزامية لإكمال بروفايل الطالب (موبايله + اسم وموبايل وصلة ولي الأمر)</summary>
+        private const int RequiredProfileFieldsCount = 4;
+
         /// <summary>الاسم الرباعي أو الكامل للمستخدم</summary>
         public string FullName { get; private set; }
 
@@ -29,6 +34,15 @@ namespace TeacherERP.Domain.Entities
         /// <summary>كود الاستجابة السريعة الثابت الخاص بالطالب (يستخدم في حالة غياب الإنترنت أو الهواتف الذكية)</summary>
         public string StaticQrCode { get; private set; }
 
+        /// <summary>الجنس (اختياري، لا يدخل في نسبة اكتمال البروفايل)</summary>
+        public Gender? Gender { get; private set; }
+
+        /// <summary>تاريخ الميلاد (اختياري، لا يدخل في نسبة اكتمال البروفايل)</summary>
+        public DateOnly? DateOfBirth { get; private set; }
+
+        /// <summary>بيانات ولي الأمر (إلزامية لاكتمال البروفايل)</summary>
+        public GuardianInfo? Guardian { get; private set; }
+
         // خصائص خاصة بالمساعدين (Admin Specific)
 
         /// <summary>يحدد ما إذا كان المساعد يمتلك صلاحية استلام الأموال والاطلاع على المديونيات</summary>
@@ -38,6 +52,36 @@ namespace TeacherERP.Domain.Entities
         public ICollection<AttendanceRecord> Attendances { get; private set; }
         public ICollection<Transaction> Transactions { get; private set; }
         public ICollection<LoginSession> LoginSessions { get; private set; }
+
+        // --- اكتمال البروفايل (محسوب، غير مخزّن) ---
+
+        /// <summary>الحقول الإلزامية الناقصة (بنفس أسماء حقول طلب إكمال البروفايل)</summary>
+        public IReadOnlyList<string> MissingProfileFields
+        {
+            get
+            {
+                var missing = new List<string>();
+
+                if (string.IsNullOrWhiteSpace(PhoneNumber))
+                {
+                    missing.Add("phoneNumber");
+                }
+
+                if (Guardian is null)
+                {
+                    missing.Add("guardianName");
+                    missing.Add("guardianPhoneNumber");
+                    missing.Add("guardianRelation");
+                }
+
+                return missing;
+            }
+        }
+
+        public bool IsProfileComplete => MissingProfileFields.Count == 0;
+
+        public int ProfileCompletionPercentage
+            => (RequiredProfileFieldsCount - MissingProfileFields.Count) * 100 / RequiredProfileFieldsCount;
 
         /// <summary>منشئ فارغ مطلوب من قِبل Entity Framework Core</summary>
         private ApplicationUser() { }
@@ -77,6 +121,32 @@ namespace TeacherERP.Domain.Entities
         }
 
         // --- دوال التحكم في الحالة (Behavior Methods) ---
+
+        /// <summary>
+        /// إكمال/تحديث بيانات البروفايل (استبدال كامل). الأرقام تصل هنا بالصيغة الدولية بعد التحقق منها.
+        /// القاعدة: موبايل ولي الأمر لازم يختلف عن موبايل الطالب.
+        /// </summary>
+        public Result<bool> CompleteProfile(string phoneNumber, GuardianInfo guardian, Gender? gender, DateOnly? dateOfBirth)
+        {
+            if (guardian.PhoneNumber == phoneNumber)
+            {
+                return Result<bool>.Failure(new Error(
+                    "Profile.GuardianPhoneSameAsStudent",
+                    "The guardian phone number must be different from the student phone number."));
+            }
+
+            if (PhoneNumber != phoneNumber)
+            {
+                PhoneNumber = phoneNumber;
+                PhoneNumberConfirmed = false;
+            }
+
+            Guardian = guardian;
+            Gender = gender;
+            DateOfBirth = dateOfBirth;
+
+            return Result<bool>.Success(true);
+        }
 
         /// <summary>إضافة أموال لرصيد الطالب</summary>
         public void AddBalance(decimal amount) => CurrentBalance += amount;
