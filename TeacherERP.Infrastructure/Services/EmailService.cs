@@ -26,11 +26,12 @@ namespace TeacherERP.Infrastructure.Services
             await SendEmailAsync(toEmail, subject, body);
         }
 
-        public async Task SendNewLoginAlertAsync(string toEmail, string deviceInfo, DateTime loginTime)
+        public async Task SendNewLoginAlertAsync(string toEmail, string deviceInfo, DateTime loginTime, string? timeZoneId)
         {
-            var subject = "New Login Alert";
-            var body = $"<p>A new login was detected on your account.</p><p>Device: {deviceInfo}</p><p>Time: {loginTime:yyyy-MM-dd HH:mm:ss UTC}</p>";
-            await SendEmailAsync(toEmail, subject, body);
+            await SendEmailAsync(
+                toEmail,
+                "New login detected | تسجيل دخول جديد",
+                EmailTemplates.NewLoginAlert(deviceInfo, loginTime, timeZoneId));
         }
 
         public async Task SendPasswordResetOtpAsync(string toEmail, string otpCode)
@@ -38,9 +39,20 @@ namespace TeacherERP.Infrastructure.Services
             await SendEmailAsync(toEmail, "Reset your password | استرجاع كلمة المرور", EmailTemplates.PasswordResetOtp(otpCode));
         }
 
-        public async Task SendPasswordChangedAlertAsync(string toEmail, DateTime changedAt)
+        public async Task SendPasswordChangedAlertAsync(string toEmail, DateTime changedAt, string? timeZoneId)
         {
-            await SendEmailAsync(toEmail, "Your password was changed | تم تغيير كلمة المرور", EmailTemplates.PasswordChanged(changedAt));
+            await SendEmailAsync(
+                toEmail,
+                "Your password was changed | تم تغيير كلمة المرور",
+                EmailTemplates.PasswordChanged(changedAt, timeZoneId));
+        }
+
+        public async Task SendSessionEvictedAlertAsync(string toEmail, string evictedDeviceName, string newDeviceName, DateTime occurredAt, string? timeZoneId)
+        {
+            await SendEmailAsync(
+                toEmail,
+                "Signed out of a device | تم تسجيل خروجك من جهاز",
+                EmailTemplates.SessionEvicted(evictedDeviceName, newDeviceName, occurredAt, timeZoneId));
         }
 
         private async Task SendEmailAsync(string toEmail, string subject, string body)

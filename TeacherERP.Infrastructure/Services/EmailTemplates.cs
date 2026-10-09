@@ -1,8 +1,11 @@
 ﻿using System.Net;
+using TeacherERP.Application.Common;
+using TeacherERP.Application.Sessions;
 
 namespace TeacherERP.Infrastructure.Services
 {
     // قوالب الإيميلات (HTML مضمّن الأنماط ليعمل مع كل برامج البريد، ثنائي اللغة)
+    // الأوقات تصل بـ UTC وتُحوَّل هنا لتوقيت المستخدم عبر UserTime
     internal static class EmailTemplates
     {
         public static string PasswordResetOtp(string otpCode)
@@ -22,9 +25,28 @@ namespace TeacherERP.Infrastructure.Services
             return Layout("🔐", "#4f46e5", "Reset your password", "استرجاع كلمة المرور", content);
         }
 
-        public static string PasswordChanged(DateTime changedAtUtc)
+        public static string NewLoginAlert(string deviceName, DateTime loginAtUtc, string? timeZoneId)
         {
-            var time = WebUtility.HtmlEncode($"{changedAtUtc:yyyy-MM-dd HH:mm} UTC");
+            var device = WebUtility.HtmlEncode(deviceName);
+            var time = WebUtility.HtmlEncode(UserTime.Format(loginAtUtc, timeZoneId));
+
+            var content = $$"""
+                <p style="margin:0 0 6px 0;">A new login was detected on your account from <b>{{device}}</b> on <b>{{time}}</b>.</p>
+                <p dir="rtl" style="margin:0 0 18px 0;color:#6b7280;">تم رصد تسجيل دخول جديد إلى حسابك من <b>{{device}}</b> بتاريخ <b dir="ltr">{{time}}</b>.</p>
+                <div style="background:#eff6ff;border-radius:12px;padding:14px 16px;margin:0 0 18px 0;color:#1e40af;font-size:14px;">
+                  If this was you, no action is needed.
+                  <span dir="rtl" style="display:block;margin-top:6px;">إذا كنت أنت من سجّل الدخول فلا يلزم أي إجراء.</span>
+                </div>
+                <p style="margin:0 0 4px 0;color:#b91c1c;font-size:13px;"><b>Wasn't you?</b> Reset your password immediately to sign out every device.</p>
+                <p dir="rtl" style="margin:0;color:#b91c1c;font-size:13px;"><b>لست أنت؟</b> أعد تعيين كلمة المرور فوراً لتسجيل الخروج من كل الأجهزة.</p>
+                """;
+
+            return Layout("🔔", "#2563eb", "New login detected", "تسجيل دخول جديد", content);
+        }
+
+        public static string PasswordChanged(DateTime changedAtUtc, string? timeZoneId)
+        {
+            var time = WebUtility.HtmlEncode(UserTime.Format(changedAtUtc, timeZoneId));
 
             var content = $$"""
                 <p style="margin:0 0 6px 0;">Your password was changed successfully on <b>{{time}}</b>.</p>
@@ -38,6 +60,27 @@ namespace TeacherERP.Infrastructure.Services
                 """;
 
             return Layout("✅", "#16a34a", "Password changed", "تم تغيير كلمة المرور", content);
+        }
+
+        public static string SessionEvicted(string evictedDeviceName, string newDeviceName, DateTime occurredAtUtc, string? timeZoneId)
+        {
+            var oldDevice = WebUtility.HtmlEncode(evictedDeviceName);
+            var newDevice = WebUtility.HtmlEncode(newDeviceName);
+            var time = WebUtility.HtmlEncode(UserTime.Format(occurredAtUtc, timeZoneId));
+            var max = SessionPolicy.MaxActiveSessions;
+
+            var content = $$"""
+                <p style="margin:0 0 6px 0;">Your account can be signed in on up to <b>{{max}} devices</b>. A new login from <b>{{newDevice}}</b> on <b>{{time}}</b> signed you out of <b>{{oldDevice}}</b>.</p>
+                <p dir="rtl" style="margin:0 0 18px 0;color:#6b7280;">يمكن تسجيل الدخول إلى حسابك على <b>{{max}} أجهزة</b> كحد أقصى. تسجيل دخول جديد من <b>{{newDevice}}</b> بتاريخ <b dir="ltr">{{time}}</b> أدى إلى تسجيل خروجك من <b>{{oldDevice}}</b>.</p>
+                <div style="background:#fffbeb;border-radius:12px;padding:14px 16px;margin:0 0 18px 0;color:#92400e;font-size:14px;">
+                  If this was you, no action is needed. You can log in again on that device at any time.
+                  <span dir="rtl" style="display:block;margin-top:6px;">إذا كنت أنت من سجّل الدخول فلا يلزم أي إجراء، ويمكنك تسجيل الدخول على ذلك الجهاز في أي وقت.</span>
+                </div>
+                <p style="margin:0 0 4px 0;color:#b91c1c;font-size:13px;"><b>Wasn't you?</b> Reset your password immediately to sign out every device.</p>
+                <p dir="rtl" style="margin:0;color:#b91c1c;font-size:13px;"><b>لست أنت؟</b> أعد تعيين كلمة المرور فوراً لتسجيل الخروج من كل الأجهزة.</p>
+                """;
+
+            return Layout("📱", "#d97706", "Signed out of a device", "تم تسجيل خروجك من جهاز", content);
         }
 
         private static string Layout(string icon, string accent, string title, string titleAr, string content)

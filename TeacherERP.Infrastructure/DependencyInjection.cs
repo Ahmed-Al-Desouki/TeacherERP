@@ -52,12 +52,18 @@ namespace TeacherERP.Infrastructure
             // 4. تفعيل الـ In-Memory Cache للـ OTP
             services.AddMemoryCache();
 
-            // 5. تسجيل الخدمات والمستودعات
+            // 5. الوصول لسياق الطلب الحالي (المنطقة الزمنية وهوية المستخدم)
+            services.AddHttpContextAccessor();
+
+            // 6. تسجيل الخدمات والمستودعات
             services.AddScoped<IUserAccountService, UserAccountService>();
             services.AddScoped<ICredentialService, CredentialService>();
             services.AddScoped<IExternalLoginService, ExternalLoginService>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ISessionRepository, SessionRepository>();
+            services.AddScoped<ISessionValidator, SessionValidator>();
+            services.AddScoped<ICurrentUserService, CurrentUserService>();
+            services.AddScoped<IUserTimeZoneAccessor, HttpUserTimeZoneAccessor>();
             services.AddTransient<IEmailService, EmailService>();
             services.AddTransient<IOtpService, OtpService>();
             services.AddTransient<IResetGrantService, ResetGrantService>();

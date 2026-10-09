@@ -1,10 +1,11 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TeacherERP.Application.Features.Users.Commands.Auth.ForgotPassword;
+using TeacherERP.Application.Features.Sessions.Logout;
+using TeacherERP.Application.Features.Sessions.LogoutAll;
 using TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn;
 using TeacherERP.Application.Features.Users.Commands.Auth.Login;
-using TeacherERP.Application.Features.Users.Commands.Auth.ResetPassword;
-using TeacherERP.Application.Features.Users.Commands.Auth.VerifyResetOtp;
+using TeacherERP.Application.Features.Users.Commands.Auth.RefreshToken;
 
 namespace TeacherERP.API.Controllers
 {
@@ -31,25 +32,27 @@ namespace TeacherERP.API.Controllers
             return ToResponse(result);
         }
 
-        [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordCommand command, CancellationToken cancellationToken)
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result);
         }
 
-        [HttpPost("verify-reset-otp")]
-        public async Task<IActionResult> VerifyResetOtp([FromBody] VerifyResetOtpCommand command, CancellationToken cancellationToken)
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout(CancellationToken cancellationToken)
         {
-            var result = await _mediator.Send(command, cancellationToken);
-            return ToResponse(result);
+            var result = await _mediator.Send(new LogoutCommand(), cancellationToken);
+            return ToResponse(result, new { Message = "Logged out successfully." });
         }
 
-        [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordCommand command, CancellationToken cancellationToken)
+        [Authorize]
+        [HttpPost("logout-all")]
+        public async Task<IActionResult> LogoutAll(CancellationToken cancellationToken)
         {
-            var result = await _mediator.Send(command, cancellationToken);
-            return ToResponse(result, new { Message = "Password reset successfully. Please log in with your new password." });
+            var result = await _mediator.Send(new LogoutAllCommand(), cancellationToken);
+            return ToResponse(result, new { Message = "Logged out from all devices." });
         }
     }
 }

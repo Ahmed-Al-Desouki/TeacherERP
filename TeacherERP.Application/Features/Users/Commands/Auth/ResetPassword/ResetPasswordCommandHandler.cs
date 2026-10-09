@@ -13,19 +13,25 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.ResetPassword
         private readonly IResetGrantService _resetGrantService;
         private readonly ISessionManager _sessionManager;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IUserTimeZoneAccessor _userTimeZoneAccessor;
+        private readonly TimeProvider _timeProvider;
 
         public ResetPasswordCommandHandler(
             IUserAccountService userAccountService,
             ICredentialService credentialService,
             IResetGrantService resetGrantService,
             ISessionManager sessionManager,
-            IBackgroundJobClient backgroundJobClient)
+            IBackgroundJobClient backgroundJobClient,
+            IUserTimeZoneAccessor userTimeZoneAccessor,
+            TimeProvider timeProvider)
         {
             _userAccountService = userAccountService;
             _credentialService = credentialService;
             _resetGrantService = resetGrantService;
             _sessionManager = sessionManager;
             _backgroundJobClient = backgroundJobClient;
+            _userTimeZoneAccessor = userTimeZoneAccessor;
+            _timeProvider = timeProvider;
         }
 
         public async Task<Result<bool>> Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
@@ -59,11 +65,13 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.ResetPassword
             // 5. إبطال التصريح (بعد نجاح كل ما سبق، فتبقى إعادة المحاولة ممكنة عند أي خطأ)
             _resetGrantService.Revoke(request.Email);
 
-            // 6. إيميل التنبيه في الخلفية
+            // 6. إيميل التنبيه في الخلفية (الوقت UTC مع منطقة المستخدم)
             var toEmail = user.Email!;
-            var changedAt = DateTime.UtcNow;
+            var changedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            var timeZoneId = _userTimeZoneAccessor.TimeZoneId;
+
             _backgroundJobClient.Enqueue<IEmailService>(emailService =>
-                emailService.SendPasswordChangedAlertAsync(toEmail, changedAt));
+                emailService.SendPasswordChangedAlertAsync(toEmail, changedAt, timeZoneId));
 
             return Result<bool>.Success(true);
         }

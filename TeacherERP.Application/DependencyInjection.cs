@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using TeacherERP.Application.Behaviors;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Application.Sessions;
@@ -21,7 +22,11 @@ namespace TeacherERP.Application
 
             services.AddValidatorsFromAssembly(assembly);
 
+            // مصدر الوقت (يمكن استبداله بـ FakeTimeProvider في الاختبارات)
+            services.TryAddSingleton(TimeProvider.System);
+
             services.AddScoped<ISessionManager, SessionManager>();
+            services.AddScoped<ISessionCleanupJob, SessionCleanupJob>();
 
             return services;
         }

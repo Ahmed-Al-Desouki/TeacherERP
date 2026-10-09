@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TeacherERP.Domain.Entities;
 using System;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -9,6 +10,15 @@ namespace TeacherERP.Infrastructure.Data
     // توريث من IdentityDbContext لدمج جداول الـ Security جاهزة
     public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
     {
+        // كل DateTime في النظام UTC: نضمن أن يُقرأ بصفته UTC حتى يظهر في الـ JSON بالـ Z (لا تغيير في شكل الجداول)
+        private static readonly ValueConverter<DateTime, DateTime> UtcConverter = new(
+            v => v,
+            v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
+        private static readonly ValueConverter<DateTime?, DateTime?> NullableUtcConverter = new(
+            v => v,
+            v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v);
+
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
         }
@@ -108,6 +118,27 @@ namespace TeacherERP.Infrastructure.Data
                 .WithMany() // المعاملة مرتبطة بجلسة، ولكن الجلسة لا تحتاج لقائمة بجميع معاملاتها
                 .HasForeignKey(t => t.RelatedSessionId)
                 .OnDelete(DeleteBehavior.SetNull); // إذا حذفت الجلسة، يبقى السجل المالي
+
+            // آخر خطوة: تطبيق قاعدة UTC على كل خصائص DateTime في كل الكيانات
+            ApplyUtcDateTimeConverters(builder);
+        }
+
+        private static void ApplyUtcDateTimeConverters(ModelBuilder builder)
+        {
+            foreach (var entityType in builder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties())
+                {
+                    if (property.ClrType == typeof(DateTime))
+                    {
+                        property.SetValueConverter(UtcConverter);
+                    }
+                    else if (property.ClrType == typeof(DateTime?))
+                    {
+                        property.SetValueConverter(NullableUtcConverter);
+                    }
+                }
+            }
         }
     }
 }

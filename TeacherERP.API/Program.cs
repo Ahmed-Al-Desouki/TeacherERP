@@ -5,7 +5,9 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
 using TeacherERP.API.Middlewares;
+using TeacherERP.API.Security;
 using TeacherERP.Application;
+using TeacherERP.Application.Interfaces;
 using TeacherERP.Infrastructure;
 using TeacherERP.Infrastructure.Data.TeacherERP.Infrastructure.Data;
 
@@ -70,8 +72,12 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Secret"]!))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Secret"]!)),
+        ClockSkew = TimeSpan.Zero // بدون سماح إضافي: الـ Access Token يعيش المدة المحددة بالضبط
     };
+
+    // التأكد من أن الجلسة المرتبطة بالتوكن ما زالت نشطة عند كل طلب
+    options.Events = new SessionJwtBearerEvents();
 });
 
 var app = builder.Build();
@@ -82,6 +88,10 @@ using (var scope = app.Services.CreateScope())
     var configuration = services.GetRequiredService<IConfiguration>();
     await ProductionDbSeeder.SeedAsync(services, configuration);
 }
+
+// مهمة دورية يومياً (3 صباحاً UTC) لحذف الجلسات المنتهية منذ أكثر من 30 يوم
+app.Services.GetRequiredService<IRecurringJobManager>()
+    .AddOrUpdate<ISessionCleanupJob>("cleanup-ended-sessions", job => job.RunAsync(), Cron.Daily(3));
 
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
