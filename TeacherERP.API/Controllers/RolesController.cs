@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TeacherERP.API.Security;
 using TeacherERP.Application.Features.Users.Commands.PromoteToAdmin;
 using TeacherERP.Application.Features.Users.Commands.PromoteToSuperAdmin;
 
@@ -43,6 +44,7 @@ namespace TeacherERP.API.Controllers
             return Ok(new { Message = "User has been successfully promoted to Super Admin." });
         }
 
+        //[Authorize(Policy = AuthPolicies.CompletedProfile)]
         [HttpGet("my-roles")]
         [Authorize]
         public IActionResult GetMyRoles()

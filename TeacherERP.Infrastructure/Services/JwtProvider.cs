@@ -23,7 +23,7 @@ namespace TeacherERP.Infrastructure.Services
             _userManager = userManager;
         }
 
-        public async Task<string> GenerateAccessTokenAsync(ApplicationUser user, Guid sessionId)
+        public async Task<AccessTokenResult> GenerateAccessTokenAsync(ApplicationUser user, Guid sessionId)
         {
             var claims = new List<Claim>
             {
@@ -57,7 +57,7 @@ namespace TeacherERP.Infrastructure.Services
             var tokenHandler = new JwtSecurityTokenHandler();
             var securityToken = tokenHandler.CreateToken(tokenDescriptor);
 
-            return tokenHandler.WriteToken(securityToken);
+            return new AccessTokenResult(tokenHandler.WriteToken(securityToken), roles.ToList());
         }
 
         public string GenerateRefreshToken()

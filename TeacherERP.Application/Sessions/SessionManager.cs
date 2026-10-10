@@ -1,5 +1,6 @@
 ﻿using Hangfire;
 using Microsoft.Extensions.Logging;
+using TeacherERP.Application.Features.Profile;
 using TeacherERP.Application.Features.Users.Commands.Auth.Login;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
@@ -95,7 +96,11 @@ namespace TeacherERP.Application.Sessions
                     emailService.SendSessionEvictedAlertAsync(toEmail, evictedDeviceName, deviceName, now, timeZoneId));
             }
 
-            return new AuthResponseDto(accessToken, $"{session.Id:N}.{secret}", session.RefreshExpiresAt);
+            return new AuthResponseDto(
+                accessToken.Token,
+                $"{session.Id:N}.{secret}",
+                session.RefreshExpiresAt,
+                RequiresProfileCompletion(user, accessToken));
         }
 
         public async Task<Result<AuthResponseDto>> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
@@ -156,8 +161,11 @@ namespace TeacherERP.Application.Sessions
             var accessToken = await _jwtProvider.GenerateAccessTokenAsync(user, session.Id);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return Result<AuthResponseDto>.Success(
-                new AuthResponseDto(accessToken, $"{session.Id:N}.{newSecret}", session.RefreshExpiresAt));
+            return Result<AuthResponseDto>.Success(new AuthResponseDto(
+                accessToken.Token,
+                $"{session.Id:N}.{newSecret}",
+                session.RefreshExpiresAt,
+                RequiresProfileCompletion(user, accessToken)));
         }
 
         public async Task<Result<bool>> RevokeByRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken)
@@ -241,6 +249,10 @@ namespace TeacherERP.Application.Sessions
                 _sessionValidator.Invalidate(session.Id);
             }
         }
+
+        // طالب بروفايله ناقص؟ (الأدوار من نفس التوكن، بدون Query إضافي)
+        private static bool RequiresProfileCompletion(ApplicationUser user, AccessTokenResult accessToken)
+            => ProfileRequirement.AppliesTo(accessToken.Roles) && !user.IsProfileComplete;
 
         private static bool TryParse(string token, out Guid sessionId, out string secret)
         {

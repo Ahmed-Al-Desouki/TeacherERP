@@ -1,6 +1,7 @@
 using Hangfire;
 using Hangfire.Dashboard;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
@@ -10,7 +11,7 @@ using TeacherERP.API.Security;
 using TeacherERP.Application;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Infrastructure;
-using TeacherERP.Infrastructure.Data.TeacherERP.Infrastructure.Data;
+using TeacherERP.Infrastructure.Data;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -85,6 +86,15 @@ builder.Services.AddAuthentication(options =>
     // التأكد من أن الجلسة المرتبطة بالتوكن ما زالت نشطة عند كل طلب
     options.Events = new SessionJwtBearerEvents();
 });
+
+// Authorization: Policy قفل الـ features حتى اكتمال بروفايل الطالب
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AuthPolicies.CompletedProfile, policy =>
+        policy.RequireAuthenticatedUser().AddRequirements(new CompletedProfileRequirement()));
+});
+builder.Services.AddScoped<IAuthorizationHandler, CompletedProfileHandler>();
+builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ProfileAuthorizationResultHandler>();
 
 var app = builder.Build();
 

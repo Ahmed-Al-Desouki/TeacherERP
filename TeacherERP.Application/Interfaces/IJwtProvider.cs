@@ -2,12 +2,13 @@
 
 namespace TeacherERP.Application.Interfaces
 {
+    // التوكن مع الأدوار التي وُضعت فيه (لتفادي سؤال الداتابيز عنها مرة تانية)
+    public record AccessTokenResult(string Token, IReadOnlyList<string> Roles);
+
     public interface IJwtProvider
     {
-
-        //Task<string> GenerateAccessTokenAsync(ApplicationUser user, Guid sessionId);
         // التوكن مرتبط بالجلسة عبر Claim باسم session_id
-        Task<string> GenerateAccessTokenAsync(ApplicationUser user, Guid sessionId);
+        Task<AccessTokenResult> GenerateAccessTokenAsync(ApplicationUser user, Guid sessionId);
         string GenerateRefreshToken();
     }
 }
