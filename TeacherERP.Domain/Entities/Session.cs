@@ -7,11 +7,14 @@ namespace TeacherERP.Domain.Entities
     /// <summary>
     /// يمثل حصة فعلية تم توليدها وتاريخها محدد، ترتبط بمجموعة معينة
     /// </summary>
-    public class Session : BaseEntity
+    public class Session : BaseEntity, ITenantOwned
     {
+        public Guid TenantId { get; private set; }
+
         public Guid GroupId { get; private set; }
         public Group Group { get; private set; }
 
+        /// <summary>وقت البداية والنهاية بتوقيت UTC</summary>
         public DateTime StartTime { get; private set; }
         public DateTime EndTime { get; private set; }
 
@@ -28,10 +31,11 @@ namespace TeacherERP.Domain.Entities
 
         private Session() { }
 
-        public static Session Create(Guid groupId, DateTime startTime, DateTime endTime)
+        public static Session Create(Guid tenantId, Guid groupId, DateTime startTime, DateTime endTime)
         {
             return new Session
             {
+                TenantId = tenantId,
                 GroupId = groupId,
                 StartTime = startTime,
                 EndTime = endTime,

@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using TeacherERP.Application.Common;
 using TeacherERP.Domain.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -19,6 +21,7 @@ namespace TeacherERP.Infrastructure.Data
             {
                 var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+                var context = services.GetRequiredService<AppDbContext>();
 
                 // 1. التأكد من إنشاء الأدوار الأساسية
                 string[] roles = { RoleNames.SuperAdmin, RoleNames.Admin, RoleNames.Student };
@@ -45,31 +48,66 @@ namespace TeacherERP.Infrastructure.Data
                 }
 
                 // 3. التحقق هل الـ Super Admin موجود مسبقاً؟
-                var existingAdmin = await userManager.FindByEmailAsync(email);
-                if (existingAdmin == null)
+                var superAdmin = await userManager.FindByEmailAsync(email);
+                if (superAdmin == null)
                 {
                     // إنشاء كيان المستخدم كإداري (وليس كطالب)، والمدرس الرئيسي له صلاحية الأموال
                     var superAdminUser = ApplicationUser.CreateAdmin(fullName, email, phoneNumber, hasFinancialDelegation: true);
                     superAdminUser.EmailConfirmed = true; // تفعيل الحساب تلقائياً للإنتاج
 
                     var createResult = await userManager.CreateAsync(superAdminUser, password);
-                    if (createResult.Succeeded)
-                    {
-                        await userManager.AddToRoleAsync(superAdminUser, RoleNames.SuperAdmin);
-                        logger.LogInformation("Default SuperAdmin created and assigned successfully.");
-                    }
-                    else
+                    if (!createResult.Succeeded)
                     {
                         var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
                         logger.LogError($"Failed to create default SuperAdmin: {errors}");
+                        return;
                     }
+
+                    await userManager.AddToRoleAsync(superAdminUser, RoleNames.SuperAdmin);
+                    logger.LogInformation("Default SuperAdmin created and assigned successfully.");
+                    superAdmin = superAdminUser;
                 }
+
+                // 4. التأكد من وجود سنتر (Tenant) للمدرس الرئيسي
+                await EnsureOwnerTenantAsync(context, superAdmin, adminConfig, logger);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "An error occurred while seeding the production database.");
                 throw;
             }
+        }
+
+        // سنتر المدرس: الاسم والتوقيت من الإعدادات (CenterName وTimeZoneId) أو القيم الافتراضية
+        private static async Task EnsureOwnerTenantAsync(
+            AppDbContext context,
+            ApplicationUser owner,
+            IConfigurationSection adminConfig,
+            ILogger logger)
+        {
+            if (await context.Tenants.AnyAsync(t => t.OwnerId == owner.Id))
+            {
+                return;
+            }
+
+            var centerName = adminConfig["CenterName"] ?? "Main Center";
+            var timeZoneId = adminConfig["TimeZoneId"] ?? "Africa/Cairo";
+
+            if (!string.Equals(timeZoneId, "UTC", StringComparison.OrdinalIgnoreCase) && !UserTime.IsValid(timeZoneId))
+            {
+                logger.LogWarning("Time zone '{TimeZoneId}' is not valid on this machine. Falling back to UTC.", timeZoneId);
+                timeZoneId = "UTC";
+            }
+
+            var tenant = Tenant.Create(centerName, owner.Id, timeZoneId);
+
+            context.Tenants.Add(tenant);
+            context.TenantMembers.Add(TenantMember.Create(tenant.Id, owner.Id, TenantRole.Owner));
+            context.TenantSettings.Add(TenantSettings.Create(tenant.Id));
+
+            await context.SaveChangesAsync();
+
+            logger.LogInformation("Tenant '{CenterName}' created for the default SuperAdmin.", centerName);
         }
     }
 }

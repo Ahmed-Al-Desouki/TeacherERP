@@ -8,8 +8,10 @@ namespace TeacherERP.Domain.Entities
     /// <summary>
     /// يمثل المجموعة الدراسية، وهي الكيان الذي يربط الطلاب بمواعيدهم الثابتة ومساعديهم
     /// </summary>
-    public class Group : BaseEntity
+    public class Group : BaseEntity, ITenantOwned
     {
+        public Guid TenantId { get; private set; }
+
         public string Name { get; private set; }
         public string GradeLevel { get; private set; }
 
@@ -19,6 +21,8 @@ namespace TeacherERP.Domain.Entities
         // --- إعدادات الجدولة التلقائية ---
         /// <summary>الأيام الثابتة لانعقاد المجموعة، مفصولة بفاصلة (مثال: "Monday,Wednesday")</summary>
         public string RecurringScheduleDays { get; private set; }
+
+        /// <summary>أوقات حائط بتوقيت السنتر (Tenant.TimeZoneId)، وتُحوَّل لـ UTC عند توليد الحصص</summary>
         public TimeSpan StartTime { get; private set; }
         public TimeSpan EndTime { get; private set; }
 
@@ -28,10 +32,11 @@ namespace TeacherERP.Domain.Entities
 
         private Group() { }
 
-        public static Group Create(string name, string gradeLevel, string whatsappLink, string days, TimeSpan start, TimeSpan end)
+        public static Group Create(Guid tenantId, string name, string gradeLevel, string whatsappLink, string days, TimeSpan start, TimeSpan end)
         {
             return new Group
             {
+                TenantId = tenantId,
                 Name = name,
                 GradeLevel = gradeLevel,
                 WhatsAppGroupLink = whatsappLink,

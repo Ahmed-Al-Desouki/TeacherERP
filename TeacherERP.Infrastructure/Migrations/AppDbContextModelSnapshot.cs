@@ -275,10 +275,13 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<double>("ScannedLatitude")
+                    b.Property<Guid?>("RecordedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double?>("ScannedLatitude")
                         .HasColumnType("float");
 
-                    b.Property<double>("ScannedLongitude")
+                    b.Property<double?>("ScannedLongitude")
                         .HasColumnType("float");
 
                     b.Property<int>("ScannedVia")
@@ -293,14 +296,22 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<Guid>("StudentId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SessionId");
+                    b.HasIndex("RecordedByUserId");
 
                     b.HasIndex("StudentId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("SessionId", "StudentId")
+                        .IsUnique();
 
                     b.ToTable("AttendanceRecords");
                 });
@@ -332,6 +343,9 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<TimeSpan>("StartTime")
                         .HasColumnType("time");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -340,6 +354,8 @@ namespace TeacherERP.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Groups");
                 });
@@ -429,6 +445,9 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -436,7 +455,86 @@ namespace TeacherERP.Infrastructure.Migrations
 
                     b.HasIndex("GroupId");
 
+                    b.HasIndex("TenantId");
+
                     b.ToTable("Sessions");
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.Tenant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("AutoApproveJoinRequests")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsListedInSearch")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId")
+                        .IsUnique();
+
+                    b.ToTable("Tenants");
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.TenantMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("TenantId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("TenantMembers");
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.TenantSettings", b =>
@@ -445,10 +543,10 @@ namespace TeacherERP.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<double>("CenterLatitude")
+                    b.Property<double?>("CenterLatitude")
                         .HasColumnType("float");
 
-                    b.Property<double>("CenterLongitude")
+                    b.Property<double?>("CenterLongitude")
                         .HasColumnType("float");
 
                     b.Property<DateTime>("CreatedAt")
@@ -463,7 +561,7 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<bool>("RejectMockLocations")
                         .HasColumnType("bit");
 
-                    b.Property<Guid>("SuperAdminId")
+                    b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -471,7 +569,7 @@ namespace TeacherERP.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SuperAdminId")
+                    b.HasIndex("TenantId")
                         .IsUnique();
 
                     b.ToTable("TenantSettings");
@@ -505,6 +603,9 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<Guid>("StudentId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
@@ -518,6 +619,8 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.HasIndex("RelatedSessionId");
 
                     b.HasIndex("StudentId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("Transactions");
                 });
@@ -623,6 +726,11 @@ namespace TeacherERP.Infrastructure.Migrations
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.AttendanceRecord", b =>
                 {
+                    b.HasOne("TeacherERP.Domain.Entities.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("RecordedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("TeacherERP.Domain.Entities.Session", "Session")
                         .WithMany("Attendances")
                         .HasForeignKey("SessionId")
@@ -635,9 +743,24 @@ namespace TeacherERP.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Session");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.Group", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.LoginSession", b =>
@@ -659,14 +782,48 @@ namespace TeacherERP.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Group");
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.Tenant", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.TenantMember", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeacherERP.Domain.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.TenantSettings", b =>
                 {
-                    b.HasOne("TeacherERP.Domain.Entities.ApplicationUser", null)
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
                         .WithOne()
-                        .HasForeignKey("TeacherERP.Domain.Entities.TenantSettings", "SuperAdminId")
+                        .HasForeignKey("TeacherERP.Domain.Entities.TenantSettings", "TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -686,6 +843,12 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.HasOne("TeacherERP.Domain.Entities.ApplicationUser", "Student")
                         .WithMany("Transactions")
                         .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 

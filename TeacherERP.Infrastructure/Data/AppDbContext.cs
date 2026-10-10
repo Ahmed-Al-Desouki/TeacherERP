@@ -25,6 +25,8 @@ namespace TeacherERP.Infrastructure.Data
 
         // تسجيل الجداول في قاعدة البيانات
         public DbSet<LoginSession> LoginSessions { get; set; }
+        public DbSet<Tenant> Tenants { get; set; }
+        public DbSet<TenantMember> TenantMembers { get; set; }
         public DbSet<TenantSettings> TenantSettings { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<Session> Sessions { get; set; }
@@ -74,49 +76,108 @@ namespace TeacherERP.Infrastructure.Data
                 entity.HasIndex(u => u.PhoneNumber).IsUnique().HasFilter("[PhoneNumber] IS NOT NULL");
             });
 
-            // 2. علاقة إعدادات السنتر مع المدرس/SuperAdmin (One-to-One)
+            // 2. السنتر (Tenant): مالكه المدرس (SuperAdmin)، ولكل مدرس سنتر واحد فقط
+            builder.Entity<Tenant>(entity =>
+            {
+                entity.Property(t => t.Name).HasMaxLength(150).IsRequired();
+                entity.Property(t => t.TimeZoneId).HasMaxLength(64).IsRequired();
+                entity.Property(t => t.Status).HasConversion<string>().HasMaxLength(16);
+
+                entity.HasOne<ApplicationUser>()
+                    .WithMany()
+                    .HasForeignKey(t => t.OwnerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(t => t.OwnerId).IsUnique();
+            });
+
+            // 3. عضوية المستخدم في السنتر (الحساب واحد، والعضويات بعدد السناتر)
+            builder.Entity<TenantMember>(entity =>
+            {
+                entity.Property(m => m.Role).HasConversion<string>().HasMaxLength(16);
+
+                entity.HasOne(m => m.Tenant)
+                    .WithMany()
+                    .HasForeignKey(m => m.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(m => m.User)
+                    .WithMany()
+                    .HasForeignKey(m => m.UserId)
+                    .OnDelete(DeleteBehavior.Cascade); // إذا حُذف المستخدم، تُحذف عضوياته
+
+                entity.HasIndex(m => new { m.TenantId, m.UserId }).IsUnique();
+                entity.HasIndex(m => m.UserId);
+            });
+
+            // 4. علاقة إعدادات السنتر بالسنتر (One-to-One)
             builder.Entity<TenantSettings>()
-                .HasOne<ApplicationUser>()
+                .HasOne<Tenant>()
                 .WithOne()
-                .HasForeignKey<TenantSettings>(ts => ts.SuperAdminId)
+                .HasForeignKey<TenantSettings>(ts => ts.TenantId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // 3. علاقة المجموعات مع المساعدين (Many-to-Many)
+            // 5. ارتباط الكيانات التابعة للسنتر به (Restrict لمنع حذف سنتر بيانات تابعة له بالخطأ)
+            builder.Entity<Group>()
+                .HasOne<Tenant>().WithMany().HasForeignKey(g => g.TenantId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Session>()
+                .HasOne<Tenant>().WithMany().HasForeignKey(s => s.TenantId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<AttendanceRecord>()
+                .HasOne<Tenant>().WithMany().HasForeignKey(a => a.TenantId).OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Transaction>()
+                .HasOne<Tenant>().WithMany().HasForeignKey(t => t.TenantId).OnDelete(DeleteBehavior.Restrict);
+
+            // 6. علاقة المجموعات مع المساعدين (Many-to-Many)
             // المساعد يقدر يشرف على كذا مجموعة، والمجموعة يقدر يشرف عليها كذا مساعد
             builder.Entity<Group>()
                 .HasMany(g => g.AssignedAdmins)
                 .WithMany()
                 .UsingEntity(j => j.ToTable("GroupAdmins")); // توليد جدول وسيط تلقائي
 
-            // 4. علاقة المجموعة بالحصص (One-to-Many)
+            // 7. علاقة المجموعة بالحصص (One-to-Many)
             builder.Entity<Group>()
                 .HasMany(g => g.Sessions)
                 .WithOne(s => s.Group)
                 .HasForeignKey(s => s.GroupId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // 5. علاقة الحصة مع سجلات الحضور (One-to-Many)
+            // 8. علاقة الحصة مع سجلات الحضور (One-to-Many)
             builder.Entity<Session>()
                 .HasMany(s => s.Attendances)
                 .WithOne(a => a.Session)
                 .HasForeignKey(a => a.SessionId)
                 .OnDelete(DeleteBehavior.Restrict); // Restrict لمنع تعارضات الحذف في SQL Server
 
-            // 6. علاقة الطالب مع سجلات حضوره (One-to-Many)
+            // 9. علاقة الطالب مع سجلات حضوره (One-to-Many)
             builder.Entity<ApplicationUser>()
                 .HasMany(u => u.Attendances)
                 .WithOne(a => a.Student)
                 .HasForeignKey(a => a.StudentId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // 7. علاقة المعاملات المالية بالطالب (One-to-Many)
+            builder.Entity<AttendanceRecord>(entity =>
+            {
+                // الطالب يُسجَّل في الحصة الواحدة مرة واحدة فقط
+                entity.HasIndex(a => new { a.SessionId, a.StudentId }).IsUnique();
+
+                // من سجّل الحضور (للتوثيق والمساءلة)
+                entity.HasOne<ApplicationUser>()
+                    .WithMany()
+                    .HasForeignKey(a => a.RecordedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // 10. علاقة المعاملات المالية بالطالب (One-to-Many)
             builder.Entity<Transaction>()
                 .HasOne(t => t.Student)
                 .WithMany(u => u.Transactions)
                 .HasForeignKey(t => t.StudentId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // 8. علاقة المعاملات المالية بالمساعد الذي استلم الأموال (One-to-Many)
+            // 11. علاقة المعاملات المالية بالمساعد الذي استلم الأموال (One-to-Many)
             builder.Entity<Transaction>()
                 .HasOne<ApplicationUser>()
                 .WithMany() // بدون Navigation Property عكسية لمنع تضخم الكلاس

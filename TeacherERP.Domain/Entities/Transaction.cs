@@ -7,8 +7,10 @@ namespace TeacherERP.Domain.Entities
     /// <summary>
     /// يوثق كل حركة مالية داخل النظام (دفتر الأستاذ الذكي)
     /// </summary>
-    public class Transaction : BaseEntity
+    public class Transaction : BaseEntity, ITenantOwned
     {
+        public Guid TenantId { get; private set; }
+
         public Guid StudentId { get; private set; }
         public ApplicationUser Student { get; private set; }
 
@@ -27,10 +29,11 @@ namespace TeacherERP.Domain.Entities
 
         private Transaction() { }
 
-        public static Transaction CreatePayment(Guid studentId, Guid adminId, decimal amount, PaymentType type, Guid? sessionId = null, string receiptUrl = null)
+        public static Transaction CreatePayment(Guid tenantId, Guid studentId, Guid adminId, decimal amount, PaymentType type, Guid? sessionId = null, string receiptUrl = null)
         {
             return new Transaction
             {
+                TenantId = tenantId,
                 StudentId = studentId,
                 ProcessedByAdminId = adminId,
                 Amount = amount,

@@ -7,16 +7,17 @@ namespace TeacherERP.Domain.Entities
     /// <summary>
     /// الإعدادات العامة للمركز التعليمي (السنتر)، يتحكم بها المدرس لتعريف سياسات الحضور
     /// </summary>
-    public class TenantSettings : BaseEntity
+    public class TenantSettings : BaseEntity, ITenantOwned
     {
-        public Guid SuperAdminId { get; private set; }
+        public Guid TenantId { get; private set; }
 
         /// <summary>وضع الحضور الافتراضي (كود ثابت للكل، متغير للشاشات، أو من طرف المساعد فقط)</summary>
         public AttendanceMode Mode { get; private set; }
 
         // --- إعدادات الحماية الجغرافية (Geofencing) ---
-        public double CenterLatitude { get; private set; }
-        public double CenterLongitude { get; private set; }
+        // اختيارية: السنتر الجديد لم يضبط موقعه بعد
+        public double? CenterLatitude { get; private set; }
+        public double? CenterLongitude { get; private set; }
 
         /// <summary>النطاق المسموح به لتسجيل الحضور بالأمتار (مثلاً: 50 متر من المركز)</summary>
         public int GeofenceRadiusMeters { get; private set; }
@@ -26,15 +27,16 @@ namespace TeacherERP.Domain.Entities
 
         private TenantSettings() { }
 
-        public static TenantSettings Create(Guid superAdminId, AttendanceMode mode, double latitude, double longitude, int radius)
+        /// <summary>
+        /// إعدادات مبدئية آمنة لسنتر جديد: الحضور من طرف المساعد فقط، حتى يضبط المدرس موقع السنتر.
+        /// </summary>
+        public static TenantSettings Create(Guid tenantId)
         {
             return new TenantSettings
             {
-                SuperAdminId = superAdminId,
-                Mode = mode,
-                CenterLatitude = latitude,
-                CenterLongitude = longitude,
-                GeofenceRadiusMeters = radius,
+                TenantId = tenantId,
+                Mode = AttendanceMode.AdminOnly,
+                GeofenceRadiusMeters = 50,
                 RejectMockLocations = true,
             };
         }
