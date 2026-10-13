@@ -92,9 +92,14 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(AuthPolicies.CompletedProfile, policy =>
         policy.RequireAuthenticatedUser().AddRequirements(new CompletedProfileRequirement()));
+
+    // Policy تحديد السنتر الحالي والتحقق من العضوية
+    options.AddPolicy(AuthPolicies.TenantMember, policy =>
+        policy.RequireAuthenticatedUser().AddRequirements(new TenantRequirement()));
 });
 builder.Services.AddScoped<IAuthorizationHandler, CompletedProfileHandler>();
-builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ProfileAuthorizationResultHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, TenantHandler>();
+builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ApiAuthorizationResultHandler>();
 
 var app = builder.Build();
 
