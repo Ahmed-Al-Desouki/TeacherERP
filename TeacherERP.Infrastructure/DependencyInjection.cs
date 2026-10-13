@@ -60,10 +60,12 @@ namespace TeacherERP.Infrastructure
             services.AddScoped<ICredentialService, CredentialService>();
             services.AddScoped<IExternalLoginService, ExternalLoginService>();
             services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<ITenantRepository, TenantRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ISessionRepository, SessionRepository>();
             services.AddScoped<ISessionValidator, SessionValidator>();
             services.AddScoped<ICurrentUserService, CurrentUserService>();
+            services.AddScoped<ICurrentTenantAccessor, CurrentTenantAccessor>();
             services.AddScoped<IUserTimeZoneAccessor, HttpUserTimeZoneAccessor>();
             services.AddTransient<IEmailService, EmailService>();
             services.AddTransient<IOtpService, OtpService>();
