@@ -51,8 +51,8 @@ namespace TeacherERP.Infrastructure.Data
                 var superAdmin = await userManager.FindByEmailAsync(email);
                 if (superAdmin == null)
                 {
-                    // إنشاء كيان المستخدم كإداري (وليس كطالب)، والمدرس الرئيسي له صلاحية الأموال
-                    var superAdminUser = ApplicationUser.CreateAdmin(fullName, email, phoneNumber, hasFinancialDelegation: true);
+                    // إنشاء كيان المستخدم كإداري (وليس كطالب)، وصلاحيته المالية تأتي من دور Owner في عضوية سنتره
+                    var superAdminUser = ApplicationUser.CreateAdmin(fullName, email, phoneNumber);
                     superAdminUser.EmailConfirmed = true; // تفعيل الحساب تلقائياً للإنتاج
 
                     var createResult = await userManager.CreateAsync(superAdminUser, password);

@@ -181,12 +181,6 @@ namespace TeacherERP.Infrastructure.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("ConsecutiveAbsences")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("CurrentBalance")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<DateOnly?>("DateOfBirth")
                         .HasColumnType("date");
 
@@ -204,9 +198,6 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<string>("Gender")
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
-
-                    b.Property<bool>("HasFinancialDelegation")
-                        .HasColumnType("bit");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -510,10 +501,24 @@ namespace TeacherERP.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("ConsecutiveAbsences")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("CurrentBalance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("HasFinancialDelegation")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");

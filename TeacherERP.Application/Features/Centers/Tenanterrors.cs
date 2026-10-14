@@ -13,7 +13,10 @@ namespace TeacherERP.Application.Features.Centers
         public static readonly Error Forbidden = new("Tenant.Forbidden", "You do not have access to this center.");
         public static readonly Error Suspended = new("Tenant.Suspended", "This center is currently suspended.");
 
-        private static readonly Error[] All = { Required, NoMembership, InvalidHeader, Forbidden, Suspended };
+        // عضو في السنتر لكن دوره لا يسمح بهذا الإجراء
+        public static readonly Error InsufficientRole = new("Tenant.InsufficientRole", "Your role in this center does not allow this action.");
+
+        private static readonly Error[] All = { Required, NoMembership, InvalidHeader, Forbidden, Suspended, InsufficientRole };
 
         public static Error? FromCode(string? code)
             => All.FirstOrDefault(e => string.Equals(e.Code, code, StringComparison.Ordinal));

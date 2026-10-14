@@ -12,6 +12,7 @@ using TeacherERP.Application;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Infrastructure;
 using TeacherERP.Infrastructure.Data;
+using TenantRole = TeacherERP.Domain.Entities.TenantRole;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -96,6 +97,13 @@ builder.Services.AddAuthorization(options =>
     // Policy تحديد السنتر الحالي والتحقق من العضوية
     options.AddPolicy(AuthPolicies.TenantMember, policy =>
         policy.RequireAuthenticatedUser().AddRequirements(new TenantRequirement()));
+
+    // نفس التحقق مع قصر الدور داخل السنتر (الدور من العضوية لا من دور الـ Identity)
+    options.AddPolicy(AuthPolicies.TenantStaff, policy =>
+        policy.RequireAuthenticatedUser().AddRequirements(new TenantRequirement(TenantRole.Owner, TenantRole.Assistant)));
+
+    options.AddPolicy(AuthPolicies.TenantOwner, policy =>
+        policy.RequireAuthenticatedUser().AddRequirements(new TenantRequirement(TenantRole.Owner)));
 });
 builder.Services.AddScoped<IAuthorizationHandler, CompletedProfileHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, TenantHandler>();

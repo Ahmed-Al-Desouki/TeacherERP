@@ -40,7 +40,7 @@ namespace TeacherERP.API.Security
             var httpContext = _httpContextAccessor.HttpContext;
             var cancellationToken = httpContext?.RequestAborted ?? CancellationToken.None;
 
-            var error = await ResolveAsync(userId, httpContext, cancellationToken);
+            var error = await ResolveAsync(userId, requirement, httpContext, cancellationToken);
             if (error is null)
             {
                 context.Succeed(requirement);
@@ -51,8 +51,12 @@ namespace TeacherERP.API.Security
             context.Fail(new AuthorizationFailureReason(this, error.Code));
         }
 
-        // null = نجح تحديد السنتر (وتم ضبطه في الـ Accessor)، وإلا الخطأ المناسب
-        private async Task<Error?> ResolveAsync(Guid userId, HttpContext? httpContext, CancellationToken cancellationToken)
+        // null = نجح تحديد السنتر والتحقق من الدور (وتم ضبط السنتر في الـ Accessor)، وإلا الخطأ المناسب
+        private async Task<Error?> ResolveAsync(
+            Guid userId,
+            TenantRequirement requirement,
+            HttpContext? httpContext,
+            CancellationToken cancellationToken)
         {
             TenantMembershipInfo? membership;
 
@@ -89,12 +93,24 @@ namespace TeacherERP.API.Security
                 membership = memberships[0];
             }
 
+            // المحظور من السنتر يأخذ نفس رد غير العضو (لا نكشف له شيئاً عن السنتر)
+            if (membership.MemberStatus == MembershipStatus.Blacklisted)
+            {
+                return TenantErrors.Forbidden;
+            }
+
             if (membership.TenantStatus != TenantStatus.Active)
             {
                 return TenantErrors.Suspended;
             }
 
-            _currentTenant.Set(new TenantContext(membership.TenantId, membership.Role));
+            // العضو الموقوف (غياب) يعدّي من هنا عمداً، وقواعد الحضور تتحقق من حالته عبر TenantContext
+            if (!requirement.Allows(membership.Role))
+            {
+                return TenantErrors.InsufficientRole;
+            }
+
+            _currentTenant.Set(new TenantContext(membership.TenantId, membership.Role, membership.MemberStatus));
             return null;
         }
     }

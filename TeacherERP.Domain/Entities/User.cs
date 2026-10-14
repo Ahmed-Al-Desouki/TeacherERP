@@ -22,14 +22,11 @@ namespace TeacherERP.Domain.Entities
         public string FullName { get; private set; }
 
         // خصائص خاصة بالطلاب (Student Specific)
-        /// <summary>حالة الطالب الحالية (نشط، موقوف بسبب الغياب، أو في القائمة السوداء)</summary>
+        /// <summary>
+        /// حالة الحساب ككل (تمنع الدخول): لا يغيّرها إلا الإدارة العليا.
+        /// الإيقاف بسبب الغياب والحظر من مدرس معيّن يخصان العضوية (TenantMember.Status) لا الحساب.
+        /// </summary>
         public StudentStatus Status { get; private set; }
-
-        /// <summary>عداد الغياب المتتالي، يستخدم لتطبيق قاعدة الإيقاف التلقائي بعد 4 حصص</summary>
-        public int ConsecutiveAbsences { get; private set; }
-
-        /// <summary>الرصيد المالي للطالب (الموجب يعني رصيد متبقي، والسالب يعني مديونية)</summary>
-        public decimal CurrentBalance { get; private set; }
 
         /// <summary>كود الاستجابة السريعة الثابت الخاص بالطالب (يستخدم في حالة غياب الإنترنت أو الهواتف الذكية)</summary>
         public string StaticQrCode { get; private set; }
@@ -42,11 +39,6 @@ namespace TeacherERP.Domain.Entities
 
         /// <summary>بيانات ولي الأمر (إلزامية لاكتمال البروفايل)</summary>
         public GuardianInfo? Guardian { get; private set; }
-
-        // خصائص خاصة بالمساعدين (Admin Specific)
-
-        /// <summary>يحدد ما إذا كان المساعد يمتلك صلاحية استلام الأموال والاطلاع على المديونيات</summary>
-        public bool HasFinancialDelegation { get; private set; }
 
         // --- العلاقات (Navigation Properties) ---
         public ICollection<AttendanceRecord> Attendances { get; private set; }
@@ -99,15 +91,14 @@ namespace TeacherERP.Domain.Entities
                 Email = email,
                 UserName = email,
                 Status = StudentStatus.Active,
-                CurrentBalance = 0,
                 StaticQrCode = Guid.NewGuid().ToString() // يمكن استبدالها بخوارزمية توليد أكواد أقصر
             };
         }
 
         /// <summary>
-        /// مصنع (Factory Method) لإنشاء مساعد (Admin) جديد وتحديد صلاحياته المالية
+        /// مصنع (Factory Method) لإنشاء مساعد أو مدرس (حساب إداري). صلاحياته داخل كل سنتر تخص عضويته (TenantMember).
         /// </summary>
-        public static ApplicationUser CreateAdmin(string fullName, string email, string phoneNumber, bool hasFinancialDelegation)
+        public static ApplicationUser CreateAdmin(string fullName, string email, string phoneNumber)
         {
             return new ApplicationUser
             {
@@ -115,8 +106,7 @@ namespace TeacherERP.Domain.Entities
                 FullName = fullName,
                 Email = email,
                 UserName = email,
-                PhoneNumber = phoneNumber,
-                HasFinancialDelegation = hasFinancialDelegation
+                PhoneNumber = phoneNumber
             };
         }
 
@@ -148,25 +138,13 @@ namespace TeacherERP.Domain.Entities
             return Result<bool>.Success(true);
         }
 
-        /// <summary>إضافة أموال لرصيد الطالب</summary>
-        public void AddBalance(decimal amount) => CurrentBalance += amount;
-
-        /// <summary>خصم أموال من رصيد الطالب (يسجل كمديونية إذا تخطى الرصيد المتاح)</summary>
-        public void DeductBalance(decimal amount) => CurrentBalance -= amount;
-
-        /// <summary>زيادة عداد الغياب المتتالي للطالب بخطوة واحدة</summary>
-        public void IncrementAbsence() => ConsecutiveAbsences++;
-
-        /// <summary>تصفير عداد الغياب بمجرد حضور الطالب لحصة واحدة</summary>
-        public void ResetAbsence() => ConsecutiveAbsences = 0;
-
-        /// <summary>إيقاف حساب الطالب (يحدث غالباً بشكل آلي عند تخطي الحد الأقصى للغياب)</summary>
+        /// <summary>إيقاف الحساب ككل (قرار الإدارة العليا، ويمنع الدخول)</summary>
         public void Suspend() => Status = StudentStatus.Suspended;
 
-        /// <summary>إدراج الطالب في القائمة السوداء (منع نهائي من دخول النظام)</summary>
+        /// <summary>إدراج الحساب في القائمة السوداء (منع نهائي من دخول النظام)</summary>
         public void Blacklist() => Status = StudentStatus.Blacklisted;
 
-        /// <summary>إعادة تفعيل حساب الطالب</summary>
+        /// <summary>إعادة تفعيل الحساب</summary>
         public void Activate() => Status = StudentStatus.Active;
     }
 

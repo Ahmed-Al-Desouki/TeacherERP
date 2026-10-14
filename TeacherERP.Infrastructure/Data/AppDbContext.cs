@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TeacherERP.Domain.Entities;
 using System;
+using System.Reflection;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using TeacherERP.Application.Interfaces;
 
 namespace TeacherERP.Infrastructure.Data
 {
@@ -19,9 +21,17 @@ namespace TeacherERP.Infrastructure.Data
             v => v,
             v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v);
 
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        private readonly ICurrentTenantAccessor? _currentTenant;
+
+        // اختياري عمداً: أدوات الـ Migrations (AppDbContextFactory) تنشئ الـ Context بدونه.
+        // وبدون سنتر محدد يكون الفلتر العام آمناً (يرجّع نتيجة فاضية).
+        public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentTenantAccessor? currentTenant = null) : base(options)
         {
+            _currentTenant = currentTenant;
         }
+
+        // السنتر الحالي للفلتر العام (يُقرأ لكل Query، وGuid.Empty يعني لا سنتر فلا نتائج)
+        private Guid CurrentTenantId => _currentTenant?.TenantId ?? Guid.Empty;
 
         // تسجيل الجداول في قاعدة البيانات
         public DbSet<LoginSession> LoginSessions { get; set; }
@@ -95,6 +105,8 @@ namespace TeacherERP.Infrastructure.Data
             builder.Entity<TenantMember>(entity =>
             {
                 entity.Property(m => m.Role).HasConversion<string>().HasMaxLength(16);
+                entity.Property(m => m.Status).HasConversion<string>().HasMaxLength(16);
+                entity.Property(m => m.CurrentBalance).HasColumnType("decimal(18,2)");
 
                 entity.HasOne(m => m.Tenant)
                     .WithMany()
@@ -185,10 +197,6 @@ namespace TeacherERP.Infrastructure.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             // ضبط نوع البيانات للأموال لتكون دقيقة ولا تسبب مشاكل (Precision and Scale)
-            builder.Entity<ApplicationUser>()
-                .Property(u => u.CurrentBalance)
-                .HasColumnType("decimal(18,2)");
-
             builder.Entity<Transaction>()
                 .Property(t => t.Amount)
                 .HasColumnType("decimal(18,2)");
@@ -199,8 +207,67 @@ namespace TeacherERP.Infrastructure.Data
                 .HasForeignKey(t => t.RelatedSessionId)
                 .OnDelete(DeleteBehavior.SetNull); // إذا حذفت الجلسة، يبقى السجل المالي
 
+            // فلتر عزل السناتر على كل كيان يطبّق ITenantOwned (تلقائي، فلا يُنسى كيان جديد)
+            ApplyTenantQueryFilters(builder);
+
             // آخر خطوة: تطبيق قاعدة UTC على كل خصائص DateTime في كل الكيانات
             ApplyUtcDateTimeConverters(builder);
+        }
+
+        private static readonly MethodInfo SetTenantFilterMethod = typeof(AppDbContext)
+            .GetMethod(nameof(SetTenantFilter), BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        private void ApplyTenantQueryFilters(ModelBuilder builder)
+        {
+            var tenantOwnedTypes = builder.Model.GetEntityTypes()
+                .Select(entityType => entityType.ClrType)
+                .Where(clrType => typeof(ITenantOwned).IsAssignableFrom(clrType))
+                .ToList();
+
+            foreach (var clrType in tenantOwnedTypes)
+            {
+                SetTenantFilterMethod.MakeGenericMethod(clrType).Invoke(this, new object[] { builder });
+            }
+        }
+
+        private void SetTenantFilter<TEntity>(ModelBuilder builder) where TEntity : class
+        {
+            builder.Entity<TEntity>()
+                .HasQueryFilter(e => EF.Property<Guid>(e, nameof(ITenantOwned.TenantId)) == CurrentTenantId);
+        }
+
+        // شبكة أمان للكتابة: لو في سنتر محدد، يُمنع حفظ أي كيان تابع لسنتر آخر
+        // (بدون سنتر محدد، مثل الـ Seeder، لا يتدخل لأن الكود هو من يحدد TenantId صراحةً)
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            EnsureTenantIsolation();
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+
+        public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            EnsureTenantIsolation();
+            return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
+        private void EnsureTenantIsolation()
+        {
+            var currentTenantId = CurrentTenantId;
+            if (currentTenantId == Guid.Empty)
+            {
+                return;
+            }
+
+            var crossTenantEntry = ChangeTracker.Entries<ITenantOwned>()
+                .FirstOrDefault(entry =>
+                    entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted
+                    && entry.Entity.TenantId != currentTenantId);
+
+            if (crossTenantEntry is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Cross-tenant write blocked for {crossTenantEntry.Entity.GetType().Name}.");
+            }
         }
 
         private static void ApplyUtcDateTimeConverters(ModelBuilder builder)

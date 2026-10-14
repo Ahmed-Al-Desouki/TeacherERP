@@ -2,8 +2,8 @@
 
 namespace TeacherERP.Application.Interfaces
 {
-    // السنتر الحالي للطلب (أو الـ Job) وصفة المستخدم فيه
-    public record TenantContext(Guid TenantId, TenantRole Role);
+    // السنتر الحالي للطلب (أو الـ Job) وصفة المستخدم فيه وحالة عضويته (لتتحقق منها قواعد الحضور وغيرها)
+    public record TenantContext(Guid TenantId, TenantRole Role, MembershipStatus MemberStatus);
 
     // حاوية لكل Scope، بدون أي اعتماد على الداتابيز (لتفادي Circular Dependency مع AppDbContext).
     // من يحدد السنتر: الـ Policy في الـ API للطلبات، والـ Job صراحةً في الخلفية.
