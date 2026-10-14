@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Shared;
 

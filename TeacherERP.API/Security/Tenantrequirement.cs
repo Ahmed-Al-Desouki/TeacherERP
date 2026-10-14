@@ -6,7 +6,7 @@ namespace TeacherERP.API.Security
     // يحدد السنتر الحالي للطلب ويتأكد أن المستخدم عضو فيه، وبدور مسموح (بدون أدوار = أي دور)
     public class TenantRequirement : IAuthorizationRequirement
     {
-        public const string HeaderName = "X-Center-Id";
+        public const string HeaderName = "X-Teacher-Id";
 
         public IReadOnlyCollection<TenantRole> AllowedRoles { get; }
 

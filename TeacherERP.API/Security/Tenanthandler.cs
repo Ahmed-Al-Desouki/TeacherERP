@@ -1,6 +1,6 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
-using TeacherERP.Application.Features.Centers;
+﻿using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
+using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;

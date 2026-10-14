@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
-using TeacherERP.Application.Features.Centers;
+using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.API.Security
