@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TeacherERP.API.Security;
+using TeacherERP.Application.Features.Tenants.GetCurrentTenant;
+using TeacherERP.Application.Features.Tenants.GetMyTenants;
 
 namespace TeacherERP.API.Controllers
 {
