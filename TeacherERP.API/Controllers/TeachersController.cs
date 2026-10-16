@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using TeacherERP.API.Security;
 using TeacherERP.Application.Features.Tenants.GetCurrentTenant;
 using TeacherERP.Application.Features.Tenants.GetMyTenants;
+using TeacherERP.Application.Features.Tenants.UpdateTenantProfile;
 
 namespace TeacherERP.API.Controllers
 {
@@ -33,6 +34,15 @@ namespace TeacherERP.API.Controllers
         {
             var result = await _mediator.Send(new GetCurrentTenantQuery(), cancellationToken);
             return ToResponse(result);
+        }
+
+        // اسم المدرس ومادته (للمدرس صاحب المساحة فقط)
+        [HttpPut("current/profile")]
+        [Authorize(Policy = AuthPolicies.TenantOwner)]
+        public async Task<IActionResult> UpdateCurrentProfile([FromBody] UpdateTenantProfileCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return ToResponse(result, new { Message = "The teacher profile was updated." });
         }
     }
 }

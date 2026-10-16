@@ -3,17 +3,21 @@
 namespace TeacherERP.Domain.Entities
 {
     /// <summary>
-    /// السنتر (نشاط المدرس): الوحدة المعزولة في النظام. كل مدرس (SuperAdmin) له Tenant واحد
-    /// بطلابه ومجموعاته وأمواله، لا يراها أي مدرس آخر.
+    /// مساحة المدرس: الوحدة المعزولة في النظام. كل مدرس (SuperAdmin) له Tenant واحد
+    /// بطلابه ومجموعاته وأمواله، لا يراها أي مدرس آخر حتى لو شاركه نفس السنتر.
     /// </summary>
     public class Tenant : BaseEntity
     {
+        /// <summary>اسم المدرس الظاهر للطلاب</summary>
         public string Name { get; private set; }
 
-        /// <summary>المدرس (SuperAdmin) صاحب السنتر</summary>
+        /// <summary>المدرس (SuperAdmin) صاحب المساحة</summary>
         public Guid OwnerId { get; private set; }
 
-        /// <summary>المنطقة الزمنية للسنتر (IANA مثل Africa/Cairo): مواعيد المجموعات أوقات حائط بتوقيته</summary>
+        /// <summary>مادة المدرس (مدرس واحد = مادة واحدة)، وتظهر في البحث. فارغة لحين ضبطها</summary>
+        public string? Subject { get; private set; }
+
+        /// <summary>المنطقة الزمنية (IANA مثل Africa/Cairo): مواعيد المجموعات أوقات حائط بتوقيته</summary>
         public string TimeZoneId { get; private set; }
 
         public TenantStatus Status { get; private set; }
@@ -37,6 +41,14 @@ namespace TeacherERP.Domain.Entities
                 IsListedInSearch = false,
                 AutoApproveJoinRequests = false
             };
+        }
+
+        /// <summary>استبدال كامل لاسم المدرس ومادته</summary>
+        public void UpdateProfile(string name, string subject)
+        {
+            Name = name.Trim();
+            Subject = subject.Trim();
+            MarkAsUpdated();
         }
     }
 

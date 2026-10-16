@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TeacherERP.Application.Interfaces;
+using TeacherERP.Domain.Entities;
 using TeacherERP.Infrastructure.Data;
 
 namespace TeacherERP.Infrastructure.Repositories
@@ -21,8 +22,13 @@ namespace TeacherERP.Infrastructure.Repositories
                 .IgnoreQueryFilters()
                 .AsNoTracking()
                 .Where(m => m.UserId == userId && m.TenantId == tenantId)
-                .Select(m => new TenantMembershipInfo(m.TenantId, m.Tenant.Name, m.Role, m.Status, m.Tenant.Status))
+                .Select(m => new TenantMembershipInfo(m.TenantId, m.Tenant.Name, m.Role, m.Status, m.Tenant.Status, m.Tenant.Subject))
                 .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public Task<Tenant?> GetByIdAsync(Guid tenantId, CancellationToken cancellationToken)
+        {
+            return _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
         }
 
         public Task<List<TenantMembershipInfo>> GetMembershipsAsync(Guid userId, CancellationToken cancellationToken)
@@ -33,7 +39,7 @@ namespace TeacherERP.Infrastructure.Repositories
                 .Where(m => m.UserId == userId)
                 .OrderBy(m => m.Tenant.Name)
                 .ThenBy(m => m.TenantId)
-                .Select(m => new TenantMembershipInfo(m.TenantId, m.Tenant.Name, m.Role, m.Status, m.Tenant.Status))
+                .Select(m => new TenantMembershipInfo(m.TenantId, m.Tenant.Name, m.Role, m.Status, m.Tenant.Status, m.Tenant.Subject))
                 .ToListAsync(cancellationToken);
         }
     }

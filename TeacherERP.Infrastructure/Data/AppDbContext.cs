@@ -37,6 +37,8 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<LoginSession> LoginSessions { get; set; }
         public DbSet<Tenant> Tenants { get; set; }
         public DbSet<TenantMember> TenantMembers { get; set; }
+        public DbSet<Center> Centers { get; set; }
+        public DbSet<CenterTeacher> CenterTeachers { get; set; }
         public DbSet<TenantSettings> TenantSettings { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<Session> Sessions { get; set; }
@@ -90,6 +92,7 @@ namespace TeacherERP.Infrastructure.Data
             builder.Entity<Tenant>(entity =>
             {
                 entity.Property(t => t.Name).HasMaxLength(150).IsRequired();
+                entity.Property(t => t.Subject).HasMaxLength(100);
                 entity.Property(t => t.TimeZoneId).HasMaxLength(64).IsRequired();
                 entity.Property(t => t.Status).HasConversion<string>().HasMaxLength(16);
 
@@ -99,6 +102,40 @@ namespace TeacherERP.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasIndex(t => t.OwnerId).IsUnique();
+            });
+
+            // 2.1 السنتر (المكان): صاحبه مدرس، ويضم مدرسين عبر CenterTeacher (غير معزول بالـ Tenant عمداً)
+            builder.Entity<Center>(entity =>
+            {
+                entity.Property(c => c.Name).HasMaxLength(150).IsRequired();
+                entity.Property(c => c.Address).HasMaxLength(300);
+
+                entity.HasOne<ApplicationUser>()
+                    .WithMany()
+                    .HasForeignKey(c => c.OwnerUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(c => c.OwnerUserId);
+            });
+
+            // 2.2 مدرس في سنتر: المدرس الواحد مرة واحدة في السنتر الواحد
+            builder.Entity<CenterTeacher>(entity =>
+            {
+                entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+                entity.Property(x => x.Origin).HasConversion<string>().HasMaxLength(16);
+
+                entity.HasOne(x => x.Center)
+                    .WithMany()
+                    .HasForeignKey(x => x.CenterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne<Tenant>()
+                    .WithMany()
+                    .HasForeignKey(x => x.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(x => new { x.CenterId, x.TenantId }).IsUnique();
+                entity.HasIndex(x => x.TenantId);
             });
 
             // 3. عضوية المستخدم في السنتر (الحساب واحد، والعضويات بعدد السناتر)

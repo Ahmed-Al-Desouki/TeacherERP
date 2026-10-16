@@ -61,6 +61,7 @@ namespace TeacherERP.Infrastructure
             services.AddScoped<IExternalLoginService, ExternalLoginService>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<ITenantRepository, TenantRepository>();
+            services.AddScoped<ICenterRepository, CenterRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ISessionRepository, SessionRepository>();
             services.AddScoped<ISessionValidator, SessionValidator>();

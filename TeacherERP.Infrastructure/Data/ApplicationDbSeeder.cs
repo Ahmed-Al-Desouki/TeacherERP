@@ -99,15 +99,19 @@ namespace TeacherERP.Infrastructure.Data
                 timeZoneId = "UTC";
             }
 
-            var tenant = Tenant.Create(centerName, owner.Id, timeZoneId);
+            // مساحة المدرس باسمه، والسنتر المكاني باسم الإعدادات، ويربطهما CenterTeacher (المدرس مؤسس السنتر)
+            var tenant = Tenant.Create(owner.FullName, owner.Id, timeZoneId);
+            var center = Center.Create(centerName, owner.Id);
 
             context.Tenants.Add(tenant);
+            context.Centers.Add(center);
+            context.CenterTeachers.Add(CenterTeacher.CreateFounder(center.Id, tenant.Id));
             context.TenantMembers.Add(TenantMember.Create(tenant.Id, owner.Id, TenantRole.Owner));
             context.TenantSettings.Add(TenantSettings.Create(tenant.Id));
 
             await context.SaveChangesAsync();
 
-            logger.LogInformation("Tenant '{CenterName}' created for the default SuperAdmin.", centerName);
+            logger.LogInformation("Center '{CenterName}' and the teacher space were created for the default SuperAdmin.", centerName);
         }
     }
 }
