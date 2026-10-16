@@ -11,18 +11,7 @@ namespace TeacherERP.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "CenterLatitude",
-                table: "TenantSettings");
-
-            migrationBuilder.DropColumn(
-                name: "CenterLongitude",
-                table: "TenantSettings");
-
-            migrationBuilder.DropColumn(
-                name: "GeofenceRadiusMeters",
-                table: "TenantSettings");
-
+            // 1. الهيكل الجديد أولاً (مادة المدرس والسناتر ومدرسو السناتر)
             migrationBuilder.AddColumn<string>(
                 name: "Subject",
                 table: "Tenants",
@@ -99,21 +88,47 @@ namespace TeacherERP.Infrastructure.Migrations
                 name: "IX_CenterTeachers_TenantId",
                 table: "CenterTeachers",
                 column: "TenantId");
+
+            // 2. نقل البيانات الموجودة: لكل مدرس سنتر بنفس اسم مساحته القديم وموقعه الجغرافي (المدرس مؤسسه)،
+            // ثم يصبح اسم المساحة هو اسم المدرس الظاهر (كامل الاسم من حسابه)
+            migrationBuilder.Sql(@"
+DECLARE @Map TABLE (TenantId uniqueidentifier NOT NULL, CenterId uniqueidentifier NOT NULL);
+
+INSERT INTO @Map (TenantId, CenterId)
+SELECT t.Id, NEWID() FROM Tenants t;
+
+INSERT INTO Centers (Id, Name, Address, OwnerUserId, Latitude, Longitude, GeofenceRadiusMeters, CreatedAt, UpdatedAt)
+SELECT m.CenterId, t.Name, NULL, t.OwnerId, s.CenterLatitude, s.CenterLongitude, ISNULL(s.GeofenceRadiusMeters, 50), SYSUTCDATETIME(), NULL
+FROM @Map m
+INNER JOIN Tenants t ON t.Id = m.TenantId
+LEFT JOIN TenantSettings s ON s.TenantId = t.Id;
+
+INSERT INTO CenterTeachers (Id, CenterId, TenantId, Status, Origin, CreatedAt, UpdatedAt)
+SELECT NEWID(), m.CenterId, m.TenantId, 'Active', 'Founder', SYSUTCDATETIME(), NULL
+FROM @Map m;
+
+UPDATE t
+SET t.Name = LEFT(u.FullName, 150)
+FROM Tenants t
+INNER JOIN AspNetUsers u ON u.Id = t.OwnerId;");
+
+            // 3. بعد النسخ فقط نحذف أعمدة الموقع القديمة من إعدادات المدرس
+            migrationBuilder.DropColumn(
+                name: "CenterLatitude",
+                table: "TenantSettings");
+
+            migrationBuilder.DropColumn(
+                name: "CenterLongitude",
+                table: "TenantSettings");
+
+            migrationBuilder.DropColumn(
+                name: "GeofenceRadiusMeters",
+                table: "TenantSettings");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "CenterTeachers");
-
-            migrationBuilder.DropTable(
-                name: "Centers");
-
-            migrationBuilder.DropColumn(
-                name: "Subject",
-                table: "Tenants");
-
             migrationBuilder.AddColumn<double>(
                 name: "CenterLatitude",
                 table: "TenantSettings",
@@ -132,6 +147,40 @@ namespace TeacherERP.Infrastructure.Migrations
                 type: "int",
                 nullable: false,
                 defaultValue: 0);
+
+            // رجوع بأفضل جهد: موقع أول سنتر نشط للمدرس يعود لإعداداته، واسم سنتره يعود اسماً لمساحته
+            migrationBuilder.Sql(@"
+UPDATE s
+SET s.CenterLatitude = c.Latitude,
+    s.CenterLongitude = c.Longitude,
+    s.GeofenceRadiusMeters = c.GeofenceRadiusMeters
+FROM TenantSettings s
+CROSS APPLY (
+    SELECT TOP 1 ce.Latitude, ce.Longitude, ce.GeofenceRadiusMeters
+    FROM CenterTeachers ct
+    INNER JOIN Centers ce ON ce.Id = ct.CenterId
+    WHERE ct.TenantId = s.TenantId AND ct.Status = 'Active'
+    ORDER BY ct.CreatedAt) c;
+
+UPDATE t
+SET t.Name = c.Name
+FROM Tenants t
+CROSS APPLY (
+    SELECT TOP 1 ce.Name
+    FROM CenterTeachers ct
+    INNER JOIN Centers ce ON ce.Id = ct.CenterId
+    WHERE ct.TenantId = t.Id AND ct.Status = 'Active'
+    ORDER BY ct.CreatedAt) c;");
+
+            migrationBuilder.DropTable(
+                name: "CenterTeachers");
+
+            migrationBuilder.DropTable(
+                name: "Centers");
+
+            migrationBuilder.DropColumn(
+                name: "Subject",
+                table: "Tenants");
         }
     }
 }

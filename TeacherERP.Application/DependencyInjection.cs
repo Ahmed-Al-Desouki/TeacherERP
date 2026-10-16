@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using TeacherERP.Application.Behaviors;
 using TeacherERP.Application.Features.Profile;
 using TeacherERP.Application.Interfaces;
+using TeacherERP.Application.Scheduling;
 using TeacherERP.Application.Sessions;
 
 namespace TeacherERP.Application
@@ -29,6 +30,8 @@ namespace TeacherERP.Application
             services.AddScoped<ISessionManager, SessionManager>();
             services.AddScoped<ISessionCleanupJob, SessionCleanupJob>();
             services.AddScoped<IProfileCompletionChecker, ProfileCompletionChecker>();
+            services.AddScoped<ISessionGenerator, SessionGenerator>();
+            services.AddScoped<ISessionGenerationJob, SessionGenerationJob>();
 
             return services;
         }

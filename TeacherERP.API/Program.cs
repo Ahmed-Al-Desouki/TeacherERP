@@ -122,6 +122,10 @@ using (var scope = app.Services.CreateScope())
 app.Services.GetRequiredService<IRecurringJobManager>()
     .AddOrUpdate<ISessionCleanupJob>("cleanup-ended-sessions", job => job.RunAsync(), Cron.Daily(3));
 
+// مهمة دورية يومياً (2 صباحاً UTC) لتوليد حصص الأسابيع القادمة لكل المدرسين من قوالب جداولهم
+app.Services.GetRequiredService<IRecurringJobManager>()
+    .AddOrUpdate<ISessionGenerationJob>("generate-sessions", job => job.RunAsync(), Cron.Daily(2));
+
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
 

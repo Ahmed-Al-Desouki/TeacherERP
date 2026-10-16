@@ -41,6 +41,7 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<CenterTeacher> CenterTeachers { get; set; }
         public DbSet<TenantSettings> TenantSettings { get; set; }
         public DbSet<Group> Groups { get; set; }
+        public DbSet<GroupScheduleSlot> GroupScheduleSlots { get; set; }
         public DbSet<Session> Sessions { get; set; }
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
@@ -178,6 +179,55 @@ namespace TeacherERP.Infrastructure.Data
 
             builder.Entity<Transaction>()
                 .HasOne<Tenant>().WithMany().HasForeignKey(t => t.TenantId).OnDelete(DeleteBehavior.Restrict);
+
+            // 5.1 المجموعة: تنعقد في سنتر، واسمها فريد داخل المدرس الواحد
+            builder.Entity<Group>(entity =>
+            {
+                entity.Property(g => g.Name).HasMaxLength(150).IsRequired();
+                entity.Property(g => g.GradeLevel).HasMaxLength(50).IsRequired();
+                entity.Property(g => g.Room).HasMaxLength(50);
+                entity.Property(g => g.WhatsAppGroupLink).HasMaxLength(500);
+
+                entity.HasOne<Center>()
+                    .WithMany()
+                    .HasForeignKey(g => g.CenterId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(g => new { g.TenantId, g.Name }).IsUnique();
+                entity.HasIndex(g => g.CenterId);
+            });
+
+            // 5.2 قالب الجدول الأسبوعي: الحصة الواحدة (يوم وبداية) لا تتكرر داخل المجموعة
+            builder.Entity<GroupScheduleSlot>(entity =>
+            {
+                entity.Property(s => s.Day).HasConversion<string>().HasMaxLength(16);
+
+                entity.HasOne(s => s.Group)
+                    .WithMany(g => g.Slots)
+                    .HasForeignKey(s => s.GroupId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne<Tenant>()
+                    .WithMany()
+                    .HasForeignKey(s => s.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(s => new { s.GroupId, s.Day, s.StartTime }).IsUnique();
+                entity.HasIndex(s => s.TenantId);
+            });
+
+            // 5.3 الحصة الفعلية: مرتبطة بحصة القالب (Restrict لتفادي تعارض مسارات الحذف)،
+            // ولا تتكرر لنفس المجموعة في نفس اللحظة (يضمن أن التوليد المتكرر آمن)
+            builder.Entity<Session>(entity =>
+            {
+                entity.HasOne<GroupScheduleSlot>()
+                    .WithMany()
+                    .HasForeignKey(s => s.SlotId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(s => new { s.GroupId, s.StartTime }).IsUnique();
+                entity.HasIndex(s => new { s.TenantId, s.StartTime });
+            });
 
             // 6. علاقة المجموعات مع المساعدين (Many-to-Many)
             // المساعد يقدر يشرف على كذا مجموعة، والمجموعة يقدر يشرف عليها كذا مساعد

@@ -28,6 +28,15 @@ namespace TeacherERP.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public Task<bool> IsActiveTeacherAtAsync(Guid centerId, Guid tenantId, CancellationToken cancellationToken)
+        {
+            return _context.CenterTeachers.AnyAsync(
+                link => link.CenterId == centerId
+                        && link.TenantId == tenantId
+                        && link.Status == CenterTeacherStatus.Active,
+                cancellationToken);
+        }
+
         public Task<Center?> GetByIdAsync(Guid centerId, CancellationToken cancellationToken)
         {
             return _context.Centers.FirstOrDefaultAsync(center => center.Id == centerId, cancellationToken);

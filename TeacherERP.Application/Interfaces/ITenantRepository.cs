@@ -13,6 +13,9 @@ namespace TeacherERP.Application.Interfaces
         // مساحة المدرس متتبَّعة للتعديل. الحفظ يتم عبر IUnitOfWork
         Task<Tenant?> GetByIdAsync(Guid tenantId, CancellationToken cancellationToken);
 
+        // مساحات المدرسين النشطة (للمهام الدورية، وتعمل بلا سنتر محدد)
+        Task<List<Guid>> GetActiveTenantIdsAsync(CancellationToken cancellationToken);
+
         // كل عضويات المستخدم (للعرض أو التحديد التلقائي لو عضوية واحدة)
         Task<List<TenantMembershipInfo>> GetMembershipsAsync(Guid userId, CancellationToken cancellationToken);
     }

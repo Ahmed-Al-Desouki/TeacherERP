@@ -31,6 +31,15 @@ namespace TeacherERP.Infrastructure.Repositories
             return _context.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
         }
 
+        public Task<List<Guid>> GetActiveTenantIdsAsync(CancellationToken cancellationToken)
+        {
+            return _context.Tenants
+                .AsNoTracking()
+                .Where(t => t.Status == TenantStatus.Active)
+                .Select(t => t.Id)
+                .ToListAsync(cancellationToken);
+        }
+
         public Task<List<TenantMembershipInfo>> GetMembershipsAsync(Guid userId, CancellationToken cancellationToken)
         {
             return _context.TenantMembers
