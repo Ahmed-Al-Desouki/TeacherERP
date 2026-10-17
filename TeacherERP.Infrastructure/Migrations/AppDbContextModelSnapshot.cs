@@ -541,6 +541,9 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<string>("BoardImageUrl")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("CancelReason")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -554,6 +557,9 @@ namespace TeacherERP.Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsCancelled")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsModified")
                         .HasColumnType("bit");
 
                     b.Property<Guid?>("SlotId")

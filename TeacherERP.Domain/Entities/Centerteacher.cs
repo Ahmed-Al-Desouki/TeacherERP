@@ -30,6 +30,18 @@ namespace TeacherERP.Domain.Entities
             };
         }
 
+        /// <summary>مدرس نشط في السنتر بدعوة أو بطلب تمت الموافقة عليه (يُستخدم عند قبول الدعوة أو الطلب، وفي بيانات الاختبار)</summary>
+        public static CenterTeacher CreateActive(Guid centerId, Guid tenantId, CenterTeacherOrigin origin)
+        {
+            return new CenterTeacher
+            {
+                CenterId = centerId,
+                TenantId = tenantId,
+                Status = CenterTeacherStatus.Active,
+                Origin = origin
+            };
+        }
+
         public void Activate()
         {
             Status = CenterTeacherStatus.Active;

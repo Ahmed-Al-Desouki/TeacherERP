@@ -116,6 +116,12 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     var configuration = services.GetRequiredService<IConfiguration>();
     await ProductionDbSeeder.SeedAsync(services, configuration);
+
+    // بيانات اختبار (مدرس ومساعد وطلاب ومجموعات) في بيئة التطوير فقط وبتفعيل صريح من الإعدادات
+    if (app.Environment.IsDevelopment() && configuration.GetValue<bool>("TestData:Enabled"))
+    {
+        await TestDataSeeder.SeedAsync(services, configuration);
+    }
 }
 
 // مهمة دورية يومياً (3 صباحاً UTC) لحذف الجلسات المنتهية منذ أكثر من 30 يوم
