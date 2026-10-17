@@ -25,6 +25,10 @@
             }
         }
 
+        // أي وقت بدون Kind يُعامل كـ UTC (كل النظام UTC)
+        public static DateTime NormalizeUtc(DateTime value)
+            => value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : DateTime.SpecifyKind(value, DateTimeKind.Utc);
+
         public static DateOnly LocalDateOf(DateTime utc, TimeZoneInfo zone)
             => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone));
 

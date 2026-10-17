@@ -23,6 +23,14 @@ namespace TeacherERP.Domain.Entities
         /// <summary>حالة توضح إذا تم إلغاء الحصة (لطرد ومنع حضور الطلاب)</summary>
         public bool IsCancelled { get; private set; }
 
+        /// <summary>سبب الإلغاء (يظهر للطلاب في رسالة الاعتذار)</summary>
+        public string? CancelReason { get; private set; }
+
+        /// <summary>
+        /// عُدّلت يدوياً (تأجيل أو إلغاء أو إضافة). التعديل الجماعي لقالب الجدول لا يمسّ الحصة المعدّلة أبداً.
+        /// </summary>
+        public bool IsModified { get; private set; }
+
         /// <summary>رابط صورة السبورة الخاصة بهذه الحصة (اختياري)</summary>
         public string? BoardImageUrl { get; private set; }
 
@@ -46,9 +54,36 @@ namespace TeacherERP.Domain.Entities
             };
         }
 
-        public void Cancel()
+        /// <summary>حصة إضافية (خارج القالب) يضيفها المدرس يدوياً</summary>
+        public static Session CreateExtra(Guid tenantId, Guid groupId, DateTime startTime, DateTime endTime)
+        {
+            var session = Create(tenantId, groupId, startTime, endTime);
+            session.IsModified = true;
+            return session;
+        }
+
+        /// <summary>تأجيل أو تقديم الحصة (الأوقات UTC)</summary>
+        public void Reschedule(DateTime startTime, DateTime endTime)
+        {
+            StartTime = startTime;
+            EndTime = endTime;
+            IsModified = true;
+            MarkAsUpdated();
+        }
+
+        public void Cancel(string? reason = null)
         {
             IsCancelled = true;
+            CancelReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+            IsModified = true;
+            MarkAsUpdated();
+        }
+
+        /// <summary>التراجع عن الإلغاء (تبقى الحصة معدّلة يدوياً)</summary>
+        public void Restore()
+        {
+            IsCancelled = false;
+            CancelReason = null;
             MarkAsUpdated();
         }
 

@@ -391,23 +391,71 @@ namespace TeacherERP.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int?>("Capacity")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<TimeSpan>("EndTime")
-                        .HasColumnType("time");
-
                     b.Property<string>("GradeLevel")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
-                    b.Property<string>("RecurringScheduleDays")
+                    b.Property<string>("Room")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("WhatsAppGroupLink")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CenterId");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("Groups");
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.GroupScheduleSlot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Day")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<int>("DurationMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<TimeSpan>("StartTime")
                         .HasColumnType("time");
@@ -418,15 +466,14 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("WhatsAppGroupLink")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("Groups");
+                    b.HasIndex("GroupId", "Day", "StartTime")
+                        .IsUnique();
+
+                    b.ToTable("GroupScheduleSlots");
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.LoginSession", b =>
@@ -492,7 +539,6 @@ namespace TeacherERP.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("BoardImageUrl")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -505,11 +551,13 @@ namespace TeacherERP.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("HomeworkAnswerUrl")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsCancelled")
                         .HasColumnType("bit");
+
+                    b.Property<Guid?>("SlotId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("datetime2");
@@ -522,9 +570,12 @@ namespace TeacherERP.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("GroupId");
+                    b.HasIndex("SlotId");
 
-                    b.HasIndex("TenantId");
+                    b.HasIndex("GroupId", "StartTime")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "StartTime");
 
                     b.ToTable("Sessions");
                 });
@@ -860,11 +911,34 @@ namespace TeacherERP.Infrastructure.Migrations
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.Group", b =>
                 {
+                    b.HasOne("TeacherERP.Domain.Entities.Center", null)
+                        .WithMany()
+                        .HasForeignKey("CenterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.GroupScheduleSlot", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.Group", "Group")
+                        .WithMany("Slots")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Group");
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.LoginSession", b =>
@@ -885,6 +959,11 @@ namespace TeacherERP.Infrastructure.Migrations
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("TeacherERP.Domain.Entities.GroupScheduleSlot", null)
+                        .WithMany()
+                        .HasForeignKey("SlotId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
                         .WithMany()
@@ -971,6 +1050,8 @@ namespace TeacherERP.Infrastructure.Migrations
             modelBuilder.Entity("TeacherERP.Domain.Entities.Group", b =>
                 {
                     b.Navigation("Sessions");
+
+                    b.Navigation("Slots");
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.Session", b =>

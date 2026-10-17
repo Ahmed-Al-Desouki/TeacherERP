@@ -31,6 +31,42 @@ namespace TeacherERP.Infrastructure.Repositories
             return times.ToHashSet();
         }
 
+        public Task<Session?> GetByIdAsync(Guid sessionId, CancellationToken cancellationToken)
+        {
+            return _context.Sessions.FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken);
+        }
+
+        public Task<List<Session>> GetTrackedByRangeAsync(
+            DateTime fromUtc, DateTime toUtc, IReadOnlyCollection<Guid>? groupIds, CancellationToken cancellationToken)
+        {
+            var query = _context.Sessions.Where(s => s.StartTime >= fromUtc && s.StartTime < toUtc);
+
+            if (groupIds is { Count: > 0 })
+            {
+                var ids = groupIds.ToArray();
+                query = query.Where(s => ids.Contains(s.GroupId));
+            }
+
+            return query
+                .OrderBy(s => s.StartTime)
+                .ThenBy(s => s.Id)
+                .ToListAsync(cancellationToken);
+        }
+
+        public Task<bool> HasConflictAsync(
+            Guid groupId, DateTime startUtc, DateTime endUtc, IReadOnlyCollection<Guid> excludeSessionIds, CancellationToken cancellationToken)
+        {
+            var excluded = excludeSessionIds.ToArray();
+
+            // نفس وقت البداية يرفضه الـ Index الفريد حتى لو ملغاة، أما التداخل فمع غير الملغاة فقط
+            return _context.Sessions.AnyAsync(
+                s => s.GroupId == groupId
+                     && !excluded.Contains(s.Id)
+                     && (s.StartTime == startUtc
+                         || (!s.IsCancelled && s.StartTime < endUtc && s.EndTime > startUtc)),
+                cancellationToken);
+        }
+
         public Task<List<SessionListItem>> GetByRangeAsync(
             DateTime fromUtc, DateTime toUtc, Guid? groupId, Guid userId, bool seesAll, CancellationToken cancellationToken)
         {
@@ -53,7 +89,7 @@ namespace TeacherERP.Infrastructure.Repositories
                 .OrderBy(s => s.StartTime)
                 .ThenBy(s => s.Id)
                 .Select(s => new SessionListItem(
-                    s.Id, s.GroupId, s.Group.Name, s.StartTime, s.EndTime, s.IsCancelled, s.SlotId))
+                    s.Id, s.GroupId, s.Group.Name, s.StartTime, s.EndTime, s.IsCancelled, s.SlotId, s.CancelReason, s.IsModified))
                 .ToListAsync(cancellationToken);
         }
     }

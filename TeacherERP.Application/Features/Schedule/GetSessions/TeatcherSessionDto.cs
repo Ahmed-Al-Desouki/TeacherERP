@@ -10,9 +10,11 @@ namespace TeacherERP.Application.Features.Schedule.GetSessions
         DateTime StartTime,
         DateTime EndTime,
         bool IsCancelled,
-        Guid? SlotId)
+        Guid? SlotId,
+        string? CancelReason,
+        bool IsModified)
     {
         public static SessionDto From(SessionListItem item)
-            => new(item.Id, item.GroupId, item.GroupName, item.StartTime, item.EndTime, item.IsCancelled, item.SlotId);
+            => new(item.Id, item.GroupId, item.GroupName, item.StartTime, item.EndTime, item.IsCancelled, item.SlotId, item.CancelReason, item.IsModified);
     }
 }
