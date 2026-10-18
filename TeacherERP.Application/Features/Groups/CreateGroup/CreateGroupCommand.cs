@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Groups/CreateGroup/CreateGroupCommand.cs
+using MediatR;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Groups.CreateGroup
@@ -11,5 +12,5 @@ namespace TeacherERP.Application.Features.Groups.CreateGroup
         string? Room,
         int? Capacity,
         string? WhatsAppGroupLink,
-        List<GroupSlotInput> Slots) : IRequest<Result<GroupDto>>;
+        List<GroupSlotInput> Slots) : IRequest<Result<GroupDto>>, IGroupSchedule;
 }

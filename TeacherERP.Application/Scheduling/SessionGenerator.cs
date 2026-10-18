@@ -1,4 +1,5 @@
-﻿using TeacherERP.Application.Interfaces;
+﻿// موجود (تعديل) — TeacherERP.Application/Scheduling/SessionGenerator.cs
+using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Scheduling
@@ -28,7 +29,7 @@ namespace TeacherERP.Application.Scheduling
             _timeProvider = timeProvider;
         }
 
-        public async Task<int> GenerateForGroupAsync(Guid groupId, CancellationToken cancellationToken)
+        public async Task<int> GenerateForGroupAsync(Guid groupId, CancellationToken cancellationToken, DateOnly? fromLocalDate = null)
         {
             var group = await _groupRepository.GetWithSlotsAsync(groupId, cancellationToken);
             if (group is null || !group.IsActive)
@@ -36,7 +37,7 @@ namespace TeacherERP.Application.Scheduling
                 return 0;
             }
 
-            var generated = await BuildAsync(new[] { group }, cancellationToken);
+            var generated = await BuildAsync(new[] { group }, fromLocalDate, cancellationToken);
             if (generated > 0)
             {
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -49,7 +50,7 @@ namespace TeacherERP.Application.Scheduling
         {
             var groups = await _groupRepository.GetActiveWithSlotsAsync(cancellationToken);
 
-            var generated = await BuildAsync(groups, cancellationToken);
+            var generated = await BuildAsync(groups, null, cancellationToken);
             if (generated > 0)
             {
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -59,7 +60,7 @@ namespace TeacherERP.Application.Scheduling
         }
 
         // يضيف الحصص الناقصة فقط (بدون حفظ) ويرجع عددها
-        private async Task<int> BuildAsync(IReadOnlyCollection<Group> groups, CancellationToken cancellationToken)
+        private async Task<int> BuildAsync(IReadOnlyCollection<Group> groups, DateOnly? fromLocalDate, CancellationToken cancellationToken)
         {
             // بدون سنتر محدد لا نولّد شيئاً (لا نخمّن المدرس)
             if (_currentTenant.Current is not { } current || groups.Count == 0)
@@ -72,6 +73,7 @@ namespace TeacherERP.Application.Scheduling
 
             var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
             var today = SessionTimeCalculator.LocalDateOf(nowUtc, zone);
+            var startDate = fromLocalDate is { } requested && requested > today ? requested : today;
             var lastDay = today.AddDays(SchedulePolicy.GenerationHorizonDays);
             var windowEndUtc = SessionTimeCalculator.ToUtc(lastDay.AddDays(1), TimeSpan.Zero, zone);
 
@@ -82,7 +84,7 @@ namespace TeacherERP.Application.Scheduling
                 var existing = await _sessionRepository.GetStartTimesAsync(group.Id, nowUtc, windowEndUtc, cancellationToken);
                 var sessions = new List<Session>();
 
-                for (var date = today; date <= lastDay; date = date.AddDays(1))
+                for (var date = startDate; date <= lastDay; date = date.AddDays(1))
                 {
                     foreach (var slot in group.Slots.Where(s => s.Day == date.DayOfWeek))
                     {

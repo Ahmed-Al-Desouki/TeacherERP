@@ -113,9 +113,10 @@ namespace TeacherERP.Infrastructure.Data
                     .GetRequiredService<ISessionGenerator>()
                     .GenerateForAllGroupsAsync(CancellationToken.None);
 
+                // تم تصحيح تمرير المتغيرات هنا لتعمل بشكل سليم مع الـ Logger
                 logger.LogInformation(
                     "Test data is ready ({Generated} new sessions). Logins: teacher.math@{Domain}, assistant.math@{Domain}, student1..3@{Domain}.",
-                    generated, EmailDomain, EmailDomain);
+                    generated, EmailDomain, EmailDomain, EmailDomain);
             }
             catch (Exception ex)
             {

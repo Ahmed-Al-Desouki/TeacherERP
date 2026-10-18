@@ -106,7 +106,9 @@ namespace TeacherERP.Domain.Entities
                 FullName = fullName,
                 Email = email,
                 UserName = email,
-                PhoneNumber = phoneNumber
+                PhoneNumber = phoneNumber,
+                // العمود إجباري في الداتابيز لكل المستخدمين، فنولّد قيمة للمساعد والمدرس أيضاً
+                StaticQrCode = Guid.NewGuid().ToString()
             };
         }
 

@@ -1,4 +1,5 @@
-﻿using TeacherERP.Domain.Entities;
+﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/IGroupSessionRepository.cs
+using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
 {
@@ -17,6 +18,13 @@ namespace TeacherERP.Application.Interfaces
     public interface IGroupSessionRepository
     {
         void AddRange(IEnumerable<Session> sessions);
+        void RemoveRange(IEnumerable<Session> sessions);
+
+        // حصص متتبَّعة مولّدة من حصص قالب معيّنة (لتعديل القالب)
+        Task<List<Session>> GetTrackedBySlotIdsAsync(IReadOnlyCollection<Guid> slotIds, CancellationToken cancellationToken);
+
+        // أي من هذه الحصص عليها سجلات حضور (لا تُحذف أبداً)
+        Task<HashSet<Guid>> GetSessionIdsWithAttendanceAsync(IReadOnlyCollection<Guid> sessionIds, CancellationToken cancellationToken);
 
         // أوقات بداية حصص المجموعة الموجودة في النطاق (لمنع تكرار التوليد)
         Task<HashSet<DateTime>> GetStartTimesAsync(Guid groupId, DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken);

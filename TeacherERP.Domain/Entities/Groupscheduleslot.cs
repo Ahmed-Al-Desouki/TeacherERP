@@ -1,4 +1,5 @@
-﻿using System;
+﻿// موجود (تعديل) — TeacherERP.Domain/Entities/GroupScheduleSlot.cs
+using System;
 
 namespace TeacherERP.Domain.Entities
 {
@@ -22,6 +23,12 @@ namespace TeacherERP.Domain.Entities
         public int DurationMinutes { get; private set; }
 
         private GroupScheduleSlot() { }
+
+        public void SetDuration(int durationMinutes)
+        {
+            DurationMinutes = durationMinutes;
+            MarkAsUpdated();
+        }
 
         public static GroupScheduleSlot Create(Guid tenantId, Guid groupId, DayOfWeek day, TimeSpan startTime, int durationMinutes)
         {

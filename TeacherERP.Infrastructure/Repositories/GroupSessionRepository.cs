@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/GroupSessionRepository.cs
+using Microsoft.EntityFrameworkCore;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Infrastructure.Data;
@@ -17,6 +18,34 @@ namespace TeacherERP.Infrastructure.Repositories
         public void AddRange(IEnumerable<Session> sessions)
         {
             _context.Sessions.AddRange(sessions);
+        }
+
+        public void RemoveRange(IEnumerable<Session> sessions)
+        {
+            _context.Sessions.RemoveRange(sessions);
+        }
+
+        public Task<List<Session>> GetTrackedBySlotIdsAsync(IReadOnlyCollection<Guid> slotIds, CancellationToken cancellationToken)
+        {
+            var ids = slotIds.ToArray();
+
+            return _context.Sessions
+                .Where(s => s.SlotId.HasValue && ids.Contains(s.SlotId.Value))
+                .ToListAsync(cancellationToken);
+        }
+
+        public async Task<HashSet<Guid>> GetSessionIdsWithAttendanceAsync(IReadOnlyCollection<Guid> sessionIds, CancellationToken cancellationToken)
+        {
+            var ids = sessionIds.ToArray();
+
+            var withAttendance = await _context.AttendanceRecords
+                .AsNoTracking()
+                .Where(a => ids.Contains(a.SessionId))
+                .Select(a => a.SessionId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            return withAttendance.ToHashSet();
         }
 
         public async Task<HashSet<DateTime>> GetStartTimesAsync(

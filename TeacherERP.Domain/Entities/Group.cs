@@ -1,4 +1,5 @@
-﻿using System;
+﻿// موجود (تعديل) — TeacherERP.Domain/Entities/Group.cs
+using System;
 using System.Collections.Generic;
 
 namespace TeacherERP.Domain.Entities
@@ -63,9 +64,37 @@ namespace TeacherERP.Domain.Entities
             };
         }
 
-        public void AddSlot(DayOfWeek day, TimeSpan startTime, int durationMinutes)
+        // يرجع الحصة المضافة ليتتبعها الـ Context صراحةً (المفتاح معيّن مسبقاً فلا يكفي الاكتشاف من الـ Collection)
+        public GroupScheduleSlot AddSlot(DayOfWeek day, TimeSpan startTime, int durationMinutes)
         {
-            Slots.Add(GroupScheduleSlot.Create(TenantId, Id, day, startTime, durationMinutes));
+            var slot = GroupScheduleSlot.Create(TenantId, Id, day, startTime, durationMinutes);
+            Slots.Add(slot);
+            MarkAsUpdated();
+            return slot;
+        }
+
+        public void RemoveSlot(GroupScheduleSlot slot)
+        {
+            Slots.Remove(slot);
+            MarkAsUpdated();
+        }
+
+        /// <summary>استبدال كامل لبيانات المجموعة (الجدول له تعديله المنفصل)</summary>
+        public void UpdateDetails(string name, string gradeLevel, Guid centerId, string? room, int? capacity, string? whatsappLink)
+        {
+            Name = name.Trim();
+            GradeLevel = gradeLevel.Trim();
+            CenterId = centerId;
+            Room = Clean(room);
+            Capacity = capacity;
+            WhatsAppGroupLink = Clean(whatsappLink);
+            MarkAsUpdated();
+        }
+
+        /// <summary>أرشفة المجموعة (لا تولّد حصصاً جديدة) أو إعادتها</summary>
+        public void SetActive(bool isActive)
+        {
+            IsActive = isActive;
             MarkAsUpdated();
         }
 

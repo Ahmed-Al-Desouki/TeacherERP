@@ -1,4 +1,5 @@
-﻿using System;
+﻿// موجود (تعديل) — TeacherERP.Domain/Entities/Session.cs
+using System;
 using System.Collections.Generic;
 
 namespace TeacherERP.Domain.Entities
@@ -68,6 +69,20 @@ namespace TeacherERP.Domain.Entities
             StartTime = startTime;
             EndTime = endTime;
             IsModified = true;
+            MarkAsUpdated();
+        }
+
+        /// <summary>فصل الحصة عن حصة القالب بعد حذفها من القالب (تبقى الحصة كما هي)</summary>
+        public void DetachFromSlot()
+        {
+            SlotId = null;
+            MarkAsUpdated();
+        }
+
+        /// <summary>مزامنة نهاية حصة غير معدّلة مع تغيير مدة القالب (لا تُعلَّم معدّلة يدوياً)</summary>
+        public void SyncEnd(DateTime endTime)
+        {
+            EndTime = endTime;
             MarkAsUpdated();
         }
 

@@ -1,4 +1,5 @@
-﻿using TeacherERP.Domain.Entities;
+﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/IGroupRepository.cs
+using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
 {
@@ -16,5 +17,13 @@ namespace TeacherERP.Application.Interfaces
         Task<Group?> GetWithSlotsAsync(Guid groupId, CancellationToken cancellationToken);
 
         Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken);
+
+        // للتعديل: المجموعة متتبَّعة مع حصص القالب. الحفظ يتم عبر IUnitOfWork
+        Task<Group?> GetTrackedWithSlotsAsync(Guid groupId, CancellationToken cancellationToken);
+        Task<bool> NameExistsExceptAsync(string name, Guid excludeGroupId, CancellationToken cancellationToken);
+
+        // حصة قالب جديدة تُتتبَّع صراحةً (Added)، وحذف حصص القالب
+        void TrackNewSlot(GroupScheduleSlot slot);
+        void RemoveSlots(IEnumerable<GroupScheduleSlot> slots);
     }
 }
