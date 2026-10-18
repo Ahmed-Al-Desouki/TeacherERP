@@ -1,4 +1,5 @@
-﻿using System;
+﻿// موجود (تعديل) — TeacherERP.Domain/Entities/Tenant.cs
+using System;
 
 namespace TeacherERP.Domain.Entities
 {
@@ -41,6 +42,14 @@ namespace TeacherERP.Domain.Entities
                 IsListedInSearch = false,
                 AutoApproveJoinRequests = false
             };
+        }
+
+        /// <summary>ظهور المدرس في بحث الطلاب، وقبول طلبات الانضمام تلقائياً (النقل بين المجموعات يحتاج موافقة دائماً)</summary>
+        public void UpdateSettings(bool isListedInSearch, bool autoApproveJoinRequests)
+        {
+            IsListedInSearch = isListedInSearch;
+            AutoApproveJoinRequests = autoApproveJoinRequests;
+            MarkAsUpdated();
         }
 
         /// <summary>استبدال كامل لاسم المدرس ومادته</summary>

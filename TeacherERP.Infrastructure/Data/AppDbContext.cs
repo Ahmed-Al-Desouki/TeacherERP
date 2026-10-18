@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿// موجود (تعديل) — TeacherERP.Infrastructure/Data/AppDbContext.cs
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TeacherERP.Domain.Entities;
@@ -42,6 +43,8 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<TenantSettings> TenantSettings { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupScheduleSlot> GroupScheduleSlots { get; set; }
+        public DbSet<GroupEnrollment> GroupEnrollments { get; set; }
+        public DbSet<EnrollmentRequest> EnrollmentRequests { get; set; }
         public DbSet<Session> Sessions { get; set; }
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
@@ -227,6 +230,38 @@ namespace TeacherERP.Infrastructure.Data
 
                 entity.HasIndex(s => new { s.GroupId, s.StartTime }).IsUnique();
                 entity.HasIndex(s => new { s.TenantId, s.StartTime });
+            });
+
+            // 5.4 تسجيل الطالب في مجموعة: تسجيل نشط واحد فقط للطالب عند كل مدرس
+            builder.Entity<GroupEnrollment>(entity =>
+            {
+                entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(16);
+
+                entity.HasOne(e => e.Group).WithMany().HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Student).WithMany().HasForeignKey(e => e.StudentId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<Tenant>().WithMany().HasForeignKey(e => e.TenantId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(e => e.ApprovedByUserId).OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => new { e.TenantId, e.StudentId }).IsUnique().HasFilter("[Status] = 'Active'");
+                entity.HasIndex(e => new { e.GroupId, e.Status });
+                entity.HasIndex(e => e.StudentId);
+            });
+
+            // 5.5 طلب انضمام أو نقل: طلب معلّق واحد فقط للطالب عند كل مدرس
+            builder.Entity<EnrollmentRequest>(entity =>
+            {
+                entity.Property(r => r.Type).HasConversion<string>().HasMaxLength(16);
+                entity.Property(r => r.Status).HasConversion<string>().HasMaxLength(16);
+                entity.Property(r => r.DecisionNote).HasMaxLength(300);
+
+                entity.HasOne(r => r.Group).WithMany().HasForeignKey(r => r.GroupId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(r => r.Student).WithMany().HasForeignKey(r => r.StudentId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<Tenant>().WithMany().HasForeignKey(r => r.TenantId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(r => r.DecidedByUserId).OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(r => new { r.TenantId, r.StudentId }).IsUnique().HasFilter("[Status] = 'Pending'");
+                entity.HasIndex(r => new { r.TenantId, r.Status });
+                entity.HasIndex(r => r.StudentId);
             });
 
             // 6. علاقة المجموعات مع المساعدين (Many-to-Many)

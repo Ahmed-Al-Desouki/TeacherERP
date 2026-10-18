@@ -1,7 +1,9 @@
-﻿using FluentValidation;
+﻿// موجود (تعديل) — TeacherERP.Application/DependencyInjection.cs
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using TeacherERP.Application.Behaviors;
+using TeacherERP.Application.Enrollment;
 using TeacherERP.Application.Features.Profile;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Application.Scheduling;
@@ -32,6 +34,7 @@ namespace TeacherERP.Application
             services.AddScoped<IProfileCompletionChecker, ProfileCompletionChecker>();
             services.AddScoped<ISessionGenerator, SessionGenerator>();
             services.AddScoped<ISessionGenerationJob, SessionGenerationJob>();
+            services.AddScoped<IEnrollmentService, EnrollmentService>();
 
             return services;
         }

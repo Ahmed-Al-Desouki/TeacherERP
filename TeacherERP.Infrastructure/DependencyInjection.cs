@@ -1,3 +1,4 @@
+// موجود (تعديل) — TeacherERP.Infrastructure/DependencyInjection.cs
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -63,6 +64,8 @@ namespace TeacherERP.Infrastructure
             services.AddScoped<ITenantRepository, TenantRepository>();
             services.AddScoped<ICenterRepository, CenterRepository>();
             services.AddScoped<IGroupRepository, GroupRepository>();
+            services.AddScoped<IDirectoryRepository, DirectoryRepository>();
+            services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
             services.AddScoped<IGroupSessionRepository, GroupSessionRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ISessionRepository, SessionRepository>();

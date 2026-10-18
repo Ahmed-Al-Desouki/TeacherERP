@@ -1,10 +1,12 @@
-﻿using MediatR;
+﻿// موجود (تعديل) — TeacherERP.API/Controllers/TeachersController.cs
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TeacherERP.API.Security;
 using TeacherERP.Application.Features.Tenants.GetCurrentTenant;
 using TeacherERP.Application.Features.Tenants.GetMyTenants;
 using TeacherERP.Application.Features.Tenants.UpdateTenantProfile;
+using TeacherERP.Application.Features.Tenants.UpdateTenantSettings;
 
 namespace TeacherERP.API.Controllers
 {
@@ -33,6 +35,15 @@ namespace TeacherERP.API.Controllers
         public async Task<IActionResult> GetCurrentTeacher(CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(new GetCurrentTenantQuery(), cancellationToken);
+            return ToResponse(result);
+        }
+
+        // ظهوري في بحث الطلاب وقبول الانضمام تلقائياً (للمدرس صاحب المساحة فقط)
+        [HttpPut("current/settings")]
+        [Authorize(Policy = AuthPolicies.TenantOwner)]
+        public async Task<IActionResult> UpdateCurrentSettings([FromBody] UpdateTenantSettingsCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result);
         }
 
