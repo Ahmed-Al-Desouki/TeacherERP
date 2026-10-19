@@ -29,6 +29,7 @@ namespace TeacherERP.Infrastructure.Repositories
                               || (tenant.Subject != null && tenant.Subject.Contains(term)))
                     orderby center.Name, tenant.Name
                     select new DirectoryRow(center.Id, center.Name, center.Address, tenant.Id, tenant.Name, tenant.Subject))
+                .Distinct() // --> من عندي دي عشان مش يكرر الصفوف لو المدرس مرتبط بأكثر من مركز
                 .Take(maxRows)
                 .ToListAsync(cancellationToken);
         }
