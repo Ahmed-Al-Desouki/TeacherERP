@@ -2,6 +2,7 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using TeacherERP.Application.Attendance;
 using TeacherERP.Application.Behaviors;
 using TeacherERP.Application.Enrollment;
 using TeacherERP.Application.Features.Profile;
@@ -35,6 +36,9 @@ namespace TeacherERP.Application
             services.AddScoped<ISessionGenerator, SessionGenerator>();
             services.AddScoped<ISessionGenerationJob, SessionGenerationJob>();
             services.AddScoped<IEnrollmentService, EnrollmentService>();
+            services.AddScoped<IAttendanceCodeService, AttendanceCodeService>();
+            services.AddScoped<IAttendanceRecorder, AttendanceRecorder>();
+            services.AddScoped<INotificationService, NotificationService>();
 
             return services;
         }

@@ -1,6 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿// موجود (تعديل) — TeacherERP.Domain/Entities/AttendanceRecord.cs
+using System;
 
 namespace TeacherERP.Domain.Entities
 {
@@ -24,6 +23,9 @@ namespace TeacherERP.Domain.Entities
         /// <summary>من سجّل الحضور (مساعد أو طالب مسؤول)، وفارغ لو الطالب مسح لنفسه. للمساءلة والتوثيق</summary>
         public Guid? RecordedByUserId { get; private set; }
 
+        /// <summary>للتعويض: الحصة الأصلية للطالب (في مجموعته) التي يعوّضها بحضور هذه الحصة</summary>
+        public Guid? CompensatesSessionId { get; private set; }
+
         /// <summary>موقع الطالب وقت التسجيل (لمقارنته لاحقاً في حالات النزاع)، وفارغ في المسح اليدوي</summary>
         public double? ScannedLatitude { get; private set; }
         public double? ScannedLongitude { get; private set; }
@@ -41,7 +43,8 @@ namespace TeacherERP.Domain.Entities
             double? lat,
             double? lon,
             Guid? recordedByUserId = null,
-            AttendanceStatus initialStatus = AttendanceStatus.Present)
+            AttendanceStatus initialStatus = AttendanceStatus.Present,
+            Guid? compensatesSessionId = null)
         {
             return new AttendanceRecord
             {
@@ -51,6 +54,7 @@ namespace TeacherERP.Domain.Entities
                 Status = initialStatus, // قد تكون PendingCompensation لو الطالب في غير موعده
                 ScannedVia = scanMethod,
                 RecordedByUserId = recordedByUserId,
+                CompensatesSessionId = compensatesSessionId,
                 ScannedLatitude = lat,
                 ScannedLongitude = lon,
             };
@@ -69,12 +73,11 @@ namespace TeacherERP.Domain.Entities
             Status = AttendanceStatus.Rejected;
             MarkAsUpdated();
         }
-
-
     }
 
     /// <summary>حالة الحضور (حاضر، غائب، تعويض معلق في انتظار الموافقة، مرفوض)</summary>
     public enum AttendanceStatus { Present, Absent, PendingCompensation, Rejected }
+
     /// <summary>طريقة المسح (بواسطة الطالب لنفسه، بواسطة المساعد لكارت الطالب، أو إدخال يدوي للطوارئ)</summary>
     public enum ScanMethod { SelfScan, AdminScan, ManualEntry }
 }

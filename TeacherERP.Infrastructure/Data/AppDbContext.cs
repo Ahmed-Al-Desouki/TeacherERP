@@ -45,6 +45,7 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<GroupScheduleSlot> GroupScheduleSlots { get; set; }
         public DbSet<GroupEnrollment> GroupEnrollments { get; set; }
         public DbSet<EnrollmentRequest> EnrollmentRequests { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
         public DbSet<Session> Sessions { get; set; }
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
@@ -163,6 +164,12 @@ namespace TeacherERP.Infrastructure.Data
                 entity.HasIndex(m => m.UserId);
             });
 
+            // سر الحضور: طول ثابت (32 بايت Hex)
+            builder.Entity<TenantSettings>()
+                .Property(s => s.QrSecret)
+                .HasMaxLength(64)
+                .IsRequired();
+
             // 4. علاقة إعدادات السنتر بالسنتر (One-to-One)
             builder.Entity<TenantSettings>()
                 .HasOne<Tenant>()
@@ -232,6 +239,25 @@ namespace TeacherERP.Infrastructure.Data
                 entity.HasIndex(s => new { s.TenantId, s.StartTime });
             });
 
+            // 5.3.1 الإشعارات: للمستلم عبر كل مدرسيه (غير معزولة بالـ Tenant عمداً)
+            builder.Entity<Notification>(entity =>
+            {
+                entity.Property(n => n.Type).HasConversion<string>().HasMaxLength(32);
+                entity.Property(n => n.Message).HasMaxLength(300).IsRequired();
+
+                entity.HasOne<ApplicationUser>()
+                    .WithMany()
+                    .HasForeignKey(n => n.RecipientUserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne<Tenant>()
+                    .WithMany()
+                    .HasForeignKey(n => n.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(n => new { n.RecipientUserId, n.IsRead, n.CreatedAt });
+            });
+
             // 5.4 تسجيل الطالب في مجموعة: تسجيل نشط واحد فقط للطالب عند كل مدرس
             builder.Entity<GroupEnrollment>(entity =>
             {
@@ -296,6 +322,12 @@ namespace TeacherERP.Infrastructure.Data
             {
                 // الطالب يُسجَّل في الحصة الواحدة مرة واحدة فقط
                 entity.HasIndex(a => new { a.SessionId, a.StudentId }).IsUnique();
+
+                // الحصة الأصلية التي يعوّضها هذا الحضور
+                entity.HasOne<Session>()
+                    .WithMany()
+                    .HasForeignKey(a => a.CompensatesSessionId)
+                    .OnDelete(DeleteBehavior.Restrict);
 
                 // من سجّل الحضور (للتوثيق والمساءلة)
                 entity.HasOne<ApplicationUser>()

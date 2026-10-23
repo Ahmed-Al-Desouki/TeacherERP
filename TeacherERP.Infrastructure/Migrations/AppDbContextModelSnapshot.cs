@@ -263,6 +263,9 @@ namespace TeacherERP.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("CompensatesSessionId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -294,6 +297,8 @@ namespace TeacherERP.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompensatesSessionId");
 
                     b.HasIndex("RecordedByUserId");
 
@@ -640,6 +645,49 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.ToTable("LoginSessions");
                 });
 
+            modelBuilder.Entity("TeacherERP.Domain.Entities.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<Guid>("RecipientUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("RelatedId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("RecipientUserId", "IsRead", "CreatedAt");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("TeacherERP.Domain.Entities.Session", b =>
                 {
                     b.Property<Guid>("Id")
@@ -795,11 +843,19 @@ namespace TeacherERP.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("AutoRegisterOnScan")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Mode")
                         .HasColumnType("int");
+
+                    b.Property<string>("QrSecret")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<bool>("RejectMockLocations")
                         .HasColumnType("bit");
@@ -969,6 +1025,11 @@ namespace TeacherERP.Infrastructure.Migrations
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.AttendanceRecord", b =>
                 {
+                    b.HasOne("TeacherERP.Domain.Entities.Session", null)
+                        .WithMany()
+                        .HasForeignKey("CompensatesSessionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("TeacherERP.Domain.Entities.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("RecordedByUserId")
@@ -1124,6 +1185,21 @@ namespace TeacherERP.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("RecipientUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.Session", b =>
