@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿// موجود (تعديل) — TeacherERP.Infrastructure/Data/ApplicationDbSeeder.cs
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TeacherERP.Application.Common;
@@ -24,7 +25,7 @@ namespace TeacherERP.Infrastructure.Data
                 var context = services.GetRequiredService<AppDbContext>();
 
                 // 1. التأكد من إنشاء الأدوار الأساسية
-                string[] roles = { RoleNames.SuperAdmin, RoleNames.Admin, RoleNames.Student };
+                string[] roles = { RoleNames.SuperAdmin, RoleNames.Assistant, RoleNames.Student };
                 foreach (var role in roles)
                 {
                     if (!await roleManager.RoleExistsAsync(role))

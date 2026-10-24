@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Interfaces/IEnrollmentRepository.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/IEnrollmentRepository.cs
 using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
@@ -32,9 +32,8 @@ namespace TeacherERP.Application.Interfaces
 
         // للموظفين داخل سنتر المدرس (يتفلتر بالمدرس الحالي)
         Task<EnrollmentRequest?> GetTrackedRequestAsync(Guid requestId, CancellationToken cancellationToken);
-        Task<bool> IsAssistantAssignedAsync(Guid groupId, Guid userId, CancellationToken cancellationToken);
         Task<List<EnrollmentRequestListItem>> GetRequestsAsync(
-            EnrollmentRequestStatus? status, Guid userId, bool seesAll, CancellationToken cancellationToken);
+            EnrollmentRequestStatus? status, CancellationToken cancellationToken);
 
         // للطالب عبر كل مدرسيه
         Task<EnrollmentRequest?> GetOwnPendingRequestAsync(Guid requestId, Guid studentId, CancellationToken cancellationToken);

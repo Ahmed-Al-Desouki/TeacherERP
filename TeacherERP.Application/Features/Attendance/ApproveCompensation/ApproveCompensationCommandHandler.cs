@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Features/Attendance/ApproveCompensation/ApproveCompensationCommandHandler.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Attendance/ApproveCompensation/ApproveCompensationCommandHandler.cs
 using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
@@ -44,13 +44,6 @@ namespace TeacherERP.Application.Features.Attendance.ApproveCompensation
             // الفلتر العام يضمن أن السجل يخص المدرس الحالي فقط
             var record = await _attendanceRepository.GetTrackedRecordAsync(request.RecordId, cancellationToken);
             if (record is null)
-            {
-                return Result<bool>.Failure(AttendanceErrors.RecordNotFound);
-            }
-
-            // المساعد يقرر في حصص مجموعاته فقط (غيرها نفس رد غير الموجود)
-            if (tenant.Role != TenantRole.Owner
-                && !await _attendanceRepository.IsAssistantAssignedToSessionAsync(record.SessionId, userId, cancellationToken))
             {
                 return Result<bool>.Failure(AttendanceErrors.RecordNotFound);
             }

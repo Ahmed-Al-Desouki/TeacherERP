@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Features/Attendance/ScanAttendance/ScanAttendanceCommandHandler.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Attendance/ScanAttendance/ScanAttendanceCommandHandler.cs
 using MediatR;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
@@ -63,7 +63,7 @@ namespace TeacherERP.Application.Features.Attendance.ScanAttendance
                 new AttendanceRequest(
                     settings.TenantId, studentId, ScanMethod.SelfScan, request.Latitude, request.Longitude,
                     RecordedByUserId: null, PreferredGroupId: request.GroupId,
-                    EnforceGeofence: true, RegisterImmediately: settings.AutoRegisterOnScan, RestrictToAssistantId: null),
+                    EnforceGeofence: true, RegisterImmediately: settings.AutoRegisterOnScan, RestrictToGroupId: null),
                 cancellationToken);
         }
     }

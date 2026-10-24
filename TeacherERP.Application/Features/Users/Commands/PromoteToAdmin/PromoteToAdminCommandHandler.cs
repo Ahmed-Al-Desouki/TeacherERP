@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Users/Commands/PromoteToAdmin/PromoteToAdminCommandHandler.cs
+using MediatR;
 using Microsoft.AspNetCore.Identity;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
@@ -27,9 +28,9 @@ namespace TeacherERP.Application.Features.Users.Commands.PromoteToAdmin
                 await _userManager.RemoveFromRoleAsync(user, "Student");
             }
 
-            if (!await _userManager.IsInRoleAsync(user, "Admin"))
+            if (!await _userManager.IsInRoleAsync(user, RoleNames.Assistant))
             {
-                var result = await _userManager.AddToRoleAsync(user, "Admin");
+                var result = await _userManager.AddToRoleAsync(user, RoleNames.Assistant);
                 if (!result.Succeeded)
                 {
                     return Result<bool>.Failure(new Error("User.PromotionFailed", result.Errors.First().Description));

@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Interfaces/IAttendanceRecorder.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/IAttendanceRecorder.cs
 using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
@@ -19,7 +19,7 @@ namespace TeacherERP.Application.Interfaces
         Guid? PreferredGroupId,
         bool EnforceGeofence,
         bool RegisterImmediately,
-        Guid? RestrictToAssistantId);
+        Guid? RestrictToGroupId);
 
     // مصدر واحد لقواعد الحضور: اختيار الحصة، الموقع، التسجيل التلقائي، التعويض، والإشعارات
     public interface IAttendanceRecorder

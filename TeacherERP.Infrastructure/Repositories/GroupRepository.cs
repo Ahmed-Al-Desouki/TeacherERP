@@ -20,17 +20,13 @@ namespace TeacherERP.Infrastructure.Repositories
             _context.Groups.Add(group);
         }
 
-        public Task<List<Group>> GetVisibleAsync(Guid userId, bool seesAll, CancellationToken cancellationToken)
+        public Task<List<Group>> GetAllWithSlotsAsync(CancellationToken cancellationToken)
         {
-            return VisibleQuery(userId, seesAll)
+            return _context.Groups
+                .AsNoTracking()
+                .Include(g => g.Slots)
                 .OrderBy(g => g.Name)
                 .ToListAsync(cancellationToken);
-        }
-
-        public Task<Group?> GetVisibleByIdAsync(Guid groupId, Guid userId, bool seesAll, CancellationToken cancellationToken)
-        {
-            return VisibleQuery(userId, seesAll)
-                .FirstOrDefaultAsync(g => g.Id == groupId, cancellationToken);
         }
 
         public Task<List<Group>> GetActiveWithSlotsAsync(CancellationToken cancellationToken)
@@ -75,18 +71,6 @@ namespace TeacherERP.Infrastructure.Repositories
         public void RemoveSlots(IEnumerable<GroupScheduleSlot> slots)
         {
             _context.GroupScheduleSlots.RemoveRange(slots);
-        }
-
-        // المساعد يرى المجموعات المخصصة له فقط (ربط الحصة بالمساعد)
-        private IQueryable<Group> VisibleQuery(Guid userId, bool seesAll)
-        {
-            IQueryable<Group> query = _context.Groups
-                .AsNoTracking()
-                .Include(g => g.Slots);
-
-            return seesAll
-                ? query
-                : query.Where(g => g.AssignedAdmins.Any(admin => admin.Id == userId));
         }
     }
 }

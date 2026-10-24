@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Features/Attendance/GetSessionAttendance/GetSessionAttendanceQueryHandler.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Attendance/GetSessionAttendance/GetSessionAttendanceQueryHandler.cs
 using MediatR;
 using TeacherERP.Application.Features.Schedule;
 using TeacherERP.Application.Features.Tenants;
@@ -34,13 +34,6 @@ namespace TeacherERP.Application.Features.Attendance.GetSessionAttendance
             if (_currentTenant.Current is not { } tenant)
             {
                 return Result<List<AttendanceListItem>>.Failure(TenantErrors.Required);
-            }
-
-            // المساعد لا يرى إلا حصص مجموعاته (غيرها نفس رد غير الموجودة)
-            if (tenant.Role != TenantRole.Owner
-                && !await _attendanceRepository.IsAssistantAssignedToSessionAsync(request.SessionId, userId, cancellationToken))
-            {
-                return Result<List<AttendanceListItem>>.Failure(ScheduleErrors.NotFound);
             }
 
             var items = await _attendanceRepository.GetSessionAttendanceAsync(request.SessionId, cancellationToken);

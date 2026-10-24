@@ -8,9 +8,8 @@ namespace TeacherERP.Application.Interfaces
     {
         void Add(Group group);
 
-        // للعرض فقط (بدون تتبع) مع حصص القالب. seesAll = المدرس، وغيره (مساعد) يرى المخصصة له فقط
-        Task<List<Group>> GetVisibleAsync(Guid userId, bool seesAll, CancellationToken cancellationToken);
-        Task<Group?> GetVisibleByIdAsync(Guid groupId, Guid userId, bool seesAll, CancellationToken cancellationToken);
+        // للعرض فقط (بدون تتبع) مع حصص القالب: كل مجموعات المدرس الحالي (المدرس ومساعدوه يرونها كلها)
+        Task<List<Group>> GetAllWithSlotsAsync(CancellationToken cancellationToken);
 
         // لتوليد الحصص
         Task<List<Group>> GetActiveWithSlotsAsync(CancellationToken cancellationToken);

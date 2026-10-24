@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Infrastructure/Repositories/AttendanceRepository.cs
+﻿// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/AttendanceRepository.cs
 using Microsoft.EntityFrameworkCore;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
@@ -27,7 +27,7 @@ namespace TeacherERP.Infrastructure.Repositories
         }
 
         public Task<List<RunningSessionInfo>> GetRunningSessionsAsync(
-            Guid tenantId, DateTime nowUtc, int earlyMinutes, Guid? assistantUserId, CancellationToken cancellationToken)
+            Guid tenantId, DateTime nowUtc, int earlyMinutes, Guid? onlyGroupId, CancellationToken cancellationToken)
         {
             var startLimit = nowUtc.AddMinutes(earlyMinutes);
 
@@ -39,7 +39,7 @@ namespace TeacherERP.Infrastructure.Repositories
                           && g.IsActive
                           && s.StartTime <= startLimit
                           && s.EndTime >= nowUtc
-                          && (assistantUserId == null || g.AssignedAdmins.Any(admin => admin.Id == assistantUserId))
+                          && (onlyGroupId == null || g.Id == onlyGroupId)
                     orderby s.StartTime
                     select new RunningSessionInfo(
                         s.Id, g.Id, g.Name, s.StartTime, s.EndTime, c.Latitude, c.Longitude, c.GeofenceRadiusMeters))
@@ -105,13 +105,6 @@ namespace TeacherERP.Infrastructure.Repositories
             return _context.AttendanceRecords.FirstOrDefaultAsync(a => a.Id == recordId, cancellationToken);
         }
 
-        public Task<bool> IsAssistantAssignedToSessionAsync(Guid sessionId, Guid userId, CancellationToken cancellationToken)
-        {
-            return _context.Sessions.AnyAsync(
-                s => s.Id == sessionId && s.Group.AssignedAdmins.Any(admin => admin.Id == userId),
-                cancellationToken);
-        }
-
         public Task<List<AttendanceListItem>> GetSessionAttendanceAsync(Guid sessionId, CancellationToken cancellationToken)
         {
             return _context.AttendanceRecords
@@ -123,16 +116,11 @@ namespace TeacherERP.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
-        public Task<List<PendingCompensationItem>> GetPendingCompensationsAsync(Guid userId, bool seesAll, CancellationToken cancellationToken)
+        public Task<List<PendingCompensationItem>> GetPendingCompensationsAsync(CancellationToken cancellationToken)
         {
             var query = _context.AttendanceRecords
                 .AsNoTracking()
                 .Where(a => a.Status == AttendanceStatus.PendingCompensation);
-
-            if (!seesAll)
-            {
-                query = query.Where(a => a.Session.Group.AssignedAdmins.Any(admin => admin.Id == userId));
-            }
 
             return query
                 .OrderBy(a => a.CreatedAt)

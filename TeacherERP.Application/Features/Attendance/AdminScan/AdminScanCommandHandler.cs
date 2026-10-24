@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Features/Attendance/AdminScan/AdminScanCommandHandler.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Attendance/AdminScan/AdminScanCommandHandler.cs
 using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
@@ -44,13 +44,13 @@ namespace TeacherERP.Application.Features.Attendance.AdminScan
                 return Result<AttendanceResultDto>.Failure(AttendanceErrors.StudentNotFound);
             }
 
-            // المساعد يسجّل في حصص مجموعاته المخصصة له فقط (ربط الحصة بالمساعد)، والموقع لا يُفحص (الماسح حاضر بنفسه)
+            // المدرس ومساعدوه يسجّلون في كل الحصص الجارية، والموقع لا يُفحص (الماسح حاضر بنفسه)
             return await _recorder.RecordAsync(
                 new AttendanceRequest(
                     tenant.TenantId, studentId.Value, ScanMethod.AdminScan, null, null,
                     RecordedByUserId: staffId, PreferredGroupId: request.GroupId,
                     EnforceGeofence: false, RegisterImmediately: true,
-                    RestrictToAssistantId: tenant.Role == TenantRole.Owner ? null : staffId),
+                    RestrictToGroupId: null),
                 cancellationToken);
         }
     }

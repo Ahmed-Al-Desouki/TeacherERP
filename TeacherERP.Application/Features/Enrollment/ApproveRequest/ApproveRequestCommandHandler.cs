@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Features/Enrollment/ApproveRequest/ApproveRequestCommandHandler.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Enrollment/ApproveRequest/ApproveRequestCommandHandler.cs
 using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
@@ -41,13 +41,6 @@ namespace TeacherERP.Application.Features.Enrollment.ApproveRequest
             // الفلتر العام يضمن أن الطلب يخص المدرس الحالي فقط
             var enrollmentRequest = await _repository.GetTrackedRequestAsync(request.RequestId, cancellationToken);
             if (enrollmentRequest is null)
-            {
-                return Result<bool>.Failure(EnrollmentErrors.RequestNotFound);
-            }
-
-            // المساعد يقرر في مجموعاته المخصصة له فقط (غيرها نفس رد غير الموجود)
-            if (tenant.Role != TenantRole.Owner
-                && !await _repository.IsAssistantAssignedAsync(enrollmentRequest.GroupId, userId, cancellationToken))
             {
                 return Result<bool>.Failure(EnrollmentErrors.RequestNotFound);
             }

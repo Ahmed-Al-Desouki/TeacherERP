@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿// موجود (تعديل) — TeacherERP.API/Controllers/ScheduleController.cs
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TeacherERP.API.Security;
@@ -32,9 +33,9 @@ namespace TeacherERP.API.Controllers
             return ToResponse(result);
         }
 
-        // تأجيل أو تقديم حصة قادمة (للمدرس فقط)
+        // تأجيل أو تقديم حصة قادمة (للمدرس أو المساعد)
         [HttpPut("sessions/{id:guid}/reschedule")]
-        [Authorize(Policy = AuthPolicies.TenantOwner)]
+        [Authorize(Policy = AuthPolicies.TenantStaff)]
         public async Task<IActionResult> RescheduleSession(Guid id, [FromBody] RescheduleSessionRequest request, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(
@@ -42,27 +43,27 @@ namespace TeacherERP.API.Controllers
             return ToResponse(result);
         }
 
-        // إلغاء حصة قادمة بسبب اختياري (للمدرس فقط)
+        // إلغاء حصة قادمة بسبب اختياري (للمدرس أو المساعد)
         [HttpPost("sessions/{id:guid}/cancel")]
-        [Authorize(Policy = AuthPolicies.TenantOwner)]
+        [Authorize(Policy = AuthPolicies.TenantStaff)]
         public async Task<IActionResult> CancelSession(Guid id, [FromBody] CancelSessionRequest request, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(new CancelSessionCommand(id, request.Reason), cancellationToken);
             return ToResponse(result);
         }
 
-        // التراجع عن إلغاء حصة قادمة (للمدرس فقط)
+        // التراجع عن إلغاء حصة قادمة (للمدرس أو المساعد)
         [HttpPost("sessions/{id:guid}/restore")]
-        [Authorize(Policy = AuthPolicies.TenantOwner)]
+        [Authorize(Policy = AuthPolicies.TenantStaff)]
         public async Task<IActionResult> RestoreSession(Guid id, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(new RestoreSessionCommand(id), cancellationToken);
             return ToResponse(result);
         }
 
-        // حصة إضافية لمجموعة خارج القالب الأسبوعي (للمدرس فقط)
+        // حصة إضافية لمجموعة خارج القالب الأسبوعي (للمدرس أو المساعد)
         [HttpPost("sessions")]
-        [Authorize(Policy = AuthPolicies.TenantOwner)]
+        [Authorize(Policy = AuthPolicies.TenantStaff)]
         public async Task<IActionResult> AddExtraSession([FromBody] AddExtraSessionCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);

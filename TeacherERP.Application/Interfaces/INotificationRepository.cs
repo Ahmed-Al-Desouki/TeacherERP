@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Interfaces/INotificationRepository.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/INotificationRepository.cs
 using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
@@ -9,8 +9,8 @@ namespace TeacherERP.Application.Interfaces
     {
         void Add(Notification notification);
 
-        // مدرس المساحة، ومساعدو المجموعة المخصصون لها (لو حُددت)
-        Task<List<Guid>> GetStaffRecipientIdsAsync(Guid tenantId, Guid? groupId, CancellationToken cancellationToken);
+        // مدرس المساحة وكل مساعديه النشطين
+        Task<List<Guid>> GetStaffRecipientIdsAsync(Guid tenantId, CancellationToken cancellationToken);
 
         Task<List<NotificationItem>> GetMineAsync(Guid userId, bool unreadOnly, CancellationToken cancellationToken);
         Task<Notification?> GetOwnTrackedAsync(Guid notificationId, Guid userId, CancellationToken cancellationToken);

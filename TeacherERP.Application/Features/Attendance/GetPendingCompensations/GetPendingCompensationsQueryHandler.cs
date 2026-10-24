@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Features/Attendance/GetPendingCompensations/GetPendingCompensationsQueryHandler.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Attendance/GetPendingCompensations/GetPendingCompensationsQueryHandler.cs
 using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
@@ -35,7 +35,7 @@ namespace TeacherERP.Application.Features.Attendance.GetPendingCompensations
                 return Result<List<PendingCompensationItem>>.Failure(TenantErrors.Required);
             }
 
-            var items = await _attendanceRepository.GetPendingCompensationsAsync(userId, tenant.Role == TenantRole.Owner, cancellationToken);
+            var items = await _attendanceRepository.GetPendingCompensationsAsync(cancellationToken);
             return Result<List<PendingCompensationItem>>.Success(items);
         }
     }

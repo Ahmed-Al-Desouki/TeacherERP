@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Features/Enrollment/GetRequests/GetRequestsQueryHandler.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Enrollment/GetRequests/GetRequestsQueryHandler.cs
 using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
@@ -35,7 +35,7 @@ namespace TeacherERP.Application.Features.Enrollment.GetRequests
                 return Result<List<EnrollmentRequestListDto>>.Failure(TenantErrors.Required);
             }
 
-            var items = await _repository.GetRequestsAsync(request.Status, userId, tenant.Role == TenantRole.Owner, cancellationToken);
+            var items = await _repository.GetRequestsAsync(request.Status, cancellationToken);
 
             return Result<List<EnrollmentRequestListDto>>.Success(items.Select(EnrollmentRequestListDto.From).ToList());
         }

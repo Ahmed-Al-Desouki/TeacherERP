@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Attendance/AttendanceRecorder.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Attendance/AttendanceRecorder.cs
 using TeacherERP.Application.Features.Attendance;
 using TeacherERP.Application.Features.Enrollment;
 using TeacherERP.Application.Interfaces;
@@ -40,7 +40,7 @@ namespace TeacherERP.Application.Attendance
             var now = _timeProvider.GetUtcNow().UtcDateTime;
 
             var running = await _attendanceRepository.GetRunningSessionsAsync(
-                request.TenantId, now, AttendancePolicy.EarlyCheckInMinutes, request.RestrictToAssistantId, cancellationToken);
+                request.TenantId, now, AttendancePolicy.EarlyCheckInMinutes, request.RestrictToGroupId, cancellationToken);
             if (running.Count == 0)
             {
                 return Result<AttendanceResultDto>.Failure(AttendanceErrors.NoSessionNow);
@@ -125,7 +125,7 @@ namespace TeacherERP.Application.Attendance
                         _enrollmentRepository.AddRequest(pending);
 
                         await _notificationService.NotifyStaffAsync(
-                            request.TenantId, session.GroupId, NotificationType.EnrollmentRequested,
+                            request.TenantId, NotificationType.EnrollmentRequested,
                             $"{studentName} asked to join {session.GroupName} by scanning the code.", pending.Id, cancellationToken);
 
                         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -147,7 +147,7 @@ namespace TeacherERP.Application.Attendance
                 if (request.Method == ScanMethod.SelfScan)
                 {
                     await _notificationService.NotifyStaffAsync(
-                        request.TenantId, session.GroupId, NotificationType.StudentAutoRegistered,
+                        request.TenantId, NotificationType.StudentAutoRegistered,
                         $"{studentName} was registered in {session.GroupName} by scanning the code.", joinRequest.Id, cancellationToken);
                 }
             }
@@ -180,7 +180,7 @@ namespace TeacherERP.Application.Attendance
             else
             {
                 await _notificationService.NotifyStaffAsync(
-                    request.TenantId, session.GroupId, NotificationType.CompensationRequested,
+                    request.TenantId, NotificationType.CompensationRequested,
                     $"{studentName} attended {session.GroupName} as a compensation session.", record.Id, cancellationToken);
             }
 

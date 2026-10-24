@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Features/Enrollment/RejectRequest/RejectRequestCommandHandler.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Enrollment/RejectRequest/RejectRequestCommandHandler.cs
 using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
@@ -43,12 +43,6 @@ namespace TeacherERP.Application.Features.Enrollment.RejectRequest
 
             var enrollmentRequest = await _repository.GetTrackedRequestAsync(request.RequestId, cancellationToken);
             if (enrollmentRequest is null)
-            {
-                return Result<bool>.Failure(EnrollmentErrors.RequestNotFound);
-            }
-
-            if (tenant.Role != TenantRole.Owner
-                && !await _repository.IsAssistantAssignedAsync(enrollmentRequest.GroupId, userId, cancellationToken))
             {
                 return Result<bool>.Failure(EnrollmentErrors.RequestNotFound);
             }

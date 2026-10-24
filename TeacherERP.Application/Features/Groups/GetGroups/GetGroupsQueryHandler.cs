@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Groups/GetGroups/GetGroupsQueryHandler.cs
+using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
@@ -34,7 +35,7 @@ namespace TeacherERP.Application.Features.Groups.GetGroups
                 return Result<List<GroupDto>>.Failure(TenantErrors.Required);
             }
 
-            var groups = await _groupRepository.GetVisibleAsync(userId, tenant.Role == TenantRole.Owner, cancellationToken);
+            var groups = await _groupRepository.GetAllWithSlotsAsync(cancellationToken);
 
             return Result<List<GroupDto>>.Success(groups.Select(GroupDto.From).ToList());
         }

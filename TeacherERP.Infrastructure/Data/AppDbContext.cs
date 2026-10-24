@@ -290,13 +290,6 @@ namespace TeacherERP.Infrastructure.Data
                 entity.HasIndex(r => r.StudentId);
             });
 
-            // 6. علاقة المجموعات مع المساعدين (Many-to-Many)
-            // المساعد يقدر يشرف على كذا مجموعة، والمجموعة يقدر يشرف عليها كذا مساعد
-            builder.Entity<Group>()
-                .HasMany(g => g.AssignedAdmins)
-                .WithMany()
-                .UsingEntity(j => j.ToTable("GroupAdmins")); // توليد جدول وسيط تلقائي
-
             // 7. علاقة المجموعة بالحصص (One-to-Many)
             builder.Entity<Group>()
                 .HasMany(g => g.Sessions)

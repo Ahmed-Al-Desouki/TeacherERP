@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Schedule/GetSessions/GetSessionsQueryHandler.cs
+using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Application.Scheduling;
@@ -49,7 +50,7 @@ namespace TeacherERP.Application.Features.Schedule.GetSessions
             }
 
             var sessions = await _sessionRepository.GetByRangeAsync(
-                from, to, request.GroupId, userId, tenant.Role == TenantRole.Owner, cancellationToken);
+                from, to, request.GroupId, cancellationToken);
 
             return Result<List<SessionDto>>.Success(sessions.Select(SessionDto.From).ToList());
         }

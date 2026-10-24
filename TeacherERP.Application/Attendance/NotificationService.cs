@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Attendance/NotificationService.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Attendance/NotificationService.cs
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 
@@ -14,9 +14,9 @@ namespace TeacherERP.Application.Attendance
         }
 
         public async Task NotifyStaffAsync(
-            Guid tenantId, Guid? groupId, NotificationType type, string message, Guid? relatedId, CancellationToken cancellationToken)
+            Guid tenantId, NotificationType type, string message, Guid? relatedId, CancellationToken cancellationToken)
         {
-            var recipients = await _repository.GetStaffRecipientIdsAsync(tenantId, groupId, cancellationToken);
+            var recipients = await _repository.GetStaffRecipientIdsAsync(tenantId, cancellationToken);
 
             foreach (var recipientId in recipients)
             {

@@ -33,8 +33,6 @@ namespace TeacherERP.Domain.Entities
         /// <summary>قالب الجدول الأسبوعي الثابت (يوم وبداية ومدة لكل حصة)</summary>
         public ICollection<GroupScheduleSlot> Slots { get; private set; }
 
-        /// <summary>المساعدون المسموح لهم بإدارة هذه المجموعة وتظهر لهم في التطبيق</summary>
-        public ICollection<ApplicationUser> AssignedAdmins { get; private set; }
         public ICollection<Session> Sessions { get; private set; }
 
         private Group() { }
@@ -59,7 +57,6 @@ namespace TeacherERP.Domain.Entities
                 WhatsAppGroupLink = Clean(whatsappLink),
                 IsActive = true,
                 Slots = new List<GroupScheduleSlot>(),
-                AssignedAdmins = new List<ApplicationUser>(),
                 Sessions = new List<Session>(),
             };
         }
@@ -95,12 +92,6 @@ namespace TeacherERP.Domain.Entities
         public void SetActive(bool isActive)
         {
             IsActive = isActive;
-            MarkAsUpdated();
-        }
-
-        public void AddAdmin(ApplicationUser admin)
-        {
-            AssignedAdmins.Add(admin);
             MarkAsUpdated();
         }
 

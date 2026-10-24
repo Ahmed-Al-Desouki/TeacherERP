@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Groups/GetGroup/GetGroupQueryHandler.cs
+using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
@@ -34,9 +35,8 @@ namespace TeacherERP.Application.Features.Groups.GetGroup
                 return Result<GroupDto>.Failure(TenantErrors.Required);
             }
 
-            // غير موجودة وغير مخصصة لك نفس الرد
-            var group = await _groupRepository.GetVisibleByIdAsync(
-                request.GroupId, userId, tenant.Role == TenantRole.Owner, cancellationToken);
+            // الفلتر العام يضمن أن المجموعة تخص المدرس الحالي فقط
+            var group = await _groupRepository.GetWithSlotsAsync(request.GroupId, cancellationToken);
 
             return group is null
                 ? Result<GroupDto>.Failure(GroupErrors.NotFound)

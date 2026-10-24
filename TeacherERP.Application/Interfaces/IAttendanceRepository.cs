@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Interfaces/IAttendanceRepository.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/IAttendanceRepository.cs
 using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
@@ -26,9 +26,9 @@ namespace TeacherERP.Application.Interfaces
         // إعدادات المدرس الحالي متتبَّعة للتعديل (يتفلتر بالمدرس الحالي)
         Task<TenantSettings?> GetTrackedSettingsAsync(CancellationToken cancellationToken);
 
-        // الحصص الجارية الآن (من قبل البداية بدقائق الدخول المبكر حتى النهاية). assistantUserId يقصرها على مجموعاته
+        // الحصص الجارية الآن (من قبل البداية بدقائق الدخول المبكر حتى النهاية). onlyGroupId يقصرها على مجموعة واحدة (للأدمن ستودنت)
         Task<List<RunningSessionInfo>> GetRunningSessionsAsync(
-            Guid tenantId, DateTime nowUtc, int earlyMinutes, Guid? assistantUserId, CancellationToken cancellationToken);
+            Guid tenantId, DateTime nowUtc, int earlyMinutes, Guid? onlyGroupId, CancellationToken cancellationToken);
 
         Task<AttendanceRecord?> GetRecordAsync(Guid sessionId, Guid studentId, CancellationToken cancellationToken);
 
@@ -42,8 +42,7 @@ namespace TeacherERP.Application.Interfaces
 
         // للموظفين داخل المدرس الحالي
         Task<AttendanceRecord?> GetTrackedRecordAsync(Guid recordId, CancellationToken cancellationToken);
-        Task<bool> IsAssistantAssignedToSessionAsync(Guid sessionId, Guid userId, CancellationToken cancellationToken);
         Task<List<AttendanceListItem>> GetSessionAttendanceAsync(Guid sessionId, CancellationToken cancellationToken);
-        Task<List<PendingCompensationItem>> GetPendingCompensationsAsync(Guid userId, bool seesAll, CancellationToken cancellationToken);
+        Task<List<PendingCompensationItem>> GetPendingCompensationsAsync(CancellationToken cancellationToken);
     }
 }

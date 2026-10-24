@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿// موجود (تعديل) — TeacherERP.Infrastructure/Data/TestDataSeeder.cs
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,7 +41,7 @@ namespace TeacherERP.Infrastructure.Data
 
                 // 1. الحسابات: مدرس (SuperAdmin) ومساعد (Admin) و3 طلاب ببروفايل مكتمل
                 var teacher = await EnsureStaffAsync(userManager, "teacher.math", "أ. محمد علي", "+201000000011", RoleNames.SuperAdmin, password);
-                var assistant = await EnsureStaffAsync(userManager, "assistant.math", "أ. سارة حسن", "+201000000012", RoleNames.Admin, password);
+                var assistant = await EnsureStaffAsync(userManager, "assistant.math", "أ. سارة حسن", "+201000000012", RoleNames.Assistant, password);
 
                 var students = new List<ApplicationUser>();
                 for (var i = 1; i <= 3; i++)
@@ -95,11 +96,11 @@ namespace TeacherERP.Infrastructure.Data
 
                 // 5. مجموعتان بجدول أسبوعي: السبت في سنتره (المساعد مخصص لها)، والثلاثاء في السنتر الرئيسي
                 await EnsureGroupAsync(
-                    context, tenant.Id, "رياضيات - ثالثة ثانوي - السبت", "Third Secondary", ownCenter.Id, assistant,
+                    context, tenant.Id, "رياضيات - ثالثة ثانوي - السبت", "Third Secondary", ownCenter.Id,
                     (DayOfWeek.Saturday, new TimeSpan(16, 0, 0), 120));
 
                 await EnsureGroupAsync(
-                    context, tenant.Id, "رياضيات - ثالثة ثانوي - الثلاثاء", "Third Secondary", mainCenter?.Id ?? ownCenter.Id, null,
+                    context, tenant.Id, "رياضيات - ثالثة ثانوي - الثلاثاء", "Third Secondary", mainCenter?.Id ?? ownCenter.Id,
                     (DayOfWeek.Tuesday, new TimeSpan(18, 0, 0), 90));
 
                 await context.SaveChangesAsync();
@@ -113,10 +114,9 @@ namespace TeacherERP.Infrastructure.Data
                     .GetRequiredService<ISessionGenerator>()
                     .GenerateForAllGroupsAsync(CancellationToken.None);
 
-                // تم تصحيح تمرير المتغيرات هنا لتعمل بشكل سليم مع الـ Logger
                 logger.LogInformation(
                     "Test data is ready ({Generated} new sessions). Logins: teacher.math@{Domain}, assistant.math@{Domain}, student1..3@{Domain}.",
-                    generated, EmailDomain, EmailDomain, EmailDomain);
+                    generated, EmailDomain, EmailDomain);
             }
             catch (Exception ex)
             {
@@ -221,7 +221,6 @@ namespace TeacherERP.Infrastructure.Data
             string name,
             string gradeLevel,
             Guid centerId,
-            ApplicationUser? assignedAssistant,
             params (DayOfWeek Day, TimeSpan Start, int DurationMinutes)[] slots)
         {
             if (await context.Groups.IgnoreQueryFilters().AnyAsync(g => g.TenantId == tenantId && g.Name == name))
@@ -234,11 +233,6 @@ namespace TeacherERP.Infrastructure.Data
             foreach (var slot in slots)
             {
                 group.AddSlot(slot.Day, slot.Start, slot.DurationMinutes);
-            }
-
-            if (assignedAssistant is not null)
-            {
-                group.AddAdmin(assignedAssistant);
             }
 
             context.Groups.Add(group);

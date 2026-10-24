@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Infrastructure/Repositories/EnrollmentRepository.cs
+﻿// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/EnrollmentRepository.cs
 using Microsoft.EntityFrameworkCore;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
@@ -66,33 +66,21 @@ namespace TeacherERP.Infrastructure.Repositories
 
         public void AddMember(TenantMember member) => _context.TenantMembers.Add(member);
 
-        // ---- للموظفين داخل المدرس الحالي (الفلتر العام يعمل) ----
+        // ---- للموظفين داخل المدرس الحالي (الفلتر العام يعمل، والمدرس والمساعد يريان كل الطلبات) ----
 
         public Task<EnrollmentRequest?> GetTrackedRequestAsync(Guid requestId, CancellationToken cancellationToken)
         {
             return _context.EnrollmentRequests.FirstOrDefaultAsync(r => r.Id == requestId, cancellationToken);
         }
 
-        public Task<bool> IsAssistantAssignedAsync(Guid groupId, Guid userId, CancellationToken cancellationToken)
-        {
-            return _context.Groups.AnyAsync(
-                g => g.Id == groupId && g.AssignedAdmins.Any(admin => admin.Id == userId),
-                cancellationToken);
-        }
-
         public Task<List<EnrollmentRequestListItem>> GetRequestsAsync(
-            EnrollmentRequestStatus? status, Guid userId, bool seesAll, CancellationToken cancellationToken)
+            EnrollmentRequestStatus? status, CancellationToken cancellationToken)
         {
             var query = _context.EnrollmentRequests.AsNoTracking().AsQueryable();
 
             if (status.HasValue)
             {
                 query = query.Where(r => r.Status == status.Value);
-            }
-
-            if (!seesAll)
-            {
-                query = query.Where(r => r.Group.AssignedAdmins.Any(admin => admin.Id == userId));
             }
 
             return query

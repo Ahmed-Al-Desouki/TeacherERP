@@ -41,6 +41,6 @@ namespace TeacherERP.Application.Interfaces
             Guid groupId, DateTime startUtc, DateTime endUtc, IReadOnlyCollection<Guid> excludeSessionIds, CancellationToken cancellationToken);
 
         Task<List<SessionListItem>> GetByRangeAsync(
-            DateTime fromUtc, DateTime toUtc, Guid? groupId, Guid userId, bool seesAll, CancellationToken cancellationToken);
+            DateTime fromUtc, DateTime toUtc, Guid? groupId, CancellationToken cancellationToken);
     }
 }

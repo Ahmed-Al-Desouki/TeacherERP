@@ -97,7 +97,7 @@ namespace TeacherERP.Infrastructure.Repositories
         }
 
         public Task<List<SessionListItem>> GetByRangeAsync(
-            DateTime fromUtc, DateTime toUtc, Guid? groupId, Guid userId, bool seesAll, CancellationToken cancellationToken)
+            DateTime fromUtc, DateTime toUtc, Guid? groupId, CancellationToken cancellationToken)
         {
             var query = _context.Sessions
                 .AsNoTracking()
@@ -106,12 +106,6 @@ namespace TeacherERP.Infrastructure.Repositories
             if (groupId.HasValue)
             {
                 query = query.Where(s => s.GroupId == groupId.Value);
-            }
-
-            // المساعد يرى حصص مجموعاته المخصصة له فقط
-            if (!seesAll)
-            {
-                query = query.Where(s => s.Group.AssignedAdmins.Any(admin => admin.Id == userId));
             }
 
             return query

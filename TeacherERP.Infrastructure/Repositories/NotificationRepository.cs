@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Infrastructure/Repositories/NotificationRepository.cs
+﻿// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/NotificationRepository.cs
 using Microsoft.EntityFrameworkCore;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
@@ -17,7 +17,7 @@ namespace TeacherERP.Infrastructure.Repositories
 
         public void Add(Notification notification) => _context.Notifications.Add(notification);
 
-        public async Task<List<Guid>> GetStaffRecipientIdsAsync(Guid tenantId, Guid? groupId, CancellationToken cancellationToken)
+        public async Task<List<Guid>> GetStaffRecipientIdsAsync(Guid tenantId, CancellationToken cancellationToken)
         {
             var ownerId = await _context.Tenants
                 .AsNoTracking()
@@ -25,19 +25,17 @@ namespace TeacherERP.Infrastructure.Repositories
                 .Select(t => t.OwnerId)
                 .FirstAsync(cancellationToken);
 
+            // المدرس وكل مساعديه النشطين (IgnoreQueryFilters مقصود: tenantId صريح والـ Seeders/الطالب بلا سنتر محدد)
+            var assistants = await _context.TenantMembers
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(m => m.TenantId == tenantId && m.Role == TenantRole.Assistant && m.Status == MembershipStatus.Active)
+                .Select(m => m.UserId)
+                .ToListAsync(cancellationToken);
+
             var recipients = new List<Guid> { ownerId };
+            recipients.AddRange(assistants);
 
-            if (groupId.HasValue)
-            {
-                var assistants = await _context.Groups
-                    .IgnoreQueryFilters()
-                    .AsNoTracking()
-                    .Where(g => g.Id == groupId.Value && g.TenantId == tenantId)
-                    .SelectMany(g => g.AssignedAdmins.Select(admin => admin.Id))
-                    .ToListAsync(cancellationToken);
-
-                recipients.AddRange(assistants);
-            }
 
             return recipients.Distinct().ToList();
         }
