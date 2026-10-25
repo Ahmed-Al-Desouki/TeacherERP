@@ -39,7 +39,7 @@ namespace TeacherERP.Infrastructure.Data
                 var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
                 var context = services.GetRequiredService<AppDbContext>();
 
-                // 1. الحسابات: مدرس (SuperAdmin) ومساعد (Admin) و3 طلاب ببروفايل مكتمل
+                // 1. الحسابات: مدرس (SuperAdmin) ومساعد (Assistant) و3 طلاب ببروفايل مكتمل
                 var teacher = await EnsureStaffAsync(userManager, "teacher.math", "أ. محمد علي", "+201000000011", RoleNames.SuperAdmin, password);
                 var assistant = await EnsureStaffAsync(userManager, "assistant.math", "أ. سارة حسن", "+201000000012", RoleNames.Assistant, password);
 
@@ -94,7 +94,7 @@ namespace TeacherERP.Infrastructure.Data
 
                 await context.SaveChangesAsync();
 
-                // 5. مجموعتان بجدول أسبوعي: السبت في سنتره (المساعد مخصص لها)، والثلاثاء في السنتر الرئيسي
+                // 5. مجموعتان بجدول أسبوعي: السبت في سنتره، والثلاثاء في السنتر الرئيسي
                 await EnsureGroupAsync(
                     context, tenant.Id, "رياضيات - ثالثة ثانوي - السبت", "Third Secondary", ownCenter.Id,
                     (DayOfWeek.Saturday, new TimeSpan(16, 0, 0), 120));
@@ -114,9 +114,10 @@ namespace TeacherERP.Infrastructure.Data
                     .GetRequiredService<ISessionGenerator>()
                     .GenerateForAllGroupsAsync(CancellationToken.None);
 
+                // عدد القيم هنا لازم يساوي عدد الـ Placeholders (4 = Generated + Domain × 3)
                 logger.LogInformation(
-                    "Test data is ready ({Generated} new sessions). Logins: teacher.math@{Domain}, assistant.math@{Domain}, student1..3@{Domain}.",
-                    generated, EmailDomain, EmailDomain);
+                    "Test data is ready ({Generated} new sessions). Logins: teacher.math@{TeacherDomain}, assistant.math@{AssistantDomain}, student1..3@{StudentDomain}.",
+                    generated, EmailDomain, EmailDomain, EmailDomain);
             }
             catch (Exception ex)
             {

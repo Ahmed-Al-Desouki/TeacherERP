@@ -22,21 +22,6 @@ namespace TeacherERP.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("ApplicationUserGroup", b =>
-                {
-                    b.Property<Guid>("AssignedAdminsId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("GroupId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("AssignedAdminsId", "GroupId");
-
-                    b.HasIndex("GroupId");
-
-                    b.ToTable("GroupAdmins", (string)null);
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("Id")
@@ -922,21 +907,6 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("Transactions");
-                });
-
-            modelBuilder.Entity("ApplicationUserGroup", b =>
-                {
-                    b.HasOne("TeacherERP.Domain.Entities.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("AssignedAdminsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("TeacherERP.Domain.Entities.Group", null)
-                        .WithMany()
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
