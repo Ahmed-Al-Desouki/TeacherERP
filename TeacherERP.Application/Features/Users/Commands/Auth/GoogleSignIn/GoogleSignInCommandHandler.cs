@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Users/Commands/Auth/GoogleSignIn/GoogleSignInCommandHandler.cs
+using MediatR;
 using TeacherERP.Application.Features.Users.Commands.Auth.Login;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
@@ -9,7 +10,6 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn
     public class GoogleSignInCommandHandler : IRequestHandler<GoogleSignInCommand, Result<AuthResponseDto>>
     {
         private const string GoogleProvider = "Google";
-        private const string StudentRole = "Student";
 
         private readonly IGoogleAuthService _googleAuthService;
         private readonly IUserAccountService _userAccountService;
@@ -52,7 +52,7 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn
                     user = ApplicationUser.CreateStudent(googleUser.FullName, googleUser.Email);
                     user.EmailConfirmed = true; // جوجل أثبتت ملكية الإيميل
 
-                    var creationResult = await _userAccountService.CreateExternalUserAsync(user, StudentRole, cancellationToken);
+                    var creationResult = await _userAccountService.CreateExternalUserAsync(user, RoleNames.Student, cancellationToken);
                     if (creationResult.IsFailure)
                         return Result<AuthResponseDto>.Failure(creationResult.Error);
                 }

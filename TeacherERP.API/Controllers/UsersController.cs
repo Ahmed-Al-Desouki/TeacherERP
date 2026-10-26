@@ -1,6 +1,9 @@
-﻿using MediatR;
+﻿// موجود (تعديل) — TeacherERP.API/Controllers/UsersController.cs
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using TeacherERP.API.Extensions;
 using TeacherERP.Application.Features.Users.Commands.CreateStudent;
 using TeacherERP.Application.Features.Users.Commands.VerifyOtp;
 
@@ -16,6 +19,7 @@ namespace TeacherERP.API.Controllers
         }
 
         [HttpPost("students")]
+        [EnableRateLimiting(RateLimitPolicies.AuthOtpSend)]
         public async Task<IActionResult> CreateStudent([FromBody] CreateStudentCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
@@ -30,6 +34,7 @@ namespace TeacherERP.API.Controllers
         }
 
         [HttpPost("verify-otp")]
+        [EnableRateLimiting(RateLimitPolicies.AuthOtpVerify)]
         public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);

@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Users/Commands/VerifyOtp/VerifyOtpCommandHandler.cs
+using MediatR;
 using Microsoft.Extensions.Caching.Memory;
 using TeacherERP.Application.Features.Users.Commands.CreateStudent;
 using TeacherERP.Application.Interfaces;
@@ -42,7 +43,7 @@ namespace TeacherERP.Application.Features.Users.Commands.VerifyOtp
             student.EmailConfirmed = true;
 
             // 4. حفظ المستخدم في قاعدة البيانات
-            var creationResult = await _userAccountService.CreateUserAsync(student, cachedData.Password, "Student", cancellationToken);
+            var creationResult = await _userAccountService.CreateUserAsync(student, cachedData.Password, RoleNames.Student, cancellationToken);
 
             if (creationResult.IsFailure)
             {

@@ -1,7 +1,9 @@
-﻿// جديد — TeacherERP.API/Controllers/AttendanceController.cs
+﻿// موجود (تعديل) — TeacherERP.API/Controllers/AttendanceController.cs
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using TeacherERP.API.Extensions;
 using TeacherERP.API.Security;
 using TeacherERP.Application.Features.Attendance.AdminScan;
 using TeacherERP.Application.Features.Attendance.ApproveCompensation;
@@ -32,6 +34,7 @@ namespace TeacherERP.API.Controllers
         // مسح الكود بالموقع. يشترط اكتمال البروفايل
         [HttpPost("scan")]
         [Authorize(Policy = AuthPolicies.CompletedProfile)]
+        [EnableRateLimiting(RateLimitPolicies.AttendanceScan)]
         public async Task<IActionResult> Scan([FromBody] ScanAttendanceCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
@@ -43,6 +46,7 @@ namespace TeacherERP.API.Controllers
         // مسح كارت الطالب (للمدرس أو المساعد)
         [HttpPost("admin-scan")]
         [Authorize(Policy = AuthPolicies.TenantStaff)]
+        [EnableRateLimiting(RateLimitPolicies.AttendanceScan)]
         public async Task<IActionResult> AdminScan([FromBody] AdminScanCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);

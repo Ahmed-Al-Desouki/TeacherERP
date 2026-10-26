@@ -1,6 +1,9 @@
-﻿using MediatR;
+﻿// موجود (تعديل) — TeacherERP.API/Controllers/AuthController.cs
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using TeacherERP.API.Extensions;
 using TeacherERP.Application.Features.Sessions.Logout;
 using TeacherERP.Application.Features.Sessions.LogoutAll;
 using TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn;
@@ -19,6 +22,7 @@ namespace TeacherERP.API.Controllers
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting(RateLimitPolicies.AuthLogin)]
         public async Task<IActionResult> Login([FromBody] LoginCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
@@ -26,6 +30,7 @@ namespace TeacherERP.API.Controllers
         }
 
         [HttpPost("google")]
+        [EnableRateLimiting(RateLimitPolicies.AuthLogin)]
         public async Task<IActionResult> GoogleSignIn([FromBody] GoogleSignInCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
@@ -33,6 +38,7 @@ namespace TeacherERP.API.Controllers
         }
 
         [HttpPost("refresh")]
+        [EnableRateLimiting(RateLimitPolicies.AuthSession)]
         public async Task<IActionResult> Refresh([FromBody] RefreshTokenCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
@@ -41,6 +47,7 @@ namespace TeacherERP.API.Controllers
 
         // بدون Authorize: الـ Refresh Token نفسه يثبت ملكية الجلسة، فيعمل حتى لو انتهى الـ Access Token
         [HttpPost("logout")]
+        [EnableRateLimiting(RateLimitPolicies.AuthSession)]
         public async Task<IActionResult> Logout([FromBody] LogoutCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);

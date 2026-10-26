@@ -1,3 +1,4 @@
+// موجود (تعديل) — TeacherERP.API/Program.cs
 using Hangfire;
 using Hangfire.Dashboard;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -6,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
 using System.Text.Json.Serialization;
+using TeacherERP.API.Extensions;
 using TeacherERP.API.Middlewares;
 using TeacherERP.API.Security;
 using TeacherERP.Application;
@@ -45,6 +47,11 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddMemoryCache();
+
+// حماية الـ API: الـ IP الحقيقي خلف الـ Proxy (اختياري)، CORS، وتحديد معدل الطلبات
+builder.Services.AddApiForwardedHeaders(builder.Configuration);
+builder.Services.AddApiCors(builder.Configuration);
+builder.Services.AddApiRateLimiting();
 
 // Clean Architecture Extensions
 builder.Services.AddApplicationServices();
@@ -132,6 +139,9 @@ app.Services.GetRequiredService<IRecurringJobManager>()
 app.Services.GetRequiredService<IRecurringJobManager>()
     .AddOrUpdate<ISessionGenerationJob>("generate-sessions", job => job.RunAsync(), Cron.Daily(2));
 
+// الـ IP الحقيقي أولاً (لا يعمل إلا لو فُعّل من الإعدادات)، لأن كل ما بعده (Rate Limiting واللوجات) يعتمد عليه
+app.UseForwardedHeaders();
+
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
 
@@ -146,6 +156,9 @@ app.UseSwaggerUI();
 // HTTPS قبل اللوحة، حتى لا تُرسل بيانات الدخول عبر اتصال غير مشفر
 app.UseHttpsRedirection();
 
+// CORS قبل المصادقة (الـ Preflight لازم يُرد عليه قبلها)
+app.UseCors(CorsExtensions.PolicyName);
+
 // لوحة Hangfire محمية بـ Basic Auth (البيانات من قسم HangfireDashboard في الإعدادات)
 var dashboardSettings = builder.Configuration.GetSection("HangfireDashboard");
 app.UseHangfireDashboard("/hangfire", new DashboardOptions
@@ -157,6 +170,10 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
 });
 
 app.UseAuthentication();
+
+// بعد المصادقة عشان الحدود اللي بالمستخدم (مسح الحضور) تعرف هويته، وقبل الـ Authorization عشان نوفّر استعلامات الداتابيز على الطلبات المرفوضة
+app.UseRateLimiter();
+
 app.UseAuthorization();
 
 app.MapControllers();
