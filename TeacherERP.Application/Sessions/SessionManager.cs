@@ -1,4 +1,5 @@
-﻿using Hangfire;
+﻿// موجود (تعديل) — TeacherERP.Application/Sessions/SessionManager.cs
+using Hangfire;
 using Microsoft.Extensions.Logging;
 using TeacherERP.Application.Features.Profile;
 using TeacherERP.Application.Features.Users.Commands.Auth.Login;
@@ -245,6 +246,32 @@ namespace TeacherERP.Application.Sessions
 
             // بعد الحفظ: مسح الكاش حتى تتوقف الـ Access Tokens فوراً
             foreach (var session in activeSessions)
+            {
+                _sessionValidator.Invalidate(session.Id);
+            }
+        }
+
+        public async Task RevokeOthersAsync(Guid userId, Guid currentSessionId, SessionRevokeReason reason, CancellationToken cancellationToken)
+        {
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+            var activeSessions = await _sessionRepository.GetActiveByUserAsync(userId, now, cancellationToken);
+            var others = activeSessions.Where(s => s.Id != currentSessionId).ToList();
+
+            if (others.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var session in others)
+            {
+                session.Revoke(reason, now);
+            }
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // بعد الحفظ: مسح الكاش حتى تتوقف الـ Access Tokens الخاصة بالأجهزة الأخرى فوراً
+            foreach (var session in others)
             {
                 _sessionValidator.Invalidate(session.Id);
             }

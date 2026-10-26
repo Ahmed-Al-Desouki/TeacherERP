@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using TeacherERP.API.Extensions;
 using TeacherERP.Application.Features.Sessions.Logout;
 using TeacherERP.Application.Features.Sessions.LogoutAll;
+using TeacherERP.Application.Features.Users.Commands.Auth.ActivateAccount;
 using TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn;
 using TeacherERP.Application.Features.Users.Commands.Auth.Login;
 using TeacherERP.Application.Features.Users.Commands.Auth.RefreshToken;
@@ -24,6 +25,15 @@ namespace TeacherERP.API.Controllers
         [HttpPost("login")]
         [EnableRateLimiting(RateLimitPolicies.AuthLogin)]
         public async Task<IActionResult> Login([FromBody] LoginCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return ToResponse(result);
+        }
+
+        // تفعيل حساب مساعد أنشأه المدرس: الكود يتبعت عند أول Login (Auth.ActivationRequired)
+        [HttpPost("activate")]
+        [EnableRateLimiting(RateLimitPolicies.AuthOtpVerify)]
+        public async Task<IActionResult> Activate([FromBody] ActivateAccountCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result);

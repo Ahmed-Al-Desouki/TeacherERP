@@ -1,4 +1,5 @@
-﻿using TeacherERP.Application.Features.Users.Commands.Auth.Login;
+﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/ISessionManager.cs
+using TeacherERP.Application.Features.Users.Commands.Auth.Login;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
@@ -17,5 +18,8 @@ namespace TeacherERP.Application.Interfaces
         Task<Result<bool>> RevokeSessionAsync(Guid userId, Guid sessionId, SessionRevokeReason reason, CancellationToken cancellationToken);
 
         Task RevokeAllForUserAsync(Guid userId, SessionRevokeReason reason, CancellationToken cancellationToken);
+
+        // إلغاء كل جلسات المستخدم ما عدا الحالية (بعد تغيير الباسورد)
+        Task RevokeOthersAsync(Guid userId, Guid currentSessionId, SessionRevokeReason reason, CancellationToken cancellationToken);
     }
 }

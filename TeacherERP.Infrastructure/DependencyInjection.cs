@@ -67,6 +67,7 @@ namespace TeacherERP.Infrastructure
             services.AddScoped<IExternalLoginService, ExternalLoginService>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<ITenantRepository, TenantRepository>();
+            services.AddScoped<ITeamRepository, TeamRepository>();
             services.AddScoped<ICenterRepository, CenterRepository>();
             services.AddScoped<IGroupRepository, GroupRepository>();
             services.AddScoped<IDirectoryRepository, DirectoryRepository>();
@@ -83,6 +84,7 @@ namespace TeacherERP.Infrastructure
             services.AddTransient<IEmailService, EmailService>();
             services.AddTransient<IOtpService, OtpService>();
             services.AddTransient<IResetGrantService, ResetGrantService>();
+            services.AddSingleton<IPasswordGenerator, PasswordGenerator>();
             services.AddScoped<IJwtProvider, JwtProvider>();
             services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 

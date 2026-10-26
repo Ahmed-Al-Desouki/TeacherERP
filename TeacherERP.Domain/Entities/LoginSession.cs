@@ -1,4 +1,5 @@
-﻿using System;
+﻿// موجود (تعديل) — TeacherERP.Domain/Entities/LoginSession.cs
+using System;
 
 namespace TeacherERP.Domain.Entities
 {
@@ -10,7 +11,8 @@ namespace TeacherERP.Domain.Entities
         DeviceLimit = 3,
         TokenReuse = 4,
         ReplacedByNewLogin = 5,
-        AdminAction = 6
+        AdminAction = 6,
+        PasswordChanged = 7
     }
 
     /// <summary>

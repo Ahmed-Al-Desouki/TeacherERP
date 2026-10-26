@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿// موجود (تعديل) — TeacherERP.Infrastructure/Services/EmailService.cs
+using System.Net;
 using System.Net.Mail;
 using System.Text;
 using Microsoft.Extensions.Options;
@@ -53,6 +54,22 @@ namespace TeacherERP.Infrastructure.Services
                 toEmail,
                 "Signed out of a device | تم تسجيل خروجك من جهاز",
                 EmailTemplates.SessionEvicted(evictedDeviceName, newDeviceName, occurredAt, timeZoneId));
+        }
+
+        public async Task SendAssistantWelcomeAsync(string toEmail, string fullName, string teacherName, string temporaryPassword)
+        {
+            await SendEmailAsync(
+                toEmail,
+                "You were added as an assistant | تمت إضافتك كمساعد",
+                EmailTemplates.AssistantWelcome(fullName, teacherName, temporaryPassword));
+        }
+
+        public async Task SendAddedToTeamAlertAsync(string toEmail, string fullName, string teacherName)
+        {
+            await SendEmailAsync(
+                toEmail,
+                "You were added to a new team | تمت إضافتك لفريق جديد",
+                EmailTemplates.AddedToTeam(fullName, teacherName));
         }
 
         private async Task SendEmailAsync(string toEmail, string subject, string body)

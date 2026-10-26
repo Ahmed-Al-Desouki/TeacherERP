@@ -1,4 +1,5 @@
-﻿using System;
+﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/IOtpService.cs
+using System;
 using System.Collections.Generic;
 using System.Text;
 using TeacherERP.Domain.Shared;
@@ -11,11 +12,12 @@ namespace TeacherERP.Application.Interfaces
         Task<Result<bool>> VerifyAsync(OtpPurpose purpose, string identifier, string code, CancellationToken cancellationToken);
     }
 
-    /// <summary>الغرض من الكود، حتى لا يتداخل كود التسجيل مع كود استرجاع الباسورد</summary>
+    /// <summary>الغرض من الكود، حتى لا يتداخل كود التسجيل مع كود استرجاع الباسورد أو تفعيل المساعد</summary>
     public enum OtpPurpose
     {
         Registration,
-        PasswordReset
+        PasswordReset,
+        Activation
     }
 
     /// <summary>نتيجة توليد الكود، تتضمن الأزمنة التي يحتاجها التطبيق للعد التنازلي</summary>

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿// موجود (تعديل) — TeacherERP.Domain/Entities/User.cs
+using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -108,6 +109,24 @@ namespace TeacherERP.Domain.Entities
                 UserName = email,
                 PhoneNumber = phoneNumber,
                 // العمود إجباري في الداتابيز لكل المستخدمين، فنولّد قيمة للمساعد والمدرس أيضاً
+                StaticQrCode = Guid.NewGuid().ToString()
+            };
+        }
+
+        /// <summary>
+        /// مساعد ينشئه المدرس بإيميله (الطريقة الوحيدة لإنشاء المساعدين). بلا موبايل.
+        /// EmailConfirmed يبقى false حتى يفعّله بالـ OTP عند أول دخول، فهو علامة "في انتظار التفعيل".
+        /// </summary>
+        public static ApplicationUser CreateAssistant(string fullName, string email)
+        {
+            return new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                FullName = fullName,
+                Email = email,
+                UserName = email,
+                Status = StudentStatus.Active,
+                EmailConfirmed = false,
                 StaticQrCode = Guid.NewGuid().ToString()
             };
         }

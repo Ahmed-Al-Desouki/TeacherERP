@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿// موجود (تعديل) — TeacherERP.Infrastructure/Services/UserAccountService.cs
+using Microsoft.AspNetCore.Identity;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
@@ -50,6 +51,30 @@ namespace TeacherERP.Infrastructure.Services
 
             await AssignRoleAsync(user, role);
             return Result<Guid>.Success(user.Id);
+        }
+
+        public async Task<Result<IReadOnlyList<string>>> GetRolesAsync(ApplicationUser user, CancellationToken cancellationToken)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            return Result<IReadOnlyList<string>>.Success(roles.ToList());
+        }
+
+        public async Task<Result<bool>> ConfirmEmailAsync(ApplicationUser user, CancellationToken cancellationToken)
+        {
+            if (user.EmailConfirmed)
+            {
+                return Result<bool>.Success(true);
+            }
+
+            user.EmailConfirmed = true;
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                return Result<bool>.Failure(new Error("User.ActivationFail", result.Errors.First().Description));
+            }
+
+            return Result<bool>.Success(true);
         }
 
         private async Task AssignRoleAsync(ApplicationUser user, string role)

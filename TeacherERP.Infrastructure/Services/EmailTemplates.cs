@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿// موجود (تعديل) — TeacherERP.Infrastructure/Services/EmailTemplates.cs
+using System.Net;
 using TeacherERP.Application.Common;
 using TeacherERP.Application.Sessions;
 
@@ -81,6 +82,50 @@ namespace TeacherERP.Infrastructure.Services
                 """;
 
             return Layout("📱", "#d97706", "Signed out of a device", "تم تسجيل خروجك من جهاز", content);
+        }
+
+        public static string AssistantWelcome(string fullName, string teacherName, string temporaryPassword)
+        {
+            var name = WebUtility.HtmlEncode(fullName);
+            var teacher = WebUtility.HtmlEncode(teacherName);
+            var password = WebUtility.HtmlEncode(temporaryPassword);
+
+            var content = $$"""
+                <p style="margin:0 0 6px 0;">Hello <b>{{name}}</b>, <b>{{teacher}}</b> added you as an assistant on Smart Teacher ERP.</p>
+                <p dir="rtl" style="margin:0 0 18px 0;color:#6b7280;">أهلاً <b>{{name}}</b>، قام <b>{{teacher}}</b> بإضافتك كمساعد على Smart Teacher ERP.</p>
+                <p style="margin:0 0 6px 0;">Log in with this email and the temporary password below:</p>
+                <p dir="rtl" style="margin:0 0 14px 0;color:#6b7280;">سجّل الدخول بهذا الإيميل وكلمة المرور المؤقتة التالية:</p>
+                <div style="text-align:center;margin:0 0 18px 0;">
+                  <span style="display:inline-block;background:#eef2ff;color:#4338ca;font-size:26px;font-weight:700;letter-spacing:3px;padding:12px 20px;border-radius:12px;font-family:Consolas,'Courier New',monospace;" dir="ltr">{{password}}</span>
+                </div>
+                <div style="background:#eff6ff;border-radius:12px;padding:14px 16px;margin:0 0 18px 0;color:#1e40af;font-size:14px;">
+                  The first time you log in, we will send a verification code to this email. After that you can choose a new password.
+                  <span dir="rtl" style="display:block;margin-top:6px;">أول مرة تسجل فيها الدخول سنرسل كود تحقق إلى هذا الإيميل، وبعدها يمكنك اختيار كلمة مرور جديدة.</span>
+                </div>
+                <p style="margin:0 0 4px 0;color:#b91c1c;font-size:13px;"><b>Keep this email private.</b> We recommend changing the password after you log in.</p>
+                <p dir="rtl" style="margin:0;color:#b91c1c;font-size:13px;"><b>لا تشارك هذا الإيميل مع أحد.</b> ننصحك بتغيير كلمة المرور بعد تسجيل الدخول.</p>
+                """;
+
+            return Layout("👋", "#4f46e5", "Welcome to the team", "أهلاً بك في الفريق", content);
+        }
+
+        public static string AddedToTeam(string fullName, string teacherName)
+        {
+            var name = WebUtility.HtmlEncode(fullName);
+            var teacher = WebUtility.HtmlEncode(teacherName);
+
+            var content = $$"""
+                <p style="margin:0 0 6px 0;">Hello <b>{{name}}</b>, <b>{{teacher}}</b> added you as an assistant on their team.</p>
+                <p dir="rtl" style="margin:0 0 18px 0;color:#6b7280;">أهلاً <b>{{name}}</b>، قام <b>{{teacher}}</b> بإضافتك كمساعد في فريقه.</p>
+                <div style="background:#eff6ff;border-radius:12px;padding:14px 16px;margin:0 0 18px 0;color:#1e40af;font-size:14px;">
+                  Use your existing email and password to log in, then choose this teacher from your list.
+                  <span dir="rtl" style="display:block;margin-top:6px;">استخدم نفس الإيميل وكلمة المرور الحاليين للدخول، ثم اختر هذا المدرس من قائمتك.</span>
+                </div>
+                <p style="margin:0 0 4px 0;color:#6b7280;font-size:13px;">If you don't know this teacher, contact the system administrator.</p>
+                <p dir="rtl" style="margin:0;color:#6b7280;font-size:13px;">إذا كنت لا تعرف هذا المدرس، تواصل مع إدارة النظام.</p>
+                """;
+
+            return Layout("🤝", "#0d9488", "Added to a new team", "تمت إضافتك لفريق جديد", content);
         }
 
         private static string Layout(string icon, string accent, string title, string titleAr, string content)
