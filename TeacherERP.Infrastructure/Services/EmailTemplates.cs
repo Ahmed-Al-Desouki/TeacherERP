@@ -9,6 +9,23 @@ namespace TeacherERP.Infrastructure.Services
     // الأوقات تصل بـ UTC وتُحوَّل هنا لتوقيت المستخدم عبر UserTime
     internal static class EmailTemplates
     {
+        public static string VerificationOtp(string otpCode)
+        {
+            var code = WebUtility.HtmlEncode(otpCode);
+
+            var content = $$"""
+        <p style="margin:0 0 6px 0;">Welcome! Use the code below to verify your email. It is valid for <b>10 minutes</b>.</p>
+        <p dir="rtl" style="margin:0 0 22px 0;color:#6b7280;">أهلاً بك! استخدم الكود التالي لتأكيد بريدك الإلكتروني. الكود صالح لمدة <b>10 دقائق</b>.</p>
+        <div style="text-align:center;margin:0 0 22px 0;">
+          <span style="display:inline-block;background:#eef2ff;color:#4338ca;font-size:34px;font-weight:700;letter-spacing:10px;padding:14px 12px 14px 22px;border-radius:12px;font-family:Consolas,'Courier New',monospace;">{{code}}</span>
+        </div>
+        <p style="margin:0 0 4px 0;color:#6b7280;font-size:13px;">If you didn't request this code, you can safely ignore this email.</p>
+        <p dir="rtl" style="margin:0;color:#6b7280;font-size:13px;">إذا لم تطلب هذا الكود، يمكنك تجاهل هذه الرسالة بأمان.</p>
+        """;
+
+            return Layout("✉️", "#4f46e5", "Verify your email", "تأكيد البريد الإلكتروني", content);
+        }
+
         public static string PasswordResetOtp(string otpCode)
         {
             var code = WebUtility.HtmlEncode(otpCode);

@@ -22,9 +22,10 @@ namespace TeacherERP.Infrastructure.Services
 
         public async Task SendOtpEmailAsync(string toEmail, string otpCode)
         {
-            var subject = "Your OTP for Smart Teacher ERP";
-            var body = $"<h1>Welcome!</h1><p>Your verification code is: <strong>{otpCode}</strong></p><p>This code is valid for 10 minutes.</p>";
-            await SendEmailAsync(toEmail, subject, body);
+            await SendEmailAsync(
+                toEmail,
+                "Your verification code | كود التحقق",
+                EmailTemplates.VerificationOtp(otpCode));
         }
 
         public async Task SendNewLoginAlertAsync(string toEmail, string deviceInfo, DateTime loginTime, string? timeZoneId)
