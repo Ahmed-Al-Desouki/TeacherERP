@@ -1,4 +1,5 @@
-﻿using TeacherERP.Domain.Shared;
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Tenants/Tenanterrors.cs
+using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Tenants
 {
@@ -16,7 +17,10 @@ namespace TeacherERP.Application.Features.Tenants
         // عضو عند المدرس لكن دوره لا يسمح بهذا الإجراء
         public static readonly Error InsufficientRole = new("Teacher.InsufficientRole", "Your role does not allow this action.");
 
-        private static readonly Error[] All = { Required, NoMembership, InvalidHeader, Forbidden, Suspended, InsufficientRole };
+        // مساعد أوقفه المدرس مؤقتاً (الطالب الموقوف بسبب الغياب لا يُمنع من هنا)
+        public static readonly Error MembershipSuspended = new("Teacher.MembershipSuspended", "Your access to this teacher is suspended.");
+
+        private static readonly Error[] All = { Required, NoMembership, InvalidHeader, Forbidden, Suspended, InsufficientRole, MembershipSuspended };
 
         public static Error? FromCode(string? code)
             => All.FirstOrDefault(e => string.Equals(e.Code, code, StringComparison.Ordinal));

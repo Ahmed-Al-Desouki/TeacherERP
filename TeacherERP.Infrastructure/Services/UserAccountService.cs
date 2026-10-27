@@ -77,6 +77,17 @@ namespace TeacherERP.Infrastructure.Services
             return Result<bool>.Success(true);
         }
 
+        public async Task<Result<bool>> DeleteAsync(ApplicationUser user, CancellationToken cancellationToken)
+        {
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+            {
+                return Result<bool>.Failure(new Error("User.DeleteFail", result.Errors.First().Description));
+            }
+
+            return Result<bool>.Success(true);
+        }
+
         private async Task AssignRoleAsync(ApplicationUser user, string role)
         {
             if (!await _roleManager.RoleExistsAsync(role))

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿// موجود (تعديل) — TeacherERP.API/Security/Tenanthandler.cs
+using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
@@ -104,7 +105,13 @@ namespace TeacherERP.API.Security
                 return TenantErrors.Suspended;
             }
 
-            // العضو الموقوف (غياب) يعدّي من هنا عمداً، وقواعد الحضور تتحقق من حالته عبر TenantContext
+            // المساعد الموقوف (قرار المدرس) يُمنع من هنا. الطالب الموقوف (غياب) يعدّي عمداً،
+            // وقواعد الحضور تتحقق من حالته عبر TenantContext
+            if (membership.MemberStatus == MembershipStatus.Suspended && membership.Role != TenantRole.Student)
+            {
+                return TenantErrors.MembershipSuspended;
+            }
+
             if (!requirement.Allows(membership.Role))
             {
                 return TenantErrors.InsufficientRole;

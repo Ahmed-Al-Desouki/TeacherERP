@@ -4,7 +4,7 @@ using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Interfaces
 {
-    // دورة حياة الحساب: البحث والإنشاء والتفعيل
+    // دورة حياة الحساب: البحث والإنشاء والتفعيل والحذف
     public interface IUserAccountService
     {
         Task<Result<bool>> CheckEmailExistsAsync(string email, CancellationToken cancellationToken);
@@ -22,5 +22,8 @@ namespace TeacherERP.Application.Interfaces
 
         // تأكيد ملكية الإيميل (تفعيل حساب المساعد بعد الـ OTP)
         Task<Result<bool>> ConfirmEmailAsync(ApplicationUser user, CancellationToken cancellationToken);
+
+        // حذف حساب (لإلغاء مساعد لم يُفعَّل بعد). المستدعي مسؤول عن التأكد أنه بلا بيانات مرتبطة
+        Task<Result<bool>> DeleteAsync(ApplicationUser user, CancellationToken cancellationToken);
     }
 }
