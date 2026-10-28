@@ -49,6 +49,7 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<Session> Sessions { get; set; }
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -237,6 +238,9 @@ namespace TeacherERP.Infrastructure.Data
 
                 entity.HasIndex(s => new { s.GroupId, s.StartTime }).IsUnique();
                 entity.HasIndex(s => new { s.TenantId, s.StartTime });
+
+                // الحصص التي لم يُحسب غيابها بعد (الـ Job يقرأ منها فقط، فالفهرس يبقى صغيراً)
+                entity.HasIndex(s => new { s.TenantId, s.EndTime }).HasFilter("[AbsencesProcessedAt] IS NULL");
             });
 
             // 5.3.1 الإشعارات: للمستلم عبر كل مدرسيه (غير معزولة بالـ Tenant عمداً)
@@ -256,6 +260,21 @@ namespace TeacherERP.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasIndex(n => new { n.RecipientUserId, n.IsRead, n.CreatedAt });
+            });
+
+            // 5.3.2 سجل التدقيق: بلا Foreign Keys على المستخدمين عمداً (سجل تاريخي لا يتأثر بحذف حساب)
+            builder.Entity<AuditLog>(entity =>
+            {
+                entity.Property(a => a.Action).HasConversion<string>().HasMaxLength(40);
+                entity.Property(a => a.Reason).HasMaxLength(500);
+
+                entity.HasOne<Tenant>()
+                    .WithMany()
+                    .HasForeignKey(a => a.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(a => new { a.TenantId, a.CreatedAt });
+                entity.HasIndex(a => new { a.TenantId, a.TargetUserId });
             });
 
             // 5.4 تسجيل الطالب في مجموعة: تسجيل نشط واحد فقط للطالب عند كل مدرس

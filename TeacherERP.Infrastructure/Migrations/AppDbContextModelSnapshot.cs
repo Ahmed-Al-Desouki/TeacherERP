@@ -297,6 +297,45 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.ToTable("AttendanceRecords");
                 });
 
+            modelBuilder.Entity("TeacherERP.Domain.Entities.AuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid?>("TargetUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "CreatedAt");
+
+                    b.HasIndex("TenantId", "TargetUserId");
+
+                    b.ToTable("AuditLogs");
+                });
+
             modelBuilder.Entity("TeacherERP.Domain.Entities.Center", b =>
                 {
                     b.Property<Guid>("Id")
@@ -679,6 +718,9 @@ namespace TeacherERP.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime?>("AbsencesProcessedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("BoardImageUrl")
                         .HasColumnType("nvarchar(max)");
 
@@ -721,6 +763,9 @@ namespace TeacherERP.Infrastructure.Migrations
 
                     b.HasIndex("GroupId", "StartTime")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "EndTime")
+                        .HasFilter("[AbsencesProcessedAt] IS NULL");
 
                     b.HasIndex("TenantId", "StartTime");
 
@@ -1026,6 +1071,15 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Navigation("Session");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.AuditLog", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.Center", b =>

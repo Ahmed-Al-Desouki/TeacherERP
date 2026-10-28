@@ -20,7 +20,7 @@ namespace TeacherERP.Domain.Entities
         /// <summary>طريقة تسجيل الحضور للشفافية وتتبع أداء المساعدين</summary>
         public ScanMethod ScannedVia { get; private set; }
 
-        /// <summary>من سجّل الحضور (مساعد أو طالب مسؤول)، وفارغ لو الطالب مسح لنفسه. للمساءلة والتوثيق</summary>
+        /// <summary>من سجّل الحضور (مساعد أو طالب مسؤول)، وفارغ لو الطالب مسح لنفسه أو النظام. للمساءلة والتوثيق</summary>
         public Guid? RecordedByUserId { get; private set; }
 
         /// <summary>للتعويض: الحصة الأصلية للطالب (في مجموعته) التي يعوّضها بحضور هذه الحصة</summary>
@@ -60,6 +60,19 @@ namespace TeacherERP.Domain.Entities
             };
         }
 
+        /// <summary>غياب يسجله النظام (الـ Job) لطالب مسجّل لم يحضر حصة انتهت</summary>
+        public static AttendanceRecord RecordAbsence(Guid tenantId, Guid sessionId, Guid studentId)
+        {
+            return new AttendanceRecord
+            {
+                TenantId = tenantId,
+                SessionId = sessionId,
+                StudentId = studentId,
+                Status = AttendanceStatus.Absent,
+                ScannedVia = ScanMethod.System,
+            };
+        }
+
         /// <summary>قبول طلب التعويض المعلق واعتباره حاضراً</summary>
         public void ApproveCompensation()
         {
@@ -78,6 +91,6 @@ namespace TeacherERP.Domain.Entities
     /// <summary>حالة الحضور (حاضر، غائب، تعويض معلق في انتظار الموافقة، مرفوض)</summary>
     public enum AttendanceStatus { Present, Absent, PendingCompensation, Rejected }
 
-    /// <summary>طريقة المسح (بواسطة الطالب لنفسه، بواسطة المساعد لكارت الطالب، أو إدخال يدوي للطوارئ)</summary>
-    public enum ScanMethod { SelfScan, AdminScan, ManualEntry }
+    /// <summary>طريقة المسح (بواسطة الطالب لنفسه، بواسطة المساعد لكارت الطالب، إدخال يدوي للطوارئ، أو النظام للغياب التلقائي)</summary>
+    public enum ScanMethod { SelfScan, AdminScan, ManualEntry, System }
 }

@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Domain/Entities/Notification.cs
+﻿// موجود (تعديل) — TeacherERP.Domain/Entities/Notification.cs
 using System;
 
 namespace TeacherERP.Domain.Entities
@@ -18,7 +18,7 @@ namespace TeacherERP.Domain.Entities
         /// <summary>نص احتياطي بالإنجليزية، والتطبيق يترجم حسب النوع</summary>
         public string Message { get; private set; }
 
-        /// <summary>الكيان المرتبط (طلب أو سجل حضور) لفتح الشاشة المناسبة</summary>
+        /// <summary>الكيان المرتبط (طلب أو سجل حضور أو طالب) لفتح الشاشة المناسبة</summary>
         public Guid? RelatedId { get; private set; }
 
         public bool IsRead { get; private set; }
@@ -49,5 +49,6 @@ namespace TeacherERP.Domain.Entities
         }
     }
 
-    public enum NotificationType { StudentAutoRegistered, EnrollmentRequested, CompensationRequested }
+    // StudentAutoSuspended: RelatedId = معرّف الطالب
+    public enum NotificationType { StudentAutoRegistered, EnrollmentRequested, CompensationRequested, StudentAutoSuspended }
 }

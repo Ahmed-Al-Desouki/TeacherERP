@@ -32,6 +32,9 @@ namespace TeacherERP.Domain.Entities
         /// </summary>
         public bool IsModified { get; private set; }
 
+        /// <summary>متى عالج الـ Job غياب هذه الحصة (فارغ = لم تُعالَج بعد). يمنع المعالجة المزدوجة</summary>
+        public DateTime? AbsencesProcessedAt { get; private set; }
+
         /// <summary>رابط صورة السبورة الخاصة بهذه الحصة (اختياري)</summary>
         public string? BoardImageUrl { get; private set; }
 
@@ -99,6 +102,13 @@ namespace TeacherERP.Domain.Entities
         {
             IsCancelled = false;
             CancelReason = null;
+            MarkAsUpdated();
+        }
+
+        /// <summary>الـ Job أنهى حساب غياب هذه الحصة (ولو كانت ملغاة أو بلا غائبين)</summary>
+        public void MarkAbsencesProcessed(DateTime atUtc)
+        {
+            AbsencesProcessedAt = atUtc;
             MarkAsUpdated();
         }
 

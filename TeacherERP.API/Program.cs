@@ -139,6 +139,10 @@ app.Services.GetRequiredService<IRecurringJobManager>()
 app.Services.GetRequiredService<IRecurringJobManager>()
     .AddOrUpdate<ISessionGenerationJob>("generate-sessions", job => job.RunAsync(), Cron.Daily(2));
 
+// مهمة دورية كل 10 دقايق لحساب غياب الحصص المنتهية والإيقاف التلقائي بعد 4 غيابات متتالية
+app.Services.GetRequiredService<IRecurringJobManager>()
+    .AddOrUpdate<IAbsenceProcessingJob>("process-absences", job => job.RunAsync(), "*/10 * * * *");
+
 // الـ IP الحقيقي أولاً (لا يعمل إلا لو فُعّل من الإعدادات)، لأن كل ما بعده (Rate Limiting واللوجات) يعتمد عليه
 app.UseForwardedHeaders();
 
