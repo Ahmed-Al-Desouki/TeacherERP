@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Interfaces/IAbsenceRepository.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/IAbsenceRepository.cs
 using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
@@ -17,5 +17,11 @@ namespace TeacherERP.Application.Interfaces
 
         // عضويات الطلاب عند المدرس الحالي متتبَّعة للتعديل
         Task<List<TenantMember>> GetTrackedStudentMembersAsync(IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken);
+
+        // هل كان الطالب مسجلاً في مجموعة الحصة وقت بدايتها؟
+        Task<bool> WasEnrolledAtAsync(Session session, Guid studentId, CancellationToken cancellationToken);
+
+        // عدد الغيابات المسجّلة بعد آخر حضور للطالب عند المدرس الحالي (الغياب المتتالي الفعلي من السجلات)
+        Task<int> CountTrailingAbsencesAsync(Guid studentId, CancellationToken cancellationToken);
     }
 }

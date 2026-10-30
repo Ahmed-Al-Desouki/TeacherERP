@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Attendance/AttendancePolicy.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Attendance/AttendancePolicy.cs
 namespace TeacherERP.Application.Attendance
 {
     public static class AttendancePolicy
@@ -11,5 +11,8 @@ namespace TeacherERP.Application.Attendance
 
         /// <summary>نافذة التعويض حول الحصة الأصلية بالأيام (قبلها أو بعدها)</summary>
         public const int CompensationWindowDays = 7;
+
+        /// <summary>يقدر الموظف يصحّح حضور حصة انتهت خلال هذه الساعات من نهايتها (بسبب إجباري يُسجَّل)</summary>
+        public const int ManualCorrectionWindowHours = 72;
     }
 }

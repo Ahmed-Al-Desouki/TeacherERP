@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Features/Attendance/AttendanceErrors.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Attendance/AttendanceErrors.cs
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Attendance
@@ -19,5 +19,13 @@ namespace TeacherERP.Application.Features.Attendance
         public static readonly Error NotDynamicMode = new("Attendance.NotDynamicMode", "The attendance mode is not the rotating code.");
         public static readonly Error RecordNotFound = new("Attendance.RecordNotFound", "The attendance record was not found.");
         public static readonly Error NotPending = new("Attendance.NotPending", "The record is not waiting for approval.");
+
+        // الإدخال اليدوي والتصحيح
+        public static readonly Error SessionCancelled = new("Attendance.SessionCancelled", "The session is cancelled.");
+        public static readonly Error SessionNotStarted = new("Attendance.SessionNotStarted", "The session has not started yet.");
+        public static readonly Error ReasonRequired = new("Attendance.ReasonRequired", "A reason is required to correct the attendance of a finished session.");
+        public static readonly Error CorrectionWindowClosed = new("Attendance.CorrectionWindowClosed", "The correction period for this session has ended.");
+        public static readonly Error StudentNotInGroup = new("Attendance.StudentNotInGroup", "The student was not enrolled in this group at the time of the session.");
+        public static readonly Error AlreadyHasRecord = new("Attendance.AlreadyHasRecord", "The student already has a record for this session that cannot be corrected.");
     }
 }

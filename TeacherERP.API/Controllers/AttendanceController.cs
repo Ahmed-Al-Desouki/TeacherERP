@@ -11,6 +11,7 @@ using TeacherERP.Application.Features.Attendance.GetAttendanceSettings;
 using TeacherERP.Application.Features.Attendance.GetDisplayCode;
 using TeacherERP.Application.Features.Attendance.GetPendingCompensations;
 using TeacherERP.Application.Features.Attendance.GetSessionAttendance;
+using TeacherERP.Application.Features.Attendance.ManualAttendance;
 using TeacherERP.Application.Features.Attendance.RegenerateStaticCode;
 using TeacherERP.Application.Features.Attendance.RejectCompensation;
 using TeacherERP.Application.Features.Attendance.ScanAttendance;
@@ -48,6 +49,15 @@ namespace TeacherERP.API.Controllers
         [Authorize(Policy = AuthPolicies.TenantStaff)]
         [EnableRateLimiting(RateLimitPolicies.AttendanceScan)]
         public async Task<IActionResult> AdminScan([FromBody] AdminScanCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return ToResponse(result);
+        }
+
+        // إدخال يدوي لطالب من قائمتي: حصة جارية = تسجيل عادي، حصة انتهت (خلال 72 ساعة) = تصحيح بسبب إجباري
+        [HttpPost("manual")]
+        [Authorize(Policy = AuthPolicies.TenantStaff)]
+        public async Task<IActionResult> ManualEntry([FromBody] ManualAttendanceCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result);

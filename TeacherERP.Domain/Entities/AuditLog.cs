@@ -1,10 +1,10 @@
-﻿// جديد — TeacherERP.Domain/Entities/AuditLog.cs
+﻿// موجود (تعديل) — TeacherERP.Domain/Entities/AuditLog.cs
 using System;
 
 namespace TeacherERP.Domain.Entities
 {
     /// <summary>
-    /// سجل تدقيق للإجراءات الحساسة داخل مساحة المدرس (إيقاف وفك إيقاف وحظر الطلاب). للإضافة فقط ولا يُعدَّل.
+    /// سجل تدقيق للإجراءات الحساسة داخل مساحة المدرس (إيقاف وفك إيقاف وحظر الطلاب وتصحيح الحضور). للإضافة فقط ولا يُعدَّل.
     /// المنفّذ والهدف بلا Foreign Keys عمداً: سجل تاريخي لا يتأثر بحذف حساب لاحقاً.
     /// </summary>
     public class AuditLog : BaseEntity, ITenantOwned
@@ -42,6 +42,8 @@ namespace TeacherERP.Domain.Entities
         StudentUnsuspended,
         StudentReinstatedByCompensation,
         StudentBlacklisted,
-        StudentUnblacklisted
+        StudentUnblacklisted,
+        AttendanceCorrected,
+        StudentReinstatedByCorrection
     }
 }

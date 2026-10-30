@@ -73,6 +73,15 @@ namespace TeacherERP.Domain.Entities
             };
         }
 
+        /// <summary>تصحيح غياب مسجَّل إلى حضور بواسطة موظف (السبب يُسجَّل في الـ Audit)</summary>
+        public void CorrectToPresent(Guid correctedByUserId)
+        {
+            Status = AttendanceStatus.Present;
+            ScannedVia = ScanMethod.ManualEntry;
+            RecordedByUserId = correctedByUserId;
+            MarkAsUpdated();
+        }
+
         /// <summary>قبول طلب التعويض المعلق واعتباره حاضراً</summary>
         public void ApproveCompensation()
         {

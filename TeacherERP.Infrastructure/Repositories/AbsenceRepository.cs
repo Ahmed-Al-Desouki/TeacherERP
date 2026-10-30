@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Infrastructure/Repositories/AbsenceRepository.cs
+﻿// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/AbsenceRepository.cs
 using Microsoft.EntityFrameworkCore;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
@@ -67,6 +67,40 @@ namespace TeacherERP.Infrastructure.Repositories
             return _context.TenantMembers
                 .Where(m => m.Role == TenantRole.Student && ids.Contains(m.UserId))
                 .ToListAsync(cancellationToken);
+        }
+
+        public Task<bool> WasEnrolledAtAsync(Session session, Guid studentId, CancellationToken cancellationToken)
+        {
+            var groupId = session.GroupId;
+            var startTime = session.StartTime;
+
+            return _context.GroupEnrollments
+                .AsNoTracking()
+                .AnyAsync(e => e.StudentId == studentId
+                               && e.GroupId == groupId
+                               && e.EnrolledAt <= startTime
+                               && (e.EndedAt == null || e.EndedAt > startTime),
+                    cancellationToken);
+        }
+
+        public async Task<int> CountTrailingAbsencesAsync(Guid studentId, CancellationToken cancellationToken)
+        {
+            // آخر حصة حضرها الطالب (حضور عادي أو تعويض معتمد)، والغيابات بعدها هي السلسلة الحالية
+            var lastPresent = await _context.AttendanceRecords
+                .AsNoTracking()
+                .Where(a => a.StudentId == studentId && a.Status == AttendanceStatus.Present)
+                .MaxAsync(a => (DateTime?)a.Session.StartTime, cancellationToken);
+
+            var absences = _context.AttendanceRecords
+                .AsNoTracking()
+                .Where(a => a.StudentId == studentId && a.Status == AttendanceStatus.Absent);
+
+            if (lastPresent is { } since)
+            {
+                absences = absences.Where(a => a.Session.StartTime > since);
+            }
+
+            return await absences.CountAsync(cancellationToken);
         }
     }
 }

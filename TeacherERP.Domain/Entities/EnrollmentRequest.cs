@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Domain/Entities/EnrollmentRequest.cs
+﻿// موجود (تعديل) — TeacherERP.Domain/Entities/EnrollmentRequest.cs
 using System;
 
 namespace TeacherERP.Domain.Entities
@@ -21,6 +21,9 @@ namespace TeacherERP.Domain.Entities
         public EnrollmentRequestType Type { get; private set; }
         public EnrollmentRequestStatus Status { get; private set; }
 
+        /// <summary>الحصة اللي الطالب مسح كودها وهو غير مسجّل (Walk-in)، فالموافقة على الطلب تسجل له حضورها. فارغة لباقي الطلبات</summary>
+        public Guid? SourceSessionId { get; private set; }
+
         /// <summary>من قرر (فارغ لو القبول تلقائي)</summary>
         public Guid? DecidedByUserId { get; private set; }
         public DateTime? DecidedAt { get; private set; }
@@ -28,7 +31,8 @@ namespace TeacherERP.Domain.Entities
 
         private EnrollmentRequest() { }
 
-        public static EnrollmentRequest Create(Guid tenantId, Guid studentId, Guid groupId, EnrollmentRequestType type)
+        public static EnrollmentRequest Create(
+            Guid tenantId, Guid studentId, Guid groupId, EnrollmentRequestType type, Guid? sourceSessionId = null)
         {
             return new EnrollmentRequest
             {
@@ -36,7 +40,8 @@ namespace TeacherERP.Domain.Entities
                 StudentId = studentId,
                 GroupId = groupId,
                 Type = type,
-                Status = EnrollmentRequestStatus.Pending
+                Status = EnrollmentRequestStatus.Pending,
+                SourceSessionId = sourceSessionId
             };
         }
 

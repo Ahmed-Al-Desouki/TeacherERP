@@ -17,6 +17,12 @@ namespace TeacherERP.Infrastructure.Migrations
                 type: "datetime2",
                 nullable: true);
 
+            // الحصص المنتهية فعلاً قبل التطبيق تُعلَّم معالَجة، حتى لا يتولّد غياب بأثر رجعي على بيانات قديمة
+            migrationBuilder.Sql(@"
+                UPDATE Sessions
+                SET AbsencesProcessedAt = SYSUTCDATETIME()
+                WHERE EndTime <= SYSUTCDATETIME();");
+
             migrationBuilder.CreateTable(
                 name: "AuditLogs",
                 columns: table => new

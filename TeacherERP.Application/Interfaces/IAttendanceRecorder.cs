@@ -4,7 +4,8 @@ using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Interfaces
 {
-    public enum AttendanceOutcome { Recorded, PendingCompensation, PendingApproval, AlreadyRecorded }
+    // Corrected: تصحيح غياب (أو إدخال متأخر) لحصة انتهت، بواسطة موظف
+    public enum AttendanceOutcome { Recorded, PendingCompensation, PendingApproval, AlreadyRecorded, Corrected }
 
     public record AttendanceResultDto(AttendanceOutcome Outcome, Guid? SessionId, string? GroupName, AttendanceStatus? Status);
 

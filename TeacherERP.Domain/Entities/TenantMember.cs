@@ -1,4 +1,5 @@
-﻿using System;
+﻿// موجود (تعديل) — TeacherERP.Domain/Entities/TenantMember.cs
+using System;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Domain.Entities
@@ -88,6 +89,13 @@ namespace TeacherERP.Domain.Entities
         public void ResetAbsence()
         {
             ConsecutiveAbsences = 0;
+            MarkAsUpdated();
+        }
+
+        /// <summary>ضبط العداد على قيمة محسوبة من السجلات (بعد تصحيح غياب مثلاً)</summary>
+        public void SetConsecutiveAbsences(int count)
+        {
+            ConsecutiveAbsences = Math.Max(0, count);
             MarkAsUpdated();
         }
 
