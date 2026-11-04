@@ -1,8 +1,7 @@
-﻿// جديد — TeacherERP.Application/Features/Attendance/GetAttendanceSettings/GetAttendanceSettingsQueryHandler.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Attendance/GetAttendanceSettings/GetAttendanceSettingsQueryHandler.cs
 using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
-using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Attendance.GetAttendanceSettings
@@ -31,11 +30,9 @@ namespace TeacherERP.Application.Features.Attendance.GetAttendanceSettings
                 return Result<AttendanceSettingsDto>.Failure(TenantErrors.Forbidden);
             }
 
-            // السر لا يُعرض إلا في الوضع الثابت (للطباعة)، وفي المتغير لا حاجة لعرضه أبداً
-            var staticCode = settings.Mode == AttendanceMode.StaticGlobalQR ? settings.QrSecret : null;
-
-            return Result<AttendanceSettingsDto>.Success(new AttendanceSettingsDto(
-                tenant.TenantId, settings.Mode, settings.RejectMockLocations, settings.AutoRegisterOnScan, staticCode));
+            return Result<AttendanceSettingsDto>.Success(AttendanceSettingsDto.From(
+                tenant.TenantId, settings.Mode, settings.RejectMockLocations, settings.AutoRegisterOnScan,
+                settings.AutoApproveGroupAdminScans, settings.QrSecret));
         }
     }
 }

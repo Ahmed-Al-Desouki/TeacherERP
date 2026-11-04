@@ -1,8 +1,7 @@
-﻿// جديد — TeacherERP.Application/Features/Attendance/UpdateAttendanceSettings/UpdateAttendanceSettingsCommandHandler.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Attendance/UpdateAttendanceSettings/UpdateAttendanceSettingsCommandHandler.cs
 using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
-using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Attendance.UpdateAttendanceSettings
@@ -36,13 +35,13 @@ namespace TeacherERP.Application.Features.Attendance.UpdateAttendanceSettings
                 return Result<AttendanceSettingsDto>.Failure(TenantErrors.Forbidden);
             }
 
-            settings.UpdateAttendance(request.Mode, request.RejectMockLocations, request.AutoRegisterOnScan);
+            settings.UpdateAttendance(
+                request.Mode, request.RejectMockLocations, request.AutoRegisterOnScan, request.AutoApproveGroupAdminScans);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            var staticCode = settings.Mode == AttendanceMode.StaticGlobalQR ? settings.QrSecret : null;
-
-            return Result<AttendanceSettingsDto>.Success(new AttendanceSettingsDto(
-                tenant.TenantId, settings.Mode, settings.RejectMockLocations, settings.AutoRegisterOnScan, staticCode));
+            return Result<AttendanceSettingsDto>.Success(AttendanceSettingsDto.From(
+                tenant.TenantId, settings.Mode, settings.RejectMockLocations, settings.AutoRegisterOnScan,
+                settings.AutoApproveGroupAdminScans, settings.QrSecret));
         }
     }
 }

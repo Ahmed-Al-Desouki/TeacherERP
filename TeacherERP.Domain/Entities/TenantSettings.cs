@@ -23,6 +23,9 @@ namespace TeacherERP.Domain.Entities
         /// <summary>طالب غير مسجل يمسح الكود فيتسجل في الحصة الجارية تلقائياً ويُبلَّغ المدرس (يقدر يقفله)</summary>
         public bool AutoRegisterOnScan { get; private set; }
 
+        /// <summary>مسح الطالب المسؤول يُعتمد فوراً: تسجيل غير المسجّل وقبول التعويض (الافتراضي: ينتظر موافقة الموظف)</summary>
+        public bool AutoApproveGroupAdminScans { get; private set; }
+
         private TenantSettings() { }
 
         /// <summary>
@@ -36,15 +39,17 @@ namespace TeacherERP.Domain.Entities
                 Mode = AttendanceMode.AdminOnly,
                 RejectMockLocations = true,
                 QrSecret = NewSecret(),
-                AutoRegisterOnScan = true
+                AutoRegisterOnScan = true,
+                AutoApproveGroupAdminScans = false
             };
         }
 
-        public void UpdateAttendance(AttendanceMode mode, bool rejectMockLocations, bool autoRegisterOnScan)
+        public void UpdateAttendance(AttendanceMode mode, bool rejectMockLocations, bool autoRegisterOnScan, bool autoApproveGroupAdminScans)
         {
             Mode = mode;
             RejectMockLocations = rejectMockLocations;
             AutoRegisterOnScan = autoRegisterOnScan;
+            AutoApproveGroupAdminScans = autoApproveGroupAdminScans;
             MarkAsUpdated();
         }
 

@@ -1,8 +1,10 @@
 ﻿// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/AttendanceRepository.cs
 using Microsoft.EntityFrameworkCore;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Infrastructure.Data;
+using TeacherERP.Infrastructure.Extensions;
 
 namespace TeacherERP.Infrastructure.Repositories
 {
@@ -22,7 +24,8 @@ namespace TeacherERP.Infrastructure.Repositories
             return (from s in _context.TenantSettings.IgnoreQueryFilters().AsNoTracking()
                     join t in _context.Tenants.AsNoTracking() on s.TenantId equals t.Id
                     where s.TenantId == tenantId
-                    select new AttendanceSettingsInfo(s.TenantId, t.Status, s.Mode, s.QrSecret, s.RejectMockLocations, s.AutoRegisterOnScan))
+                    select new AttendanceSettingsInfo(
+                        s.TenantId, t.Status, s.Mode, s.QrSecret, s.RejectMockLocations, s.AutoRegisterOnScan, s.AutoApproveGroupAdminScans))
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
@@ -114,6 +117,19 @@ namespace TeacherERP.Infrastructure.Repositories
                 .Select(a => new AttendanceListItem(
                     a.Id, a.StudentId, a.Student.FullName, a.Status, a.ScannedVia, a.CreatedAt, a.CompensatesSessionId))
                 .ToListAsync(cancellationToken);
+        }
+
+        public Task<PagedResult<AttendanceListItem>> GetSessionAttendancePageAsync(
+            Guid sessionId, PageRequest page, CancellationToken cancellationToken)
+        {
+            return _context.AttendanceRecords
+                .AsNoTracking()
+                .Where(a => a.SessionId == sessionId)
+                .OrderBy(a => a.CreatedAt)
+                .ThenBy(a => a.Id)
+                .Select(a => new AttendanceListItem(
+                    a.Id, a.StudentId, a.Student.FullName, a.Status, a.ScannedVia, a.CreatedAt, a.CompensatesSessionId))
+                .ToPagedAsync(page, cancellationToken);
         }
 
         public Task<List<PendingCompensationItem>> GetPendingCompensationsAsync(CancellationToken cancellationToken)

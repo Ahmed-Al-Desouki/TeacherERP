@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Domain/Entities/GroupEnrollment.cs
+﻿// موجود (تعديل) — TeacherERP.Domain/Entities/GroupEnrollment.cs
 using System;
 
 namespace TeacherERP.Domain.Entities
@@ -26,6 +26,10 @@ namespace TeacherERP.Domain.Entities
         /// <summary>من وافق (فارغ لو القبول تلقائي)</summary>
         public Guid? ApprovedByUserId { get; private set; }
 
+        /// <summary>طالب مسؤول عن هذه المجموعة (حضور ومحتوى الحصة فقط). علامة على التسجيل، فتروح لوحدها بنهايته (نقل أو حظر)</summary>
+        public bool IsGroupAdmin { get; private set; }
+        public DateTime? GroupAdminSince { get; private set; }
+
         private GroupEnrollment() { }
 
         public static GroupEnrollment Create(Guid tenantId, Guid groupId, Guid studentId, DateTime enrolledAtUtc, Guid? approvedByUserId)
@@ -41,10 +45,26 @@ namespace TeacherERP.Domain.Entities
             };
         }
 
+        public void AppointAsGroupAdmin(DateTime atUtc)
+        {
+            IsGroupAdmin = true;
+            GroupAdminSince = atUtc;
+            MarkAsUpdated();
+        }
+
+        public void RemoveGroupAdmin()
+        {
+            IsGroupAdmin = false;
+            GroupAdminSince = null;
+            MarkAsUpdated();
+        }
+
         public void End(DateTime endedAtUtc)
         {
             Status = EnrollmentStatus.Ended;
             EndedAt = endedAtUtc;
+            IsGroupAdmin = false;
+            GroupAdminSince = null;
             MarkAsUpdated();
         }
     }

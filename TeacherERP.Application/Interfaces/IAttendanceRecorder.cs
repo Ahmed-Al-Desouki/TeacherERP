@@ -10,6 +10,7 @@ namespace TeacherERP.Application.Interfaces
     public record AttendanceResultDto(AttendanceOutcome Outcome, Guid? SessionId, string? GroupName, AttendanceStatus? Status);
 
     // طلب تسجيل حضور بعد التحقق من الكود والصلاحيات (مسؤولية المستدعي)
+    // AutoApproveCompensation: تعويض الطالب من مجموعة تانية يُعتمد فوراً (حاضر) بدل ما يستنى موافقة الموظف
     public record AttendanceRequest(
         Guid TenantId,
         Guid StudentId,
@@ -20,7 +21,8 @@ namespace TeacherERP.Application.Interfaces
         Guid? PreferredGroupId,
         bool EnforceGeofence,
         bool RegisterImmediately,
-        Guid? RestrictToGroupId);
+        Guid? RestrictToGroupId,
+        bool AutoApproveCompensation = false);
 
     // مصدر واحد لقواعد الحضور: اختيار الحصة، الموقع، التسجيل التلقائي، التعويض، والإشعارات
     public interface IAttendanceRecorder

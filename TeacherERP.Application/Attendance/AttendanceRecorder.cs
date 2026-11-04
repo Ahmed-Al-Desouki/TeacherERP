@@ -121,7 +121,9 @@ namespace TeacherERP.Application.Attendance
                 {
                     if (!await _enrollmentRepository.HasPendingRequestAsync(request.TenantId, request.StudentId, cancellationToken))
                     {
-                        var pending = EnrollmentRequest.Create(request.TenantId, request.StudentId, session.GroupId, EnrollmentRequestType.Join);
+                        // الطلب يفتكر الحصة، فالموافقة عليه تسجل للطالب حضورها
+                        var pending = EnrollmentRequest.Create(
+                            request.TenantId, request.StudentId, session.GroupId, EnrollmentRequestType.Join, session.SessionId);
                         _enrollmentRepository.AddRequest(pending);
 
                         await _notificationService.NotifyStaffAsync(
@@ -152,13 +154,13 @@ namespace TeacherERP.Application.Attendance
                 }
             }
 
-            // 5) حضور عادي لمجموعته، أو تعويض (معلّق) لو الحصة لمجموعة أخرى عند نفس المدرس
+            // 5) حضور عادي لمجموعته، أو تعويض لو الحصة لمجموعة أخرى عند نفس المدرس (معلّق، أو معتمد فوراً لمسح الأدمن المفعّل له ذلك)
             var status = AttendanceStatus.Present;
             Guid? compensates = null;
 
             if (active is not null && !isOwnGroup)
             {
-                status = AttendanceStatus.PendingCompensation;
+                status = request.AutoApproveCompensation ? AttendanceStatus.Present : AttendanceStatus.PendingCompensation;
                 compensates = await _attendanceRepository.FindCompensableSessionAsync(
                     request.TenantId, active.GroupId, request.StudentId, now, AttendancePolicy.CompensationWindowDays, cancellationToken);
             }

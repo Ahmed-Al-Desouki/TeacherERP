@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using TeacherERP.API.Security;
 using TeacherERP.Application.Features.Tenants.GetCurrentTenant;
 using TeacherERP.Application.Features.Tenants.GetMyTenants;
+using TeacherERP.Application.Features.Tenants.GetTenantSettings;
 using TeacherERP.Application.Features.Tenants.UpdateTenantProfile;
 using TeacherERP.Application.Features.Tenants.UpdateTenantSettings;
 
@@ -38,7 +39,16 @@ namespace TeacherERP.API.Controllers
             return ToResponse(result);
         }
 
-        // ظهوري في بحث الطلاب وقبول الانضمام تلقائياً (للمدرس صاحب المساحة فقط)
+        // القيم الحالية لسياسات المدرس (الظهور في البحث، والموافقات التلقائية) (للمدرس صاحب المساحة فقط)
+        [HttpGet("current/settings")]
+        [Authorize(Policy = AuthPolicies.TenantOwner)]
+        public async Task<IActionResult> GetCurrentSettings(CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetTenantSettingsQuery(), cancellationToken);
+            return ToResponse(result);
+        }
+
+        // ظهوري في بحث الطلاب والموافقات التلقائية (للمدرس صاحب المساحة فقط). استبدال كامل
         [HttpPut("current/settings")]
         [Authorize(Policy = AuthPolicies.TenantOwner)]
         public async Task<IActionResult> UpdateCurrentSettings([FromBody] UpdateTenantSettingsCommand command, CancellationToken cancellationToken)

@@ -1,10 +1,12 @@
 ﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/IAttendanceRepository.cs
+using TeacherERP.Application.Common;
 using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
 {
     public record AttendanceSettingsInfo(
-        Guid TenantId, TenantStatus TenantStatus, AttendanceMode Mode, string QrSecret, bool RejectMockLocations, bool AutoRegisterOnScan);
+        Guid TenantId, TenantStatus TenantStatus, AttendanceMode Mode, string QrSecret, bool RejectMockLocations,
+        bool AutoRegisterOnScan, bool AutoApproveGroupAdminScans);
 
     public record RunningSessionInfo(
         Guid SessionId, Guid GroupId, string GroupName, DateTime StartTime, DateTime EndTime,
@@ -43,6 +45,11 @@ namespace TeacherERP.Application.Interfaces
         // للموظفين داخل المدرس الحالي
         Task<AttendanceRecord?> GetTrackedRecordAsync(Guid recordId, CancellationToken cancellationToken);
         Task<List<AttendanceListItem>> GetSessionAttendanceAsync(Guid sessionId, CancellationToken cancellationToken);
+
+        // نسخة بصفحات (تحل محل القائمة الكاملة في خطوة تحويل القوائم القديمة)
+        Task<PagedResult<AttendanceListItem>> GetSessionAttendancePageAsync(
+            Guid sessionId, PageRequest page, CancellationToken cancellationToken);
+
         Task<List<PendingCompensationItem>> GetPendingCompensationsAsync(CancellationToken cancellationToken);
     }
 }

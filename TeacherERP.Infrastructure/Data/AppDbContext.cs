@@ -45,8 +45,10 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<GroupScheduleSlot> GroupScheduleSlots { get; set; }
         public DbSet<GroupEnrollment> GroupEnrollments { get; set; }
         public DbSet<EnrollmentRequest> EnrollmentRequests { get; set; }
+        public DbSet<GroupAdminRequest> GroupAdminRequests { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<Session> Sessions { get; set; }
+        public DbSet<SessionAttachment> SessionAttachments { get; set; }
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
@@ -243,6 +245,30 @@ namespace TeacherERP.Infrastructure.Data
                 entity.HasIndex(s => new { s.TenantId, s.EndTime }).HasFilter("[AbsencesProcessedAt] IS NULL");
             });
 
+            // 5.3.0 ملفات الحصة (سبورة، شرح، واجب...): تُحذف سجلاتها مع حصتها. المنفّذ بلا Foreign Key (سجل تاريخي)
+            builder.Entity<SessionAttachment>(entity =>
+            {
+                entity.Property(a => a.Kind).HasConversion<string>().HasMaxLength(16);
+                entity.Property(a => a.Url).HasMaxLength(1000).IsRequired();
+                entity.Property(a => a.PublicId).HasMaxLength(300).IsRequired();
+                entity.Property(a => a.FileName).HasMaxLength(200).IsRequired();
+                entity.Property(a => a.ContentType).HasMaxLength(100).IsRequired();
+                entity.Property(a => a.Caption).HasMaxLength(300);
+
+                entity.HasOne(a => a.Session)
+                    .WithMany()
+                    .HasForeignKey(a => a.SessionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne<Tenant>()
+                    .WithMany()
+                    .HasForeignKey(a => a.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(a => new { a.SessionId, a.CreatedAt });
+                entity.HasIndex(a => new { a.TenantId, a.CreatedAt });
+            });
+
             // 5.3.1 الإشعارات: للمستلم عبر كل مدرسيه (غير معزولة بالـ Tenant عمداً)
             builder.Entity<Notification>(entity =>
             {
@@ -307,6 +333,21 @@ namespace TeacherERP.Infrastructure.Data
                 entity.HasIndex(r => new { r.TenantId, r.StudentId }).IsUnique().HasFilter("[Status] = 'Pending'");
                 entity.HasIndex(r => new { r.TenantId, r.Status });
                 entity.HasIndex(r => r.StudentId);
+            });
+
+            // 5.6 طلب مساعد لتعيين/إزالة طالب مسؤول: طلب معلّق واحد لكل (مجموعة، طالب). المنفّذ والمقرِّر بلا Foreign Key
+            builder.Entity<GroupAdminRequest>(entity =>
+            {
+                entity.Property(r => r.Type).HasConversion<string>().HasMaxLength(16);
+                entity.Property(r => r.Status).HasConversion<string>().HasMaxLength(16);
+                entity.Property(r => r.DecisionNote).HasMaxLength(300);
+
+                entity.HasOne(r => r.Group).WithMany().HasForeignKey(r => r.GroupId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(r => r.Student).WithMany().HasForeignKey(r => r.StudentId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<Tenant>().WithMany().HasForeignKey(r => r.TenantId).OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(r => new { r.TenantId, r.GroupId, r.StudentId }).IsUnique().HasFilter("[Status] = 'Pending'");
+                entity.HasIndex(r => new { r.TenantId, r.Status, r.CreatedAt });
             });
 
             // 7. علاقة المجموعة بالحصص (One-to-Many)

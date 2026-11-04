@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.Application/Features/Tenants/UpdateTenantSettings/UpdateTenantSettingsCommandHandler.cs
+﻿// موجود (تعديل) — TeacherERP.Application/Features/Tenants/UpdateTenantSettings/UpdateTenantSettingsCommandHandler.cs
 using MediatR;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Shared;
@@ -34,10 +34,11 @@ namespace TeacherERP.Application.Features.Tenants.UpdateTenantSettings
                 return Result<TenantSettingsDto>.Failure(TenantErrors.Forbidden);
             }
 
-            tenant.UpdateSettings(request.IsListedInSearch, request.AutoApproveJoinRequests);
+            tenant.UpdateSettings(request.IsListedInSearch, request.AutoApproveJoinRequests, request.AutoApproveGroupAdminChanges);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return Result<TenantSettingsDto>.Success(new TenantSettingsDto(tenant.IsListedInSearch, tenant.AutoApproveJoinRequests));
+            return Result<TenantSettingsDto>.Success(
+                new TenantSettingsDto(tenant.IsListedInSearch, tenant.AutoApproveJoinRequests, tenant.AutoApproveGroupAdminChanges));
         }
     }
 }

@@ -4,7 +4,7 @@ using System;
 namespace TeacherERP.Domain.Entities
 {
     /// <summary>
-    /// سجل تدقيق للإجراءات الحساسة داخل مساحة المدرس (إيقاف وفك إيقاف وحظر الطلاب وتصحيح الحضور). للإضافة فقط ولا يُعدَّل.
+    /// سجل تدقيق للإجراءات الحساسة داخل مساحة المدرس (إيقاف وفك إيقاف وحظر الطلاب وتصحيح الحضور والطلاب المسؤولين ومحتوى الحصص). للإضافة فقط ولا يُعدَّل.
     /// المنفّذ والهدف بلا Foreign Keys عمداً: سجل تاريخي لا يتأثر بحذف حساب لاحقاً.
     /// </summary>
     public class AuditLog : BaseEntity, ITenantOwned
@@ -16,7 +16,7 @@ namespace TeacherERP.Domain.Entities
 
         public AuditAction Action { get; private set; }
 
-        /// <summary>الطالب (أو المستخدم) المتأثر بالإجراء</summary>
+        /// <summary>الطالب (أو المستخدم) المتأثر بالإجراء، وفارغ لما لا ينطبق (مثل رفع ملف)</summary>
         public Guid? TargetUserId { get; private set; }
 
         public string? Reason { get; private set; }
@@ -44,6 +44,11 @@ namespace TeacherERP.Domain.Entities
         StudentBlacklisted,
         StudentUnblacklisted,
         AttendanceCorrected,
-        StudentReinstatedByCorrection
+        StudentReinstatedByCorrection,
+        GroupAdminAppointed,
+        GroupAdminRemoved,
+        GroupAdminAttendanceRecorded,
+        SessionAttachmentUploaded,
+        SessionAttachmentDeleted
     }
 }

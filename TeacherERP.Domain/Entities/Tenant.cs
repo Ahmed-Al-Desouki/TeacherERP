@@ -29,6 +29,9 @@ namespace TeacherERP.Domain.Entities
         /// <summary>قبول طلبات انضمام الطلاب للمجموعات تلقائياً (الافتراضي: تحتاج موافقة)</summary>
         public bool AutoApproveJoinRequests { get; private set; }
 
+        /// <summary>تعيين وإزالة الطلاب المسؤولين بواسطة المساعد تُنفَّذ فوراً بدون موافقة المدرس (الافتراضي: تحتاج موافقة)</summary>
+        public bool AutoApproveGroupAdminChanges { get; private set; }
+
         private Tenant() { }
 
         public static Tenant Create(string name, Guid ownerId, string timeZoneId)
@@ -40,15 +43,17 @@ namespace TeacherERP.Domain.Entities
                 TimeZoneId = timeZoneId,
                 Status = TenantStatus.Active,
                 IsListedInSearch = false,
-                AutoApproveJoinRequests = false
+                AutoApproveJoinRequests = false,
+                AutoApproveGroupAdminChanges = false
             };
         }
 
-        /// <summary>ظهور المدرس في بحث الطلاب، وقبول طلبات الانضمام تلقائياً (النقل بين المجموعات يحتاج موافقة دائماً)</summary>
-        public void UpdateSettings(bool isListedInSearch, bool autoApproveJoinRequests)
+        /// <summary>سياسات المدرس: الظهور في البحث، وقبول الانضمام تلقائياً، وقبول تغييرات الطلاب المسؤولين من المساعد تلقائياً</summary>
+        public void UpdateSettings(bool isListedInSearch, bool autoApproveJoinRequests, bool autoApproveGroupAdminChanges)
         {
             IsListedInSearch = isListedInSearch;
             AutoApproveJoinRequests = autoApproveJoinRequests;
+            AutoApproveGroupAdminChanges = autoApproveGroupAdminChanges;
             MarkAsUpdated();
         }
 

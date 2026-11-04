@@ -49,6 +49,13 @@ namespace TeacherERP.Domain.Entities
         }
     }
 
-    // StudentAutoSuspended: RelatedId = معرّف الطالب
-    public enum NotificationType { StudentAutoRegistered, EnrollmentRequested, CompensationRequested, StudentAutoSuspended }
+    // StudentAutoSuspended: RelatedId = معرّف الطالب. GroupAdminChangeRequested: RelatedId = معرّف الطلب
+    public enum NotificationType
+    {
+        StudentAutoRegistered,
+        EnrollmentRequested,
+        CompensationRequested,
+        StudentAutoSuspended,
+        GroupAdminChangeRequested
+    }
 }
