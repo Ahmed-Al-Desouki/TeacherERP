@@ -7,6 +7,7 @@ using TeacherERP.Application.Attendance;
 using TeacherERP.Application.Behaviors;
 using TeacherERP.Application.Enrollment;
 using TeacherERP.Application.Features.Profile;
+using TeacherERP.Application.Files;
 using TeacherERP.Application.GroupAdmins;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Application.Scheduling;
@@ -46,6 +47,7 @@ namespace TeacherERP.Application
             services.AddScoped<IAbsenceProcessingJob, AbsenceProcessingJob>();
             services.AddScoped<IGroupAccessService, GroupAccessService>();
             services.AddScoped<IGroupAdminService, GroupAdminService>();
+            services.AddScoped<IStoredFileCleanupJob, StoredFileCleanupJob>();
 
             return services;
         }

@@ -55,6 +55,10 @@ namespace TeacherERP.Infrastructure
             configuration.GetSection("GoogleAuthSettings").Bind(googleAuthSettings);
             services.AddSingleton(Options.Create(googleAuthSettings));
 
+            var cloudinarySettings = new CloudinarySettings();
+            configuration.GetSection("CloudinarySettings").Bind(cloudinarySettings);
+            services.AddSingleton(Options.Create(cloudinarySettings));
+
             // 4. تفعيل الـ In-Memory Cache للـ OTP
             services.AddMemoryCache();
 
@@ -79,6 +83,7 @@ namespace TeacherERP.Infrastructure
             services.AddScoped<IAbsenceRepository, AbsenceRepository>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<IGroupSessionRepository, GroupSessionRepository>();
+            services.AddScoped<ISessionAttachmentRepository, SessionAttachmentRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ISessionRepository, SessionRepository>();
             services.AddScoped<ISessionValidator, SessionValidator>();
@@ -89,6 +94,7 @@ namespace TeacherERP.Infrastructure
             services.AddTransient<IOtpService, OtpService>();
             services.AddTransient<IResetGrantService, ResetGrantService>();
             services.AddSingleton<IPasswordGenerator, PasswordGenerator>();
+            services.AddSingleton<IFileStorage, CloudinaryFileStorage>();
             services.AddScoped<IJwtProvider, JwtProvider>();
             services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 
