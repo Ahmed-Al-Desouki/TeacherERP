@@ -1,4 +1,4 @@
-﻿// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/AttendanceRepository.cs
+// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/AttendanceRepository.cs
 using Microsoft.EntityFrameworkCore;
 using TeacherERP.Application.Common;
 using TeacherERP.Application.Interfaces;
@@ -108,17 +108,6 @@ namespace TeacherERP.Infrastructure.Repositories
             return _context.AttendanceRecords.FirstOrDefaultAsync(a => a.Id == recordId, cancellationToken);
         }
 
-        public Task<List<AttendanceListItem>> GetSessionAttendanceAsync(Guid sessionId, CancellationToken cancellationToken)
-        {
-            return _context.AttendanceRecords
-                .AsNoTracking()
-                .Where(a => a.SessionId == sessionId)
-                .OrderBy(a => a.CreatedAt)
-                .Select(a => new AttendanceListItem(
-                    a.Id, a.StudentId, a.Student.FullName, a.Status, a.ScannedVia, a.CreatedAt, a.CompensatesSessionId))
-                .ToListAsync(cancellationToken);
-        }
-
         public Task<PagedResult<AttendanceListItem>> GetSessionAttendancePageAsync(
             Guid sessionId, PageRequest page, CancellationToken cancellationToken)
         {
@@ -132,15 +121,25 @@ namespace TeacherERP.Infrastructure.Repositories
                 .ToPagedAsync(page, cancellationToken);
         }
 
-        public Task<List<PendingCompensationItem>> GetPendingCompensationsAsync(CancellationToken cancellationToken)
+        public async Task<PagedResult<PendingCompensationItem>> GetPendingCompensationsPageAsync(
+            PageRequest page, CancellationToken cancellationToken)
         {
-            var query = _context.AttendanceRecords
+            var pending = _context.AttendanceRecords
                 .AsNoTracking()
                 .Where(a => a.Status == AttendanceStatus.PendingCompensation);
 
-            return query
+            // العدّ قبل الإسقاط (الـ Select فيه Subqueries) فيبقى الاستعلام بسيطاً
+            var total = await pending.CountAsync(cancellationToken);
+            if (total == 0)
+            {
+                return new PagedResult<PendingCompensationItem>(new List<PendingCompensationItem>(), page.Page, page.PageSize, 0);
+            }
+
+            var items = await pending
                 .OrderBy(a => a.CreatedAt)
-                .Take(200)
+                .ThenBy(a => a.Id)
+                .Skip(page.Skip)
+                .Take(page.PageSize)
                 .Select(a => new PendingCompensationItem(
                     a.Id,
                     a.StudentId,
@@ -153,6 +152,8 @@ namespace TeacherERP.Infrastructure.Repositories
                     _context.Sessions.Where(s => s.Id == a.CompensatesSessionId).Select(s => s.Group.Name).FirstOrDefault(),
                     a.CreatedAt))
                 .ToListAsync(cancellationToken);
+
+            return new PagedResult<PendingCompensationItem>(items, page.Page, page.PageSize, total);
         }
     }
 }

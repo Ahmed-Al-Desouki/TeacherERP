@@ -1,4 +1,4 @@
-﻿// موجود (تعديل) — TeacherERP.Application/Features/Enrollment/ApproveRequest/ApproveRequestCommandHandler.cs
+// موجود (تعديل) — TeacherERP.Application/Features/Enrollment/ApproveRequest/ApproveRequestCommandHandler.cs
 using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
@@ -68,15 +68,17 @@ namespace TeacherERP.Application.Features.Enrollment.ApproveRequest
             // طالب مسح الكود في حصة وهو غير مسجّل (Walk-in) وطلبه كان معلّقاً: الموافقة تسجل له حضور الحصة اللي حضرها فعلاً
             if (enrollmentRequest.SourceSessionId is { } sessionId)
             {
-                await RecordWalkInAttendanceAsync(tenant.TenantId, enrollmentRequest.StudentId, sessionId, userId, cancellationToken);
+                await RecordWalkInAttendanceAsync(tenant.TenantId, enrollmentRequest, sessionId, userId, cancellationToken);
             }
 
             return approved;
         }
 
         private async Task RecordWalkInAttendanceAsync(
-            Guid tenantId, Guid studentId, Guid sessionId, Guid approvedByUserId, CancellationToken cancellationToken)
+            Guid tenantId, EnrollmentRequest enrollmentRequest, Guid sessionId, Guid approvedByUserId, CancellationToken cancellationToken)
         {
+            var studentId = enrollmentRequest.StudentId;
+
             var session = await _sessionRepository.GetByIdAsync(sessionId, cancellationToken);
             if (session is null || session.IsCancelled)
             {
@@ -89,9 +91,13 @@ namespace TeacherERP.Application.Features.Enrollment.ApproveRequest
                 return;
             }
 
-            // الطالب مسح بنفسه، والموافِق هو المسؤول عن تسجيله
+            // الطريقة والمسجِّل زي ما حصلوا وقت المسح: طالب مسح بنفسه (والموافِق هو المسؤول عن تسجيله)،
+            // أو طالب مسؤول مسحه (فهو المسجِّل). الطلبات القديمة بدون بيانات تُعامل كمسح ذاتي
+            var method = enrollmentRequest.SourceScanMethod ?? ScanMethod.SelfScan;
+            var recordedBy = enrollmentRequest.SourceRecordedByUserId ?? approvedByUserId;
+
             _attendanceRepository.AddRecord(AttendanceRecord.RecordPresence(
-                tenantId, sessionId, studentId, ScanMethod.SelfScan, null, null, approvedByUserId));
+                tenantId, sessionId, studentId, method, null, null, recordedBy));
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }

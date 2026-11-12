@@ -1,15 +1,14 @@
-﻿// جديد — TeacherERP.Application/Features/Audit/GetAuditLog/GetAuditLogQueryHandler.cs
+// موجود (تعديل) — TeacherERP.Application/Features/Audit/GetAuditLog/GetAuditLogQueryHandler.cs
 using MediatR;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Audit.GetAuditLog
 {
-    public class GetAuditLogQueryHandler : IRequestHandler<GetAuditLogQuery, Result<List<AuditLogDto>>>
+    public class GetAuditLogQueryHandler : IRequestHandler<GetAuditLogQuery, Result<PagedResult<AuditLogDto>>>
     {
-        private const int MaxRows = 100;
-
         private readonly ICurrentTenantAccessor _currentTenant;
         private readonly IAuditRepository _auditRepository;
 
@@ -19,16 +18,16 @@ namespace TeacherERP.Application.Features.Audit.GetAuditLog
             _auditRepository = auditRepository;
         }
 
-        public async Task<Result<List<AuditLogDto>>> Handle(GetAuditLogQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PagedResult<AuditLogDto>>> Handle(GetAuditLogQuery request, CancellationToken cancellationToken)
         {
             if (_currentTenant.Current is null)
             {
-                return Result<List<AuditLogDto>>.Failure(TenantErrors.Required);
+                return Result<PagedResult<AuditLogDto>>.Failure(TenantErrors.Required);
             }
 
-            var items = await _auditRepository.GetRecentAsync(request.TargetUserId, MaxRows, cancellationToken);
+            var page = await _auditRepository.GetPageAsync(request.TargetUserId, PageRequest.From(request), cancellationToken);
 
-            return Result<List<AuditLogDto>>.Success(items.Select(AuditLogDto.From).ToList());
+            return Result<PagedResult<AuditLogDto>>.Success(page.Map(AuditLogDto.From));
         }
     }
 }

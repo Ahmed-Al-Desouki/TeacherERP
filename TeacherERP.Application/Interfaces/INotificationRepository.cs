@@ -1,4 +1,5 @@
-﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/INotificationRepository.cs
+// موجود (تعديل) — TeacherERP.Application/Interfaces/INotificationRepository.cs
+using TeacherERP.Application.Common;
 using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
@@ -12,7 +13,10 @@ namespace TeacherERP.Application.Interfaces
         // مدرس المساحة وكل مساعديه النشطين
         Task<List<Guid>> GetStaffRecipientIdsAsync(Guid tenantId, CancellationToken cancellationToken);
 
-        Task<List<NotificationItem>> GetMineAsync(Guid userId, bool unreadOnly, CancellationToken cancellationToken);
+        // إشعاراتي بصفحات، الأحدث أولاً
+        Task<PagedResult<NotificationItem>> GetMinePageAsync(
+            Guid userId, bool unreadOnly, PageRequest page, CancellationToken cancellationToken);
+
         Task<Notification?> GetOwnTrackedAsync(Guid notificationId, Guid userId, CancellationToken cancellationToken);
         Task<List<Notification>> GetOwnUnreadTrackedAsync(Guid userId, CancellationToken cancellationToken);
     }

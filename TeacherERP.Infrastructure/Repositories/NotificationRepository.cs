@@ -1,8 +1,10 @@
-﻿// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/NotificationRepository.cs
+// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/NotificationRepository.cs
 using Microsoft.EntityFrameworkCore;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Infrastructure.Data;
+using TeacherERP.Infrastructure.Extensions;
 
 namespace TeacherERP.Infrastructure.Repositories
 {
@@ -36,11 +38,11 @@ namespace TeacherERP.Infrastructure.Repositories
             var recipients = new List<Guid> { ownerId };
             recipients.AddRange(assistants);
 
-
             return recipients.Distinct().ToList();
         }
 
-        public Task<List<NotificationItem>> GetMineAsync(Guid userId, bool unreadOnly, CancellationToken cancellationToken)
+        public Task<PagedResult<NotificationItem>> GetMinePageAsync(
+            Guid userId, bool unreadOnly, PageRequest page, CancellationToken cancellationToken)
         {
             var query = _context.Notifications.AsNoTracking().Where(n => n.RecipientUserId == userId);
 
@@ -51,9 +53,9 @@ namespace TeacherERP.Infrastructure.Repositories
 
             return query
                 .OrderByDescending(n => n.CreatedAt)
-                .Take(100)
+                .ThenBy(n => n.Id)
                 .Select(n => new NotificationItem(n.Id, n.TenantId, n.Type, n.Message, n.RelatedId, n.IsRead, n.CreatedAt))
-                .ToListAsync(cancellationToken);
+                .ToPagedAsync(page, cancellationToken);
         }
 
         public Task<Notification?> GetOwnTrackedAsync(Guid notificationId, Guid userId, CancellationToken cancellationToken)

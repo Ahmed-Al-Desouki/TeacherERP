@@ -1,4 +1,5 @@
-﻿// جديد — TeacherERP.Application/Features/Directory/DirectoryDtos.cs
+// موجود (تعديل) — TeacherERP.Application/Features/Directory/DirectoryDtos.cs
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Groups;
 
 namespace TeacherERP.Application.Features.Directory
@@ -20,12 +21,12 @@ namespace TeacherERP.Application.Features.Directory
 
     public record DirectoryCenterInfoDto(Guid Id, string Name, string? Address);
 
-    // ملف مدرس عام للطالب: مواعيد مجموعاته (بتوقيت المدرس TimeZoneId)
+    // ملف مدرس عام للطالب: مواعيد مجموعاته (بتوقيت المدرس TimeZoneId). المجموعات بصفحات
     public record TeacherProfileDto(
         Guid TeacherId,
         string Name,
         string? Subject,
         string TimeZoneId,
         List<DirectoryCenterInfoDto> Centers,
-        List<DirectoryGroupDto> Groups);
+        PagedResult<DirectoryGroupDto> Groups);
 }

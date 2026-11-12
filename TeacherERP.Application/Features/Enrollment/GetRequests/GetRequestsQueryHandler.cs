@@ -1,13 +1,13 @@
-﻿// موجود (تعديل) — TeacherERP.Application/Features/Enrollment/GetRequests/GetRequestsQueryHandler.cs
+// موجود (تعديل) — TeacherERP.Application/Features/Enrollment/GetRequests/GetRequestsQueryHandler.cs
 using MediatR;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
-using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Enrollment.GetRequests
 {
-    public class GetRequestsQueryHandler : IRequestHandler<GetRequestsQuery, Result<List<EnrollmentRequestListDto>>>
+    public class GetRequestsQueryHandler : IRequestHandler<GetRequestsQuery, Result<PagedResult<EnrollmentRequestListDto>>>
     {
         private readonly ICurrentUserService _currentUser;
         private readonly ICurrentTenantAccessor _currentTenant;
@@ -23,21 +23,22 @@ namespace TeacherERP.Application.Features.Enrollment.GetRequests
             _repository = repository;
         }
 
-        public async Task<Result<List<EnrollmentRequestListDto>>> Handle(GetRequestsQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PagedResult<EnrollmentRequestListDto>>> Handle(
+            GetRequestsQuery request, CancellationToken cancellationToken)
         {
-            if (_currentUser.UserId is not { } userId)
+            if (_currentUser.UserId is not { })
             {
-                return Result<List<EnrollmentRequestListDto>>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
+                return Result<PagedResult<EnrollmentRequestListDto>>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
             }
 
-            if (_currentTenant.Current is not { } tenant)
+            if (_currentTenant.Current is null)
             {
-                return Result<List<EnrollmentRequestListDto>>.Failure(TenantErrors.Required);
+                return Result<PagedResult<EnrollmentRequestListDto>>.Failure(TenantErrors.Required);
             }
 
-            var items = await _repository.GetRequestsAsync(request.Status, cancellationToken);
+            var page = await _repository.GetRequestsPageAsync(request.Status, PageRequest.From(request), cancellationToken);
 
-            return Result<List<EnrollmentRequestListDto>>.Success(items.Select(EnrollmentRequestListDto.From).ToList());
+            return Result<PagedResult<EnrollmentRequestListDto>>.Success(page.Map(EnrollmentRequestListDto.From));
         }
     }
 }

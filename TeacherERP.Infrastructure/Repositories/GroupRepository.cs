@@ -1,8 +1,10 @@
-﻿// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/GroupRepository.cs
+// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/GroupRepository.cs
 using Microsoft.EntityFrameworkCore;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Infrastructure.Data;
+using TeacherERP.Infrastructure.Extensions;
 
 namespace TeacherERP.Infrastructure.Repositories
 {
@@ -20,13 +22,14 @@ namespace TeacherERP.Infrastructure.Repositories
             _context.Groups.Add(group);
         }
 
-        public Task<List<Group>> GetAllWithSlotsAsync(CancellationToken cancellationToken)
+        public Task<PagedResult<Group>> GetPageWithSlotsAsync(PageRequest page, CancellationToken cancellationToken)
         {
             return _context.Groups
                 .AsNoTracking()
                 .Include(g => g.Slots)
                 .OrderBy(g => g.Name)
-                .ToListAsync(cancellationToken);
+                .ThenBy(g => g.Id)
+                .ToPagedAsync(page, cancellationToken);
         }
 
         public Task<List<Group>> GetActiveWithSlotsAsync(CancellationToken cancellationToken)

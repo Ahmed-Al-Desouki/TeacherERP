@@ -1,14 +1,14 @@
-﻿// موجود (تعديل) — TeacherERP.Application/Features/Schedule/GetSessions/GetSessionsQueryHandler.cs
+// موجود (تعديل) — TeacherERP.Application/Features/Schedule/GetSessions/GetSessionsQueryHandler.cs
 using MediatR;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Application.Scheduling;
-using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Schedule.GetSessions
 {
-    public class GetSessionsQueryHandler : IRequestHandler<GetSessionsQuery, Result<List<SessionDto>>>
+    public class GetSessionsQueryHandler : IRequestHandler<GetSessionsQuery, Result<PagedResult<SessionDto>>>
     {
         private readonly ICurrentUserService _currentUser;
         private readonly ICurrentTenantAccessor _currentTenant;
@@ -27,36 +27,30 @@ namespace TeacherERP.Application.Features.Schedule.GetSessions
             _timeProvider = timeProvider;
         }
 
-        public async Task<Result<List<SessionDto>>> Handle(GetSessionsQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PagedResult<SessionDto>>> Handle(GetSessionsQuery request, CancellationToken cancellationToken)
         {
-            if (_currentUser.UserId is not { } userId)
+            if (_currentUser.UserId is not { })
             {
-                return Result<List<SessionDto>>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
+                return Result<PagedResult<SessionDto>>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
             }
 
-            if (_currentTenant.Current is not { } tenant)
+            if (_currentTenant.Current is null)
             {
-                return Result<List<SessionDto>>.Failure(TenantErrors.Required);
+                return Result<PagedResult<SessionDto>>.Failure(TenantErrors.Required);
             }
 
-            var from = request.From is { } f ? NormalizeUtc(f) : _timeProvider.GetUtcNow().UtcDateTime;
-            var to = request.To is { } t ? NormalizeUtc(t) : from.AddDays(SchedulePolicy.DefaultSessionsQueryDays);
+            var from = request.From is { } f ? SessionTimeCalculator.NormalizeUtc(f) : _timeProvider.GetUtcNow().UtcDateTime;
+            var to = request.To is { } t ? SessionTimeCalculator.NormalizeUtc(t) : from.AddDays(SchedulePolicy.DefaultSessionsQueryDays);
 
             if (to <= from || (to - from).TotalDays > SchedulePolicy.MaxSessionsQueryDays)
             {
-                return Result<List<SessionDto>>.Failure(new Error(
-                    "Schedule.InvalidRange",
-                    $"The range must be positive and at most {SchedulePolicy.MaxSessionsQueryDays} days."));
+                return Result<PagedResult<SessionDto>>.Failure(ScheduleErrors.InvalidRange());
             }
 
-            var sessions = await _sessionRepository.GetByRangeAsync(
-                from, to, request.GroupId, cancellationToken);
+            var page = await _sessionRepository.GetByRangeAsync(
+                from, to, request.GroupId, PageRequest.From(request), cancellationToken);
 
-            return Result<List<SessionDto>>.Success(sessions.Select(SessionDto.From).ToList());
+            return Result<PagedResult<SessionDto>>.Success(page.Map(SessionDto.From));
         }
-
-        // أي وقت بدون Kind يُعامل كـ UTC (كل النظام UTC)
-        private static DateTime NormalizeUtc(DateTime value)
-            => value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : DateTime.SpecifyKind(value, DateTimeKind.Utc);
     }
 }

@@ -1,7 +1,8 @@
-﻿// جديد — TeacherERP.API/Controllers/NotificationsController.cs
+// موجود (تعديل) — TeacherERP.API/Controllers/NotificationsController.cs
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Notifications.GetMyNotifications;
 using TeacherERP.Application.Features.Notifications.MarkAllNotificationsRead;
 using TeacherERP.Application.Features.Notifications.MarkNotificationRead;
@@ -19,11 +20,15 @@ namespace TeacherERP.API.Controllers
             _mediator = mediator;
         }
 
-        // ?unreadOnly=true
+        // ?unreadOnly=true&page=1&pageSize=20
         [HttpGet]
-        public async Task<IActionResult> GetMine([FromQuery] bool unreadOnly, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetMine(
+            [FromQuery] bool unreadOnly,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = PageRequest.DefaultPageSize,
+            CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(new GetMyNotificationsQuery(unreadOnly), cancellationToken);
+            var result = await _mediator.Send(new GetMyNotificationsQuery(unreadOnly, page, pageSize), cancellationToken);
             return ToResponse(result);
         }
 

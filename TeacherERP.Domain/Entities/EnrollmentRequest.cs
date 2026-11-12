@@ -1,4 +1,4 @@
-﻿// موجود (تعديل) — TeacherERP.Domain/Entities/EnrollmentRequest.cs
+// موجود (تعديل) — TeacherERP.Domain/Entities/EnrollmentRequest.cs
 using System;
 
 namespace TeacherERP.Domain.Entities
@@ -24,6 +24,12 @@ namespace TeacherERP.Domain.Entities
         /// <summary>الحصة اللي الطالب مسح كودها وهو غير مسجّل (Walk-in)، فالموافقة على الطلب تسجل له حضورها. فارغة لباقي الطلبات</summary>
         public Guid? SourceSessionId { get; private set; }
 
+        /// <summary>طريقة مسح الـ Walk-in الأصلية (مسح ذاتي أو بواسطة طالب مسؤول...)، لتُسجَّل كما هي في سجل الحضور عند الموافقة. فارغة لباقي الطلبات</summary>
+        public ScanMethod? SourceScanMethod { get; private set; }
+
+        /// <summary>من سجّل المسح (الطالب المسؤول مثلاً)، وفارغ لو الطالب مسح لنفسه</summary>
+        public Guid? SourceRecordedByUserId { get; private set; }
+
         /// <summary>من قرر (فارغ لو القبول تلقائي)</summary>
         public Guid? DecidedByUserId { get; private set; }
         public DateTime? DecidedAt { get; private set; }
@@ -32,7 +38,13 @@ namespace TeacherERP.Domain.Entities
         private EnrollmentRequest() { }
 
         public static EnrollmentRequest Create(
-            Guid tenantId, Guid studentId, Guid groupId, EnrollmentRequestType type, Guid? sourceSessionId = null)
+            Guid tenantId,
+            Guid studentId,
+            Guid groupId,
+            EnrollmentRequestType type,
+            Guid? sourceSessionId = null,
+            ScanMethod? sourceScanMethod = null,
+            Guid? sourceRecordedByUserId = null)
         {
             return new EnrollmentRequest
             {
@@ -41,7 +53,9 @@ namespace TeacherERP.Domain.Entities
                 GroupId = groupId,
                 Type = type,
                 Status = EnrollmentRequestStatus.Pending,
-                SourceSessionId = sourceSessionId
+                SourceSessionId = sourceSessionId,
+                SourceScanMethod = sourceScanMethod,
+                SourceRecordedByUserId = sourceRecordedByUserId
             };
         }
 

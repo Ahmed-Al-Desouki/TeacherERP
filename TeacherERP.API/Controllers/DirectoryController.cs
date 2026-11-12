@@ -1,7 +1,8 @@
-﻿// جديد — TeacherERP.API/Controllers/DirectoryController.cs
+// موجود (تعديل) — TeacherERP.API/Controllers/DirectoryController.cs
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Directory.GetTeacherProfile;
 using TeacherERP.Application.Features.Directory.SearchDirectory;
 
@@ -18,19 +19,28 @@ namespace TeacherERP.API.Controllers
             _mediator = mediator;
         }
 
-        // ?term= : السنتر أولاً ثم مدرسوه
+        // ?term=&page=1&pageSize=20 : الصفحات على مستوى السناتر، والسنتر أولاً ثم مدرسوه
         [HttpGet("search")]
-        public async Task<IActionResult> Search([FromQuery] string term, CancellationToken cancellationToken)
+        public async Task<IActionResult> Search(
+            [FromQuery] string term,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = PageRequest.DefaultPageSize,
+            CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(new SearchDirectoryQuery(term), cancellationToken);
+            var result = await _mediator.Send(new SearchDirectoryQuery(term, page, pageSize), cancellationToken);
             return ToResponse(result);
         }
 
-        // ?gradeLevel= اختياري: مجموعات المدرس ومواعيدها
+        // ?gradeLevel= اختياري، و?page=&pageSize= على مجموعات المدرس ومواعيدها
         [HttpGet("teachers/{id:guid}")]
-        public async Task<IActionResult> GetTeacher(Guid id, [FromQuery] string? gradeLevel, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetTeacher(
+            Guid id,
+            [FromQuery] string? gradeLevel,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = PageRequest.DefaultPageSize,
+            CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(new GetTeacherProfileQuery(id, gradeLevel), cancellationToken);
+            var result = await _mediator.Send(new GetTeacherProfileQuery(id, gradeLevel, page, pageSize), cancellationToken);
             return ToResponse(result);
         }
     }

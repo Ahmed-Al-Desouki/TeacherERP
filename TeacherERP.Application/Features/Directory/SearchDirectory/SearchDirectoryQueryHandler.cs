@@ -1,16 +1,15 @@
-﻿// جديد — TeacherERP.Application/Features/Directory/SearchDirectory/SearchDirectoryQueryHandler.cs
+// موجود (تعديل) — TeacherERP.Application/Features/Directory/SearchDirectory/SearchDirectoryQueryHandler.cs
 using MediatR;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Directory.SearchDirectory
 {
-    public class SearchDirectoryQueryHandler : IRequestHandler<SearchDirectoryQuery, Result<List<DirectoryCenterDto>>>
+    public class SearchDirectoryQueryHandler : IRequestHandler<SearchDirectoryQuery, Result<PagedResult<DirectoryCenterDto>>>
     {
         private const int MinTermLength = 2;
         private const int MaxTermLength = 50;
-        private const int MaxCenters = 20;
-        private const int MaxRows = 200;
 
         private readonly IDirectoryRepository _directoryRepository;
 
@@ -19,20 +18,20 @@ namespace TeacherERP.Application.Features.Directory.SearchDirectory
             _directoryRepository = directoryRepository;
         }
 
-        public async Task<Result<List<DirectoryCenterDto>>> Handle(SearchDirectoryQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PagedResult<DirectoryCenterDto>>> Handle(SearchDirectoryQuery request, CancellationToken cancellationToken)
         {
             var term = request.Term?.Trim() ?? string.Empty;
             if (term.Length < MinTermLength || term.Length > MaxTermLength)
             {
-                return Result<List<DirectoryCenterDto>>.Failure(new Error(
+                return Result<PagedResult<DirectoryCenterDto>>.Failure(new Error(
                     "Directory.InvalidTerm", $"The search text must be between {MinTermLength} and {MaxTermLength} characters."));
             }
 
-            var rows = await _directoryRepository.SearchAsync(term, MaxRows, cancellationToken);
+            var found = await _directoryRepository.SearchAsync(term, PageRequest.From(request), cancellationToken);
 
-            var centers = rows
+            // الصفوف مرتبة بالسنتر أولاً، فالتجميع يحافظ على الترتيب
+            var centers = found.Rows
                 .GroupBy(row => row.CenterId)
-                .Take(MaxCenters)
                 .Select(group =>
                 {
                     var first = group.First();
@@ -44,7 +43,8 @@ namespace TeacherERP.Application.Features.Directory.SearchDirectory
                 })
                 .ToList();
 
-            return Result<List<DirectoryCenterDto>>.Success(centers);
+            return Result<PagedResult<DirectoryCenterDto>>.Success(
+                new PagedResult<DirectoryCenterDto>(centers, request.Page, request.PageSize, found.TotalCenters));
         }
     }
 }

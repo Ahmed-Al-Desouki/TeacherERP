@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.API/Extensions/RateLimitingExtensions.cs
+// موجود (تعديل) — TeacherERP.API/Extensions/RateLimitingExtensions.cs
 using System.Globalization;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
@@ -14,6 +14,7 @@ namespace TeacherERP.API.Extensions
         private const int OtpVerifyPerTenMinutes = 20;
         private const int SessionPerMinute = 60;
         private const int ScanPerMinute = 20;
+        private const int UploadPerMinute = 20;
         private const int GlobalPerMinute = 300;
 
         public static IServiceCollection AddApiRateLimiting(this IServiceCollection services)
@@ -46,6 +47,10 @@ namespace TeacherERP.API.Extensions
                 options.AddPolicy(RateLimitPolicies.AttendanceScan, context =>
                     RateLimitPartition.GetFixedWindowLimiter(
                         UserOrIpKey(context), _ => Window(ScanPerMinute, TimeSpan.FromMinutes(1))));
+
+                options.AddPolicy(RateLimitPolicies.ContentUpload, context =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        UserOrIpKey(context), _ => Window(UploadPerMinute, TimeSpan.FromMinutes(1))));
 
                 options.OnRejected = async (context, cancellationToken) =>
                 {

@@ -1,12 +1,13 @@
-﻿// جديد — TeacherERP.Application/Features/Students/GetStudents/GetStudentsQueryHandler.cs
+// موجود (تعديل) — TeacherERP.Application/Features/Students/GetStudents/GetStudentsQueryHandler.cs
 using MediatR;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Students.GetStudents
 {
-    public class GetStudentsQueryHandler : IRequestHandler<GetStudentsQuery, Result<List<StudentListDto>>>
+    public class GetStudentsQueryHandler : IRequestHandler<GetStudentsQuery, Result<PagedResult<StudentListDto>>>
     {
         private readonly ICurrentTenantAccessor _currentTenant;
         private readonly IStudentRepository _studentRepository;
@@ -17,16 +18,17 @@ namespace TeacherERP.Application.Features.Students.GetStudents
             _studentRepository = studentRepository;
         }
 
-        public async Task<Result<List<StudentListDto>>> Handle(GetStudentsQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PagedResult<StudentListDto>>> Handle(GetStudentsQuery request, CancellationToken cancellationToken)
         {
             if (_currentTenant.Current is null)
             {
-                return Result<List<StudentListDto>>.Failure(TenantErrors.Required);
+                return Result<PagedResult<StudentListDto>>.Failure(TenantErrors.Required);
             }
 
-            var items = await _studentRepository.GetStudentsAsync(request.Status, request.GroupId, cancellationToken);
+            var page = await _studentRepository.GetStudentsPageAsync(
+                request.Status, request.GroupId, PageRequest.From(request), cancellationToken);
 
-            return Result<List<StudentListDto>>.Success(items.Select(StudentListDto.From).ToList());
+            return Result<PagedResult<StudentListDto>>.Success(page.Map(StudentListDto.From));
         }
     }
 }

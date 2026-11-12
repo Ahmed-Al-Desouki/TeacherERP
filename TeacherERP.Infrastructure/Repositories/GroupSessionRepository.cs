@@ -1,8 +1,10 @@
-﻿// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/GroupSessionRepository.cs
+// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/GroupSessionRepository.cs
 using Microsoft.EntityFrameworkCore;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Infrastructure.Data;
+using TeacherERP.Infrastructure.Extensions;
 
 namespace TeacherERP.Infrastructure.Repositories
 {
@@ -96,8 +98,8 @@ namespace TeacherERP.Infrastructure.Repositories
                 cancellationToken);
         }
 
-        public Task<List<SessionListItem>> GetByRangeAsync(
-            DateTime fromUtc, DateTime toUtc, Guid? groupId, CancellationToken cancellationToken)
+        public Task<PagedResult<SessionListItem>> GetByRangeAsync(
+            DateTime fromUtc, DateTime toUtc, Guid? groupId, PageRequest page, CancellationToken cancellationToken)
         {
             var query = _context.Sessions
                 .AsNoTracking()
@@ -113,7 +115,7 @@ namespace TeacherERP.Infrastructure.Repositories
                 .ThenBy(s => s.Id)
                 .Select(s => new SessionListItem(
                     s.Id, s.GroupId, s.Group.Name, s.StartTime, s.EndTime, s.IsCancelled, s.SlotId, s.CancelReason, s.IsModified))
-                .ToListAsync(cancellationToken);
+                .ToPagedAsync(page, cancellationToken);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/IGroupRepository.cs
+// موجود (تعديل) — TeacherERP.Application/Interfaces/IGroupRepository.cs
+using TeacherERP.Application.Common;
 using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
@@ -8,8 +9,8 @@ namespace TeacherERP.Application.Interfaces
     {
         void Add(Group group);
 
-        // للعرض فقط (بدون تتبع) مع حصص القالب: كل مجموعات المدرس الحالي (المدرس ومساعدوه يرونها كلها)
-        Task<List<Group>> GetAllWithSlotsAsync(CancellationToken cancellationToken);
+        // للعرض فقط (بدون تتبع) مع حصص القالب بصفحات: كل مجموعات المدرس الحالي (المدرس ومساعدوه يرونها كلها). مرتبة بالاسم ثم الـ Id
+        Task<PagedResult<Group>> GetPageWithSlotsAsync(PageRequest page, CancellationToken cancellationToken);
 
         // لتوليد الحصص
         Task<List<Group>> GetActiveWithSlotsAsync(CancellationToken cancellationToken);

@@ -1,4 +1,5 @@
-﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/IGroupSessionRepository.cs
+// موجود (تعديل) — TeacherERP.Application/Interfaces/IGroupSessionRepository.cs
+using TeacherERP.Application.Common;
 using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
@@ -40,7 +41,8 @@ namespace TeacherERP.Application.Interfaces
         Task<bool> HasConflictAsync(
             Guid groupId, DateTime startUtc, DateTime endUtc, IReadOnlyCollection<Guid> excludeSessionIds, CancellationToken cancellationToken);
 
-        Task<List<SessionListItem>> GetByRangeAsync(
-            DateTime fromUtc, DateTime toUtc, Guid? groupId, CancellationToken cancellationToken);
+        // حصص النطاق بصفحات (للعرض فقط)، مرتبة بوقت البداية ثم الـ Id
+        Task<PagedResult<SessionListItem>> GetByRangeAsync(
+            DateTime fromUtc, DateTime toUtc, Guid? groupId, PageRequest page, CancellationToken cancellationToken);
     }
 }

@@ -1,8 +1,9 @@
-﻿// موجود (تعديل) — TeacherERP.API/Controllers/GroupsController.cs
+// موجود (تعديل) — TeacherERP.API/Controllers/GroupsController.cs
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TeacherERP.API.Security;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Groups.CreateGroup;
 using TeacherERP.Application.Features.Groups.GetGroup;
 using TeacherERP.Application.Features.Groups.GetGroups;
@@ -54,12 +55,15 @@ namespace TeacherERP.API.Controllers
             return ToResponse(result);
         }
 
-        // المدرس يرى كل مجموعاته، والمساعد المخصصة له فقط
+        // ?page=1&pageSize=20 : المدرس والمساعد يريان كل المجموعات
         [HttpGet]
         [Authorize(Policy = AuthPolicies.TenantStaff)]
-        public async Task<IActionResult> GetGroups(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetGroups(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = PageRequest.DefaultPageSize,
+            CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(new GetGroupsQuery(), cancellationToken);
+            var result = await _mediator.Send(new GetGroupsQuery(page, pageSize), cancellationToken);
             return ToResponse(result);
         }
 

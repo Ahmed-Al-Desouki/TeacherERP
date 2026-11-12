@@ -1,8 +1,9 @@
-﻿// جديد — TeacherERP.API/Controllers/EnrollmentController.cs
+// موجود (تعديل) — TeacherERP.API/Controllers/EnrollmentController.cs
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TeacherERP.API.Security;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Enrollment.ApproveRequest;
 using TeacherERP.Application.Features.Enrollment.CancelRequest;
 using TeacherERP.Application.Features.Enrollment.GetMyEnrollments;
@@ -35,11 +36,14 @@ namespace TeacherERP.API.Controllers
             return ToResponse(result);
         }
 
-        // تسجيلاتي وطلباتي
+        // تسجيلاتي (قائمة) وطلباتي (بصفحات): ?page=1&pageSize=20
         [HttpGet("mine")]
-        public async Task<IActionResult> GetMine(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetMine(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = PageRequest.DefaultPageSize,
+            CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(new GetMyEnrollmentsQuery(), cancellationToken);
+            var result = await _mediator.Send(new GetMyEnrollmentsQuery(page, pageSize), cancellationToken);
             return ToResponse(result);
         }
 
@@ -51,13 +55,18 @@ namespace TeacherERP.API.Controllers
             return ToResponse(result, new { Message = "The request was cancelled." });
         }
 
-        // ---- جهة الموظفين (المدرس الكل، والمساعد مجموعاته فقط) ----
+        // ---- جهة الموظفين (المدرس والمساعد يريان كل الطلبات) ----
 
+        // ?status=Pending&page=1&pageSize=20 : الأحدث أولاً
         [HttpGet("requests")]
         [Authorize(Policy = AuthPolicies.TenantStaff)]
-        public async Task<IActionResult> GetRequests([FromQuery] EnrollmentRequestStatus? status, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetRequests(
+            [FromQuery] EnrollmentRequestStatus? status,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = PageRequest.DefaultPageSize,
+            CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(new GetRequestsQuery(status), cancellationToken);
+            var result = await _mediator.Send(new GetRequestsQuery(status, page, pageSize), cancellationToken);
             return ToResponse(result);
         }
 

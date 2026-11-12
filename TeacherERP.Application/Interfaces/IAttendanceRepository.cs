@@ -1,4 +1,4 @@
-﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/IAttendanceRepository.cs
+// موجود (تعديل) — TeacherERP.Application/Interfaces/IAttendanceRepository.cs
 using TeacherERP.Application.Common;
 using TeacherERP.Domain.Entities;
 
@@ -44,12 +44,13 @@ namespace TeacherERP.Application.Interfaces
 
         // للموظفين داخل المدرس الحالي
         Task<AttendanceRecord?> GetTrackedRecordAsync(Guid recordId, CancellationToken cancellationToken);
-        Task<List<AttendanceListItem>> GetSessionAttendanceAsync(Guid sessionId, CancellationToken cancellationToken);
 
-        // نسخة بصفحات (تحل محل القائمة الكاملة في خطوة تحويل القوائم القديمة)
+        // سجلات حضور حصة بصفحات، مرتبة بوقت التسجيل ثم الـ Id
         Task<PagedResult<AttendanceListItem>> GetSessionAttendancePageAsync(
             Guid sessionId, PageRequest page, CancellationToken cancellationToken);
 
-        Task<List<PendingCompensationItem>> GetPendingCompensationsAsync(CancellationToken cancellationToken);
+        // طلبات التعويض المعلّقة بصفحات، الأقدم أولاً
+        Task<PagedResult<PendingCompensationItem>> GetPendingCompensationsPageAsync(
+            PageRequest page, CancellationToken cancellationToken);
     }
 }

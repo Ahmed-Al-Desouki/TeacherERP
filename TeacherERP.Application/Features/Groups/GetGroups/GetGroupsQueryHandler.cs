@@ -1,13 +1,13 @@
-﻿// موجود (تعديل) — TeacherERP.Application/Features/Groups/GetGroups/GetGroupsQueryHandler.cs
+// موجود (تعديل) — TeacherERP.Application/Features/Groups/GetGroups/GetGroupsQueryHandler.cs
 using MediatR;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
-using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Groups.GetGroups
 {
-    public class GetGroupsQueryHandler : IRequestHandler<GetGroupsQuery, Result<List<GroupDto>>>
+    public class GetGroupsQueryHandler : IRequestHandler<GetGroupsQuery, Result<PagedResult<GroupDto>>>
     {
         private readonly ICurrentUserService _currentUser;
         private readonly ICurrentTenantAccessor _currentTenant;
@@ -23,21 +23,21 @@ namespace TeacherERP.Application.Features.Groups.GetGroups
             _groupRepository = groupRepository;
         }
 
-        public async Task<Result<List<GroupDto>>> Handle(GetGroupsQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PagedResult<GroupDto>>> Handle(GetGroupsQuery request, CancellationToken cancellationToken)
         {
-            if (_currentUser.UserId is not { } userId)
+            if (_currentUser.UserId is not { })
             {
-                return Result<List<GroupDto>>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
+                return Result<PagedResult<GroupDto>>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
             }
 
-            if (_currentTenant.Current is not { } tenant)
+            if (_currentTenant.Current is null)
             {
-                return Result<List<GroupDto>>.Failure(TenantErrors.Required);
+                return Result<PagedResult<GroupDto>>.Failure(TenantErrors.Required);
             }
 
-            var groups = await _groupRepository.GetAllWithSlotsAsync(cancellationToken);
+            var page = await _groupRepository.GetPageWithSlotsAsync(PageRequest.From(request), cancellationToken);
 
-            return Result<List<GroupDto>>.Success(groups.Select(GroupDto.From).ToList());
+            return Result<PagedResult<GroupDto>>.Success(page.Map(GroupDto.From));
         }
     }
 }

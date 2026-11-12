@@ -1,4 +1,5 @@
-﻿// جديد — TeacherERP.Application/Features/Enrollment/EnrollmentDtos.cs
+// موجود (تعديل) — TeacherERP.Application/Features/Enrollment/EnrollmentDtos.cs
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 
@@ -26,7 +27,8 @@ namespace TeacherERP.Application.Features.Enrollment
             => new(item.EnrollmentId, item.GroupId, item.GroupName, item.TeacherId, item.TeacherName, item.Subject, item.EnrolledAt);
     }
 
-    public record MyEnrollmentsDto(List<MyEnrollmentDto> Enrollments, List<EnrollmentRequestDto> Requests);
+    // تسجيلاتي النشطة (تسجيل واحد لكل مدرس فتبقى قائمة صغيرة)، وطلباتي بصفحات
+    public record MyEnrollmentsDto(List<MyEnrollmentDto> Enrollments, PagedResult<EnrollmentRequestDto> Requests);
 
     // طلب كما يراه الموظف (CurrentGroupName للنقل: المجموعة الحالية للطالب)
     public record EnrollmentRequestListDto(

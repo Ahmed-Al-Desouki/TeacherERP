@@ -1,4 +1,5 @@
-﻿// جديد — TeacherERP.Application/Interfaces/IStudentRepository.cs
+// موجود (تعديل) — TeacherERP.Application/Interfaces/IStudentRepository.cs
+using TeacherERP.Application.Common;
 using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
@@ -15,6 +16,8 @@ namespace TeacherERP.Application.Interfaces
     // طلاب المدرس الحالي للموظفين (الفلتر العام يعمل). بدون بيانات تواصل ولا مالية
     public interface IStudentRepository
     {
-        Task<List<StudentListItem>> GetStudentsAsync(MembershipStatus? status, Guid? groupId, CancellationToken cancellationToken);
+        // بصفحات، مرتبة بالاسم ثم الـ Id
+        Task<PagedResult<StudentListItem>> GetStudentsPageAsync(
+            MembershipStatus? status, Guid? groupId, PageRequest page, CancellationToken cancellationToken);
     }
 }

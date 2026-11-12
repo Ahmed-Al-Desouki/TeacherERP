@@ -1,5 +1,6 @@
-﻿// جديد — TeacherERP.Application/Features/Enrollment/GetMyEnrollments/GetMyEnrollmentsQueryHandler.cs
+// موجود (تعديل) — TeacherERP.Application/Features/Enrollment/GetMyEnrollments/GetMyEnrollmentsQueryHandler.cs
 using MediatR;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Shared;
 
@@ -24,11 +25,11 @@ namespace TeacherERP.Application.Features.Enrollment.GetMyEnrollments
             }
 
             var enrollments = await _repository.GetMyEnrollmentsAsync(studentId, cancellationToken);
-            var requests = await _repository.GetMyRequestsAsync(studentId, cancellationToken);
+            var requests = await _repository.GetMyRequestsPageAsync(studentId, PageRequest.From(request), cancellationToken);
 
             return Result<MyEnrollmentsDto>.Success(new MyEnrollmentsDto(
                 enrollments.Select(MyEnrollmentDto.From).ToList(),
-                requests.Select(EnrollmentRequestDto.From).ToList()));
+                requests.Map(EnrollmentRequestDto.From)));
         }
     }
 }

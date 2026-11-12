@@ -1,7 +1,9 @@
-﻿// جديد — TeacherERP.API/Controllers/SessionAttachmentsController.cs
+// موجود (تعديل) — TeacherERP.API/Controllers/SessionAttachmentsController.cs
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using TeacherERP.API.Extensions;
 using TeacherERP.API.Security;
 using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.SessionContent;
@@ -28,6 +30,7 @@ namespace TeacherERP.API.Controllers
         // multipart/form-data: file (الملف) + kind (Board/Explanation/Homework/HomeworkAnswer/Other) + caption (اختياري)
         [HttpPost("~/api/Schedule/sessions/{sessionId:guid}/attachments")]
         [Authorize(Policy = AuthPolicies.TenantMember)]
+        [EnableRateLimiting(RateLimitPolicies.ContentUpload)]
         [RequestSizeLimit(SessionContentPolicy.MaxRequestBytes)]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Upload(

@@ -1,11 +1,12 @@
-﻿// جديد — TeacherERP.Application/Features/Notifications/GetMyNotifications/GetMyNotificationsQueryHandler.cs
+// موجود (تعديل) — TeacherERP.Application/Features/Notifications/GetMyNotifications/GetMyNotificationsQueryHandler.cs
 using MediatR;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Notifications.GetMyNotifications
 {
-    public class GetMyNotificationsQueryHandler : IRequestHandler<GetMyNotificationsQuery, Result<List<NotificationItem>>>
+    public class GetMyNotificationsQueryHandler : IRequestHandler<GetMyNotificationsQuery, Result<PagedResult<NotificationItem>>>
     {
         private readonly ICurrentUserService _currentUser;
         private readonly INotificationRepository _repository;
@@ -16,15 +17,16 @@ namespace TeacherERP.Application.Features.Notifications.GetMyNotifications
             _repository = repository;
         }
 
-        public async Task<Result<List<NotificationItem>>> Handle(GetMyNotificationsQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PagedResult<NotificationItem>>> Handle(GetMyNotificationsQuery request, CancellationToken cancellationToken)
         {
             if (_currentUser.UserId is not { } userId)
             {
-                return Result<List<NotificationItem>>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
+                return Result<PagedResult<NotificationItem>>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
             }
 
-            var items = await _repository.GetMineAsync(userId, request.UnreadOnly, cancellationToken);
-            return Result<List<NotificationItem>>.Success(items);
+            var page = await _repository.GetMinePageAsync(userId, request.UnreadOnly, PageRequest.From(request), cancellationToken);
+
+            return Result<PagedResult<NotificationItem>>.Success(page);
         }
     }
 }

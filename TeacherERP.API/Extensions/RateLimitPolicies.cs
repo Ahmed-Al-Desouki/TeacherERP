@@ -1,4 +1,4 @@
-﻿// جديد — TeacherERP.API/Extensions/RateLimitPolicies.cs
+// موجود (تعديل) — TeacherERP.API/Extensions/RateLimitPolicies.cs
 namespace TeacherERP.API.Extensions
 {
     // أسماء الـ Policies (الأرقام في RateLimitingExtensions)
@@ -18,5 +18,8 @@ namespace TeacherERP.API.Extensions
 
         /// <summary>مسح الحضور (بالمستخدم مش بالـ IP: طلاب السنتر على نفس الواي فاي)</summary>
         public const string AttendanceScan = "attendance-scan";
+
+        /// <summary>رفع ملفات الحصص (بالمستخدم): كل طلب يرفع ملفاً لـ Cloudinary فنحميه من الإغراق</summary>
+        public const string ContentUpload = "content-upload";
     }
 }

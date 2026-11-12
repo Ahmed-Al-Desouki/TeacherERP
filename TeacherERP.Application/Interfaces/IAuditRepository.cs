@@ -1,4 +1,5 @@
-﻿// جديد — TeacherERP.Application/Interfaces/IAuditRepository.cs
+// موجود (تعديل) — TeacherERP.Application/Interfaces/IAuditRepository.cs
+using TeacherERP.Application.Common;
 using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
@@ -19,6 +20,7 @@ namespace TeacherERP.Application.Interfaces
     {
         void Add(AuditLog log);
 
-        Task<List<AuditLogItem>> GetRecentAsync(Guid? targetUserId, int take, CancellationToken cancellationToken);
+        // الأحدث أولاً، بصفحات
+        Task<PagedResult<AuditLogItem>> GetPageAsync(Guid? targetUserId, PageRequest page, CancellationToken cancellationToken);
     }
 }

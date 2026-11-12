@@ -1,10 +1,11 @@
-﻿// موجود (تعديل) — TeacherERP.API/Controllers/AttendanceController.cs
+// موجود (تعديل) — TeacherERP.API/Controllers/AttendanceController.cs
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using TeacherERP.API.Extensions;
 using TeacherERP.API.Security;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Attendance.AdminScan;
 using TeacherERP.Application.Features.Attendance.ApproveCompensation;
 using TeacherERP.Application.Features.Attendance.GetAttendanceSettings;
@@ -72,19 +73,28 @@ namespace TeacherERP.API.Controllers
             return ToResponse(result);
         }
 
+        // ?page=1&pageSize=20 : سجلات حضور الحصة بترتيب وقت التسجيل
         [HttpGet("sessions/{sessionId:guid}")]
         [Authorize(Policy = AuthPolicies.TenantStaff)]
-        public async Task<IActionResult> GetSessionAttendance(Guid sessionId, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetSessionAttendance(
+            Guid sessionId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = PageRequest.DefaultPageSize,
+            CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(new GetSessionAttendanceQuery(sessionId), cancellationToken);
+            var result = await _mediator.Send(new GetSessionAttendanceQuery(sessionId, page, pageSize), cancellationToken);
             return ToResponse(result);
         }
 
+        // ?page=1&pageSize=20 : الأقدم أولاً
         [HttpGet("compensations/pending")]
         [Authorize(Policy = AuthPolicies.TenantStaff)]
-        public async Task<IActionResult> GetPendingCompensations(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetPendingCompensations(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = PageRequest.DefaultPageSize,
+            CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(new GetPendingCompensationsQuery(), cancellationToken);
+            var result = await _mediator.Send(new GetPendingCompensationsQuery(page, pageSize), cancellationToken);
             return ToResponse(result);
         }
 

@@ -1,8 +1,9 @@
-﻿// جديد — TeacherERP.API/Controllers/StudentsController.cs
+// موجود (تعديل) — TeacherERP.API/Controllers/StudentsController.cs
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TeacherERP.API.Security;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Students;
 using TeacherERP.Application.Features.Students.BlacklistStudent;
 using TeacherERP.Application.Features.Students.GetStudents;
@@ -23,12 +24,17 @@ namespace TeacherERP.API.Controllers
             _mediator = mediator;
         }
 
-        // ?status=Suspended&groupId= : قائمة الطلاب مع حالتهم وعداد غيابهم ومجموعتهم (للمدرس والمساعد)
+        // ?status=Suspended&groupId=&page=1&pageSize=20 : الطلاب مع حالتهم وعداد غيابهم ومجموعتهم (للمدرس والمساعد)
         [HttpGet]
         [Authorize(Policy = AuthPolicies.TenantStaff)]
-        public async Task<IActionResult> GetStudents([FromQuery] MembershipStatus? status, [FromQuery] Guid? groupId, CancellationToken cancellationToken)
+        public async Task<IActionResult> GetStudents(
+            [FromQuery] MembershipStatus? status,
+            [FromQuery] Guid? groupId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = PageRequest.DefaultPageSize,
+            CancellationToken cancellationToken = default)
         {
-            var result = await _mediator.Send(new GetStudentsQuery(status, groupId), cancellationToken);
+            var result = await _mediator.Send(new GetStudentsQuery(status, groupId, page, pageSize), cancellationToken);
             return ToResponse(result);
         }
 

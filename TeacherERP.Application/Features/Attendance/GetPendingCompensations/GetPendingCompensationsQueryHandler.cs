@@ -1,13 +1,14 @@
-﻿// موجود (تعديل) — TeacherERP.Application/Features/Attendance/GetPendingCompensations/GetPendingCompensationsQueryHandler.cs
+// موجود (تعديل) — TeacherERP.Application/Features/Attendance/GetPendingCompensations/GetPendingCompensationsQueryHandler.cs
 using MediatR;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
-using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Attendance.GetPendingCompensations
 {
-    public class GetPendingCompensationsQueryHandler : IRequestHandler<GetPendingCompensationsQuery, Result<List<PendingCompensationItem>>>
+    public class GetPendingCompensationsQueryHandler
+        : IRequestHandler<GetPendingCompensationsQuery, Result<PagedResult<PendingCompensationItem>>>
     {
         private readonly ICurrentUserService _currentUser;
         private readonly ICurrentTenantAccessor _currentTenant;
@@ -23,20 +24,22 @@ namespace TeacherERP.Application.Features.Attendance.GetPendingCompensations
             _attendanceRepository = attendanceRepository;
         }
 
-        public async Task<Result<List<PendingCompensationItem>>> Handle(GetPendingCompensationsQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PagedResult<PendingCompensationItem>>> Handle(
+            GetPendingCompensationsQuery request, CancellationToken cancellationToken)
         {
-            if (_currentUser.UserId is not { } userId)
+            if (_currentUser.UserId is not { })
             {
-                return Result<List<PendingCompensationItem>>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
+                return Result<PagedResult<PendingCompensationItem>>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
             }
 
-            if (_currentTenant.Current is not { } tenant)
+            if (_currentTenant.Current is null)
             {
-                return Result<List<PendingCompensationItem>>.Failure(TenantErrors.Required);
+                return Result<PagedResult<PendingCompensationItem>>.Failure(TenantErrors.Required);
             }
 
-            var items = await _attendanceRepository.GetPendingCompensationsAsync(cancellationToken);
-            return Result<List<PendingCompensationItem>>.Success(items);
+            var page = await _attendanceRepository.GetPendingCompensationsPageAsync(PageRequest.From(request), cancellationToken);
+
+            return Result<PagedResult<PendingCompensationItem>>.Success(page);
         }
     }
 }

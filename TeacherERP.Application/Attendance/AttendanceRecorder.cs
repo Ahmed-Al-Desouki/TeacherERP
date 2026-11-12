@@ -1,4 +1,4 @@
-﻿// موجود (تعديل) — TeacherERP.Application/Attendance/AttendanceRecorder.cs
+// موجود (تعديل) — TeacherERP.Application/Attendance/AttendanceRecorder.cs
 using TeacherERP.Application.Features.Attendance;
 using TeacherERP.Application.Features.Enrollment;
 using TeacherERP.Application.Interfaces;
@@ -121,9 +121,10 @@ namespace TeacherERP.Application.Attendance
                 {
                     if (!await _enrollmentRepository.HasPendingRequestAsync(request.TenantId, request.StudentId, cancellationToken))
                     {
-                        // الطلب يفتكر الحصة، فالموافقة عليه تسجل للطالب حضورها
+                        // الطلب يفتكر الحصة وطريقة المسح ومن سجّله، فالموافقة عليه تسجل الحضور بنفس البيانات
                         var pending = EnrollmentRequest.Create(
-                            request.TenantId, request.StudentId, session.GroupId, EnrollmentRequestType.Join, session.SessionId);
+                            request.TenantId, request.StudentId, session.GroupId, EnrollmentRequestType.Join,
+                            session.SessionId, request.Method, request.RecordedByUserId);
                         _enrollmentRepository.AddRequest(pending);
 
                         await _notificationService.NotifyStaffAsync(

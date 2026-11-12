@@ -1,8 +1,10 @@
-﻿// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/EnrollmentRepository.cs
+// موجود (تعديل) — TeacherERP.Infrastructure/Repositories/EnrollmentRepository.cs
 using Microsoft.EntityFrameworkCore;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Infrastructure.Data;
+using TeacherERP.Infrastructure.Extensions;
 
 namespace TeacherERP.Infrastructure.Repositories
 {
@@ -73,8 +75,8 @@ namespace TeacherERP.Infrastructure.Repositories
             return _context.EnrollmentRequests.FirstOrDefaultAsync(r => r.Id == requestId, cancellationToken);
         }
 
-        public Task<List<EnrollmentRequestListItem>> GetRequestsAsync(
-            EnrollmentRequestStatus? status, CancellationToken cancellationToken)
+        public async Task<PagedResult<EnrollmentRequestListItem>> GetRequestsPageAsync(
+            EnrollmentRequestStatus? status, PageRequest page, CancellationToken cancellationToken)
         {
             var query = _context.EnrollmentRequests.AsNoTracking().AsQueryable();
 
@@ -83,9 +85,18 @@ namespace TeacherERP.Infrastructure.Repositories
                 query = query.Where(r => r.Status == status.Value);
             }
 
-            return query
+            // العدّ قبل الإسقاط (الـ Select فيه Subquery للمجموعة الحالية) فيبقى الاستعلام بسيطاً
+            var total = await query.CountAsync(cancellationToken);
+            if (total == 0)
+            {
+                return new PagedResult<EnrollmentRequestListItem>(new List<EnrollmentRequestListItem>(), page.Page, page.PageSize, 0);
+            }
+
+            var items = await query
                 .OrderByDescending(r => r.CreatedAt)
-                .Take(200)
+                .ThenBy(r => r.Id)
+                .Skip(page.Skip)
+                .Take(page.PageSize)
                 .Select(r => new EnrollmentRequestListItem(
                     r.Id,
                     r.StudentId,
@@ -100,6 +111,8 @@ namespace TeacherERP.Infrastructure.Repositories
                         .Select(e => e.Group.Name)
                         .FirstOrDefault()))
                 .ToListAsync(cancellationToken);
+
+            return new PagedResult<EnrollmentRequestListItem>(items, page.Page, page.PageSize, total);
         }
 
         // ---- للطالب عبر كل مدرسيه ----
@@ -118,19 +131,18 @@ namespace TeacherERP.Infrastructure.Repositories
             return (from e in _context.GroupEnrollments.IgnoreQueryFilters().AsNoTracking()
                     join t in _context.Tenants.AsNoTracking() on e.TenantId equals t.Id
                     where e.StudentId == studentId && e.Status == EnrollmentStatus.Active
-                    orderby e.EnrolledAt descending
+                    orderby e.EnrolledAt descending, e.Id
                     select new MyEnrollmentItem(e.Id, e.GroupId, e.Group.Name, t.Id, t.Name, t.Subject, e.EnrolledAt))
                 .ToListAsync(cancellationToken);
         }
 
-        public Task<List<MyRequestItem>> GetMyRequestsAsync(Guid studentId, CancellationToken cancellationToken)
+        public Task<PagedResult<MyRequestItem>> GetMyRequestsPageAsync(Guid studentId, PageRequest page, CancellationToken cancellationToken)
         {
             return (from r in _context.EnrollmentRequests.IgnoreQueryFilters().AsNoTracking()
                     where r.StudentId == studentId
-                    orderby r.CreatedAt descending
+                    orderby r.CreatedAt descending, r.Id
                     select new MyRequestItem(r.Id, r.GroupId, r.Group.Name, r.TenantId, r.Type, r.Status, r.CreatedAt, r.DecisionNote))
-                .Take(50)
-                .ToListAsync(cancellationToken);
+                .ToPagedAsync(page, cancellationToken);
         }
     }
 }

@@ -1,14 +1,13 @@
-﻿// موجود (تعديل) — TeacherERP.Application/Features/Attendance/GetSessionAttendance/GetSessionAttendanceQueryHandler.cs
+// موجود (تعديل) — TeacherERP.Application/Features/Attendance/GetSessionAttendance/GetSessionAttendanceQueryHandler.cs
 using MediatR;
-using TeacherERP.Application.Features.Schedule;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
-using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Attendance.GetSessionAttendance
 {
-    public class GetSessionAttendanceQueryHandler : IRequestHandler<GetSessionAttendanceQuery, Result<List<AttendanceListItem>>>
+    public class GetSessionAttendanceQueryHandler : IRequestHandler<GetSessionAttendanceQuery, Result<PagedResult<AttendanceListItem>>>
     {
         private readonly ICurrentUserService _currentUser;
         private readonly ICurrentTenantAccessor _currentTenant;
@@ -24,20 +23,23 @@ namespace TeacherERP.Application.Features.Attendance.GetSessionAttendance
             _attendanceRepository = attendanceRepository;
         }
 
-        public async Task<Result<List<AttendanceListItem>>> Handle(GetSessionAttendanceQuery request, CancellationToken cancellationToken)
+        public async Task<Result<PagedResult<AttendanceListItem>>> Handle(
+            GetSessionAttendanceQuery request, CancellationToken cancellationToken)
         {
-            if (_currentUser.UserId is not { } userId)
+            if (_currentUser.UserId is not { })
             {
-                return Result<List<AttendanceListItem>>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
+                return Result<PagedResult<AttendanceListItem>>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
             }
 
-            if (_currentTenant.Current is not { } tenant)
+            if (_currentTenant.Current is null)
             {
-                return Result<List<AttendanceListItem>>.Failure(TenantErrors.Required);
+                return Result<PagedResult<AttendanceListItem>>.Failure(TenantErrors.Required);
             }
 
-            var items = await _attendanceRepository.GetSessionAttendanceAsync(request.SessionId, cancellationToken);
-            return Result<List<AttendanceListItem>>.Success(items);
+            var page = await _attendanceRepository.GetSessionAttendancePageAsync(
+                request.SessionId, PageRequest.From(request), cancellationToken);
+
+            return Result<PagedResult<AttendanceListItem>>.Success(page);
         }
     }
 }
