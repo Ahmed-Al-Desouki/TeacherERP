@@ -11,6 +11,9 @@ namespace TeacherERP.Application.Features.Schedule
         public static readonly Error NewTimeInPast = new("Session.NewTimeInPast", "The new time must be in the future.");
         public static readonly Error Cancelled = new("Session.Cancelled", "The session is cancelled.");
         public static readonly Error TimeConflict = new("Session.TimeConflict", "The time conflicts with another session of the same group.");
+        public static readonly Error HasPendingCompensations = new(
+            "Session.HasPendingCompensations",
+            "This session has pending compensation requests. Approve or reject them before cancelling it.");
 
         public static Error InvalidRange()
             => new("Schedule.InvalidRange", $"The range must be positive and at most {SchedulePolicy.MaxSessionsQueryDays} days.");

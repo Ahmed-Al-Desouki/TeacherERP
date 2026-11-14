@@ -10,17 +10,20 @@ namespace TeacherERP.Application.Features.Schedule.BulkCancelSessions
     {
         private readonly ICurrentTenantAccessor _currentTenant;
         private readonly IGroupSessionRepository _sessionRepository;
+        private readonly IAttendanceRepository _attendanceRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
 
         public BulkCancelSessionsCommandHandler(
             ICurrentTenantAccessor currentTenant,
             IGroupSessionRepository sessionRepository,
+            IAttendanceRepository attendanceRepository,
             IUnitOfWork unitOfWork,
             TimeProvider timeProvider)
         {
             _currentTenant = currentTenant;
             _sessionRepository = sessionRepository;
+            _attendanceRepository = attendanceRepository;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
         }
@@ -48,8 +51,20 @@ namespace TeacherERP.Application.Features.Schedule.BulkCancelSessions
 
             var sessions = await _sessionRepository.GetTrackedByRangeAsync(from, to, request.GroupIds, cancellationToken);
 
+            // إما يُلغى الكل أو لا شيء: أي حصة عليها تعويض معلّق تمنع الإلغاء الجماعي (نفس قاعدة التأجيل الجماعي)
+            var cancellable = sessions.Where(s => !s.IsCancelled).ToList();
+            if (cancellable.Count > 0)
+            {
+                var blocked = await _attendanceRepository.GetSessionIdsWithPendingCompensationAsync(
+                    cancellable.Select(s => s.Id).ToArray(), cancellationToken);
+                if (blocked.Count > 0)
+                {
+                    return Result<BulkResultDto>.Failure(ScheduleErrors.HasPendingCompensations);
+                }
+            }
+
             var affected = 0;
-            foreach (var session in sessions.Where(s => !s.IsCancelled))
+            foreach (var session in cancellable)
             {
                 session.Cancel(request.Reason);
                 affected++;

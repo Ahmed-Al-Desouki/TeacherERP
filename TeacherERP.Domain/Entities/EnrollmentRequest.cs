@@ -30,6 +30,10 @@ namespace TeacherERP.Domain.Entities
         /// <summary>من سجّل المسح (الطالب المسؤول مثلاً)، وفارغ لو الطالب مسح لنفسه</summary>
         public Guid? SourceRecordedByUserId { get; private set; }
 
+        /// <summary>موقع المسح وقت الـ Walk-in، ليُنقل لسجل الحضور عند الموافقة. فارغ لباقي الطلبات</summary>
+        public double? SourceLatitude { get; private set; }
+        public double? SourceLongitude { get; private set; }
+
         /// <summary>من قرر (فارغ لو القبول تلقائي)</summary>
         public Guid? DecidedByUserId { get; private set; }
         public DateTime? DecidedAt { get; private set; }
@@ -44,7 +48,9 @@ namespace TeacherERP.Domain.Entities
             EnrollmentRequestType type,
             Guid? sourceSessionId = null,
             ScanMethod? sourceScanMethod = null,
-            Guid? sourceRecordedByUserId = null)
+            Guid? sourceRecordedByUserId = null,
+            double? sourceLatitude = null,
+            double? sourceLongitude = null)
         {
             return new EnrollmentRequest
             {
@@ -55,7 +61,9 @@ namespace TeacherERP.Domain.Entities
                 Status = EnrollmentRequestStatus.Pending,
                 SourceSessionId = sourceSessionId,
                 SourceScanMethod = sourceScanMethod,
-                SourceRecordedByUserId = sourceRecordedByUserId
+                SourceRecordedByUserId = sourceRecordedByUserId,
+                SourceLatitude = sourceLatitude,
+                SourceLongitude = sourceLongitude
             };
         }
 

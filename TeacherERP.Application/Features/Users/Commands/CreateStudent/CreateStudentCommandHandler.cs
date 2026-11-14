@@ -50,7 +50,7 @@ namespace TeacherERP.Application.Features.Users.Commands.CreateStudent
                 Password = request.Password
             };
 
-            _cache.Set($"Reg_{request.Email}", cacheData, TimeSpan.FromMinutes(10));
+            _cache.Set(RegistrationCacheKey.For(request.Email), cacheData, TimeSpan.FromMinutes(10));
 
             // 4. إرسال الإيميل في الخلفية
             var otpCode = otpResult.Value!.Code;

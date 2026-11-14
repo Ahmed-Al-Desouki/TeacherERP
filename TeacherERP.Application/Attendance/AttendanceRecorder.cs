@@ -124,7 +124,8 @@ namespace TeacherERP.Application.Attendance
                         // الطلب يفتكر الحصة وطريقة المسح ومن سجّله، فالموافقة عليه تسجل الحضور بنفس البيانات
                         var pending = EnrollmentRequest.Create(
                             request.TenantId, request.StudentId, session.GroupId, EnrollmentRequestType.Join,
-                            session.SessionId, request.Method, request.RecordedByUserId);
+                            session.SessionId, request.Method, request.RecordedByUserId,
+                            request.Latitude, request.Longitude);
                         _enrollmentRepository.AddRequest(pending);
 
                         await _notificationService.NotifyStaffAsync(

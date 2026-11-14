@@ -96,8 +96,10 @@ namespace TeacherERP.Application.Features.Enrollment.ApproveRequest
             var method = enrollmentRequest.SourceScanMethod ?? ScanMethod.SelfScan;
             var recordedBy = enrollmentRequest.SourceRecordedByUserId ?? approvedByUserId;
 
+            // موقع المسح الأصلي ينتقل لسجل الحضور (الطلبات القديمة بدون موقع تبقى فارغة)
             _attendanceRepository.AddRecord(AttendanceRecord.RecordPresence(
-                tenantId, sessionId, studentId, method, null, null, recordedBy));
+                tenantId, sessionId, studentId, method,
+                enrollmentRequest.SourceLatitude, enrollmentRequest.SourceLongitude, recordedBy));
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }

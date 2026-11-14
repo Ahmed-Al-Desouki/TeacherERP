@@ -24,7 +24,7 @@ namespace TeacherERP.Application.Features.Users.Commands.VerifyOtp
         public async Task<Result<Guid>> Handle(VerifyOtpCommand request, CancellationToken cancellationToken)
         {
             // 1. جلب البيانات المعلقة من الـ Cache (قبل التحقق من الكود، حتى لا يُستهلك الكود بلا داعٍ)
-            if (!_cache.TryGetValue($"Reg_{request.Email}", out CachedRegistrationData? cachedData) || cachedData == null)
+            if (!_cache.TryGetValue(RegistrationCacheKey.For(request.Email), out CachedRegistrationData? cachedData) || cachedData == null)
             {
                 return Result<Guid>.Failure(new Error("Otp.Expired", "OTP has expired or email is incorrect. Please register again."));
             }
@@ -51,7 +51,7 @@ namespace TeacherERP.Application.Features.Users.Commands.VerifyOtp
             }
 
             // 5. مسح البيانات من الـ Cache
-            _cache.Remove($"Reg_{request.Email}");
+            _cache.Remove(RegistrationCacheKey.For(request.Email));
 
             // 6. إرجاع الـ ID الخاص بالمستخدم الجديد بنجاح
             return Result<Guid>.Success(student.Id);

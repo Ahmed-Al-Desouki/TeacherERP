@@ -40,6 +40,10 @@ namespace TeacherERP.Application.Interfaces
 
         Task<Guid?> GetStudentIdByQrAsync(string studentQrCode, CancellationToken cancellationToken);
 
+        // أي من هذه الحصص عليها تعويض معلّق (كحصة حضرها الطالب تعويضاً، أو كحصة أصلية يعوّضها)، فلا يصح إلغاؤها
+        Task<HashSet<Guid>> GetSessionIdsWithPendingCompensationAsync(
+            IReadOnlyCollection<Guid> sessionIds, CancellationToken cancellationToken);
+
         void AddRecord(AttendanceRecord record);
 
         // للموظفين داخل المدرس الحالي

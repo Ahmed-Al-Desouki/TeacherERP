@@ -42,10 +42,17 @@ namespace TeacherERP.Application.Attendance
             return current | previous;
         }
 
+        // مفتاح الكود المتغير مشتق من السر بـ HMAC ووسم ثابت، فالكود الثابت المطبوع (وهو السر نفسه) لا يكفي لتوليد الأكواد المتغيرة
+        private const string DynamicKeyLabel = "attendance-dynamic-qr-v1";
+
         private static string Compute(Guid tenantId, string secret, long window)
         {
-            var hash = HMACSHA256.HashData(
+            var dynamicKey = HMACSHA256.HashData(
                 Encoding.UTF8.GetBytes(secret),
+                Encoding.UTF8.GetBytes(DynamicKeyLabel));
+
+            var hash = HMACSHA256.HashData(
+                dynamicKey,
                 Encoding.UTF8.GetBytes($"{tenantId:N}|{window}"));
 
             return Convert.ToHexString(hash)[..8];

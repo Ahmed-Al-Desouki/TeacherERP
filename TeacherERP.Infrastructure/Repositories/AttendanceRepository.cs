@@ -94,6 +94,37 @@ namespace TeacherERP.Infrastructure.Repositories
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
+        public async Task<HashSet<Guid>> GetSessionIdsWithPendingCompensationAsync(
+            IReadOnlyCollection<Guid> sessionIds, CancellationToken cancellationToken)
+        {
+            var ids = sessionIds.ToHashSet();
+            var idArray = ids.ToArray();
+
+            var rows = await _context.AttendanceRecords
+                .AsNoTracking()
+                .Where(a => a.Status == AttendanceStatus.PendingCompensation
+                            && (idArray.Contains(a.SessionId)
+                                || (a.CompensatesSessionId.HasValue && idArray.Contains(a.CompensatesSessionId.Value))))
+                .Select(a => new { a.SessionId, a.CompensatesSessionId })
+                .ToListAsync(cancellationToken);
+
+            var blocked = new HashSet<Guid>();
+            foreach (var row in rows)
+            {
+                if (ids.Contains(row.SessionId))
+                {
+                    blocked.Add(row.SessionId);
+                }
+
+                if (row.CompensatesSessionId is { } compensated && ids.Contains(compensated))
+                {
+                    blocked.Add(compensated);
+                }
+            }
+
+            return blocked;
+        }
+
         public void AddRecord(AttendanceRecord record) => _context.AttendanceRecords.Add(record);
 
         // ---- للموظفين داخل المدرس الحالي (الفلتر العام يعمل) ----
