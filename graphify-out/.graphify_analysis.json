@@ -2822,22 +2822,22 @@
       "why": "connects across different repos/directories; bridges separate communities; peripheral node `TeamErrors` unexpectedly reaches hub `Error`"
     },
     {
-      "source": "UserRepository",
-      "target": "IUserRepository",
+      "source": "AppDbContext",
+      "target": "AttendanceRecord",
       "source_files": [
-        "TeacherERP.Infrastructure/Repositories/UserRepository.cs",
-        "TeacherERP.Application/Interfaces/IUserRepository.cs"
+        "TeacherERP.Infrastructure/Data/AppDbContext.cs",
+        "TeacherERP.Domain/Entities/AttendanceRecord.cs"
       ],
       "confidence": "EXTRACTED",
-      "relation": "implements",
+      "relation": "references",
       "why": "connects across different repos/directories; bridges separate communities"
     }
   ],
   "questions": [
     {
       "type": "bridge_node",
-      "question": "Why does `TeacherERP.Application.Interfaces` connect `TimeSpan` to `TeacherERP.Domain.Shared`, `TeacherERP.Application.Interfaces`, `system`, `Guid`, `CreateAssistantCommandHandler`, `Result`, `Session`, `AttendanceRecord`, `LoginSession`, `IUserAccountService`, `PasswordController.cs`, `ITenantRepository`, `EnrollmentRequestStatus`, `Error`, `SessionValidator`, `ResetGrantService`, `ICenterRepository`, `CompleteProfileValidator`, `GetSessionsQueryHandler`, `RevokeSessionCommand`, `GetMySessionsQueryHandler`, `Centerdto.cs`, `TeacherERP.Application.Features.Students`, `UnblacklistStudentValidator.cs`, `RemoveAssistantValidator.cs`, `ResendWelcomeValidator.cs`, `TeacherERP.Application.Features.Schedule.GetSessions`?",
-      "why": "High betweenness centrality (0.072) - this node is a cross-community bridge."
+      "question": "Why does `TeacherERP.Domain.Entities` connect `TimeSpan` to `TeacherERP.Domain.Shared`, `TeacherERP.Application.Interfaces`, `system`, `Guid`, `CreateAssistantCommandHandler`, `Result`, `AttendanceRecord`, `Center`, `LoginSession`, `.Handle`, `http`, `ICurrentTenantAccessor`, `IUserAccountService`, `Transaction`, `OtpService`, `.GetByIdAsync`, `ITenantRepository`, `GroupEnrollment`, `TeacherERP.Application.Features.Users.Commands.Auth.Login`, `fluentvalidation`, `AuthResponseDto`, `Error`, `.AddApiRateLimiting`, `TenantRole`, `IServiceCollection`, `.ValidateIdTokenAsync`, `CompleteProfileValidator`, `CancelSessionCommandHandler.cs`, `Centerdto.cs`, `LoggingBehavior.cs`, `ResetPasswordValidator.cs`, `VerifyResetOtpValidator.cs`?",
+      "why": "High betweenness centrality (0.067) - this node is a cross-community bridge."
     },
     {
       "type": "isolated_nodes",
@@ -2851,8 +2851,8 @@
     },
     {
       "type": "bridge_node",
-      "question": "Why does `TeacherERP.Domain.Entities` connect `TimeSpan` to `TeacherERP.Domain.Shared`, `TeacherERP.Application.Interfaces`, `system`, `Guid`, `CreateAssistantCommandHandler`, `Result`, `AttendanceRecord`, `Center`, `LoginSession`, `.Handle`, `http`, `ICurrentTenantAccessor`, `IUserAccountService`, `Transaction`, `OtpService`, `.GetByIdAsync`, `ITenantRepository`, `GroupEnrollment`, `TeacherERP.Application.Features.Users.Commands.Auth.Login`, `fluentvalidation`, `AuthResponseDto`, `Error`, `.AddApiRateLimiting`, `TenantRole`, `IServiceCollection`, `.ValidateIdTokenAsync`, `CompleteProfileValidator`, `CancelSessionCommandHandler.cs`, `Centerdto.cs`, `LoggingBehavior.cs`, `ResetPasswordValidator.cs`, `VerifyResetOtpValidator.cs`?",
-      "why": "High betweenness centrality (0.060) - this node is a cross-community bridge."
+      "question": "Why does `TeacherERP.Application.Interfaces` connect `TimeSpan` to `TeacherERP.Domain.Shared`, `TeacherERP.Application.Interfaces`, `system`, `Guid`, `CreateAssistantCommandHandler`, `Result`, `Session`, `AttendanceRecord`, `LoginSession`, `IUserAccountService`, `PasswordController.cs`, `ITenantRepository`, `EnrollmentRequestStatus`, `Error`, `SessionValidator`, `ResetGrantService`, `ICenterRepository`, `CompleteProfileValidator`, `GetSessionsQueryHandler`, `RevokeSessionCommand`, `GetMySessionsQueryHandler`, `Centerdto.cs`, `TeacherERP.Application.Features.Students`, `UnblacklistStudentValidator.cs`, `RemoveAssistantValidator.cs`, `ResendWelcomeValidator.cs`, `TeacherERP.Application.Features.Schedule.GetSessions`?",
+      "why": "High betweenness centrality (0.064) - this node is a cross-community bridge."
     },
     {
       "type": "low_cohesion",
@@ -2862,7 +2862,7 @@
     {
       "type": "bridge_node",
       "question": "Why does `Result` connect `.AddApplicationServices` to `IActionResult`, `Task`, `TeacherERP.Application.Interfaces`, `system`, `Session`, `DateTime`, `Group`, `AttendanceRecord`, `LoginSession`, `http`, `AttendanceController.cs`, `.SeedAsync`, `IUserAccountService`, `PasswordController.cs`, `.SaveChangesAsync`, `TenantSettings`, `AuditLog`, `BaseEntity`, `.ResolveAsync`, `ResetGrantService`, `TeacherERP.Application.Features.Students`, `UpdateGroupValidator`, `.RequiresProfileCompletion`, `RescheduleSessionValidator.cs`, `GoogleSignInValidator.cs`, `ResetPasswordValidator.cs`?",
-      "why": "High betweenness centrality (0.059) - this node is a cross-community bridge."
+      "why": "High betweenness centrality (0.055) - this node is a cross-community bridge."
     },
     {
       "type": "low_cohesion",

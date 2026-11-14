@@ -1,4 +1,4 @@
-# Graph Report - TeacherERP  (2026-11-04)
+# Graph Report - TeacherERP  (2026-11-14)
 
 ## Corpus Check
 - cluster-only mode — file stats not available
@@ -151,8 +151,8 @@
   TeacherERP.Application/Features/Groups/GroupErrors.cs → TeacherERP.Domain/Shared/Error.cs
 - `TeamErrors` --references--> `Error`  [EXTRACTED]
   TeacherERP.Application/Features/Team/TeamErrors.cs → TeacherERP.Domain/Shared/Error.cs
-- `UserRepository` --implements--> `IUserRepository`  [EXTRACTED]
-  TeacherERP.Infrastructure/Repositories/UserRepository.cs → TeacherERP.Application/Interfaces/IUserRepository.cs
+- `AppDbContext` --references--> `AttendanceRecord`  [EXTRACTED]
+  TeacherERP.Infrastructure/Data/AppDbContext.cs → TeacherERP.Domain/Entities/AttendanceRecord.cs
 
 ## Import Cycles
 - None detected.
@@ -483,17 +483,17 @@ Nodes (4): StudentStatus, Active, Blacklisted, Suspended
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `TeacherERP.Application.Interfaces` connect `TimeSpan` to `TeacherERP.Domain.Shared`, `TeacherERP.Application.Interfaces`, `system`, `Guid`, `CreateAssistantCommandHandler`, `Result`, `Session`, `AttendanceRecord`, `LoginSession`, `IUserAccountService`, `PasswordController.cs`, `ITenantRepository`, `EnrollmentRequestStatus`, `Error`, `SessionValidator`, `ResetGrantService`, `ICenterRepository`, `CompleteProfileValidator`, `GetSessionsQueryHandler`, `RevokeSessionCommand`, `GetMySessionsQueryHandler`, `Centerdto.cs`, `TeacherERP.Application.Features.Students`, `UnblacklistStudentValidator.cs`, `RemoveAssistantValidator.cs`, `ResendWelcomeValidator.cs`, `TeacherERP.Application.Features.Schedule.GetSessions`?**
-  _High betweenness centrality (0.072) - this node is a cross-community bridge._
+- **Why does `TeacherERP.Domain.Entities` connect `TimeSpan` to `TeacherERP.Domain.Shared`, `TeacherERP.Application.Interfaces`, `system`, `Guid`, `CreateAssistantCommandHandler`, `Result`, `AttendanceRecord`, `Center`, `LoginSession`, `.Handle`, `http`, `ICurrentTenantAccessor`, `IUserAccountService`, `Transaction`, `OtpService`, `.GetByIdAsync`, `ITenantRepository`, `GroupEnrollment`, `TeacherERP.Application.Features.Users.Commands.Auth.Login`, `fluentvalidation`, `AuthResponseDto`, `Error`, `.AddApiRateLimiting`, `TenantRole`, `IServiceCollection`, `.ValidateIdTokenAsync`, `CompleteProfileValidator`, `CancelSessionCommandHandler.cs`, `Centerdto.cs`, `LoggingBehavior.cs`, `ResetPasswordValidator.cs`, `VerifyResetOtpValidator.cs`?**
+  _High betweenness centrality (0.067) - this node is a cross-community bridge._
 - **What connects `DisplayName`, `Host`, `Mail` to the rest of the system?**
   _350 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `TeacherERP.Domain.Shared` be split into smaller, more focused modules?**
   _Cohesion score 0.031982611395746 - nodes in this community are weakly interconnected._
-- **Why does `TeacherERP.Domain.Entities` connect `TimeSpan` to `TeacherERP.Domain.Shared`, `TeacherERP.Application.Interfaces`, `system`, `Guid`, `CreateAssistantCommandHandler`, `Result`, `AttendanceRecord`, `Center`, `LoginSession`, `.Handle`, `http`, `ICurrentTenantAccessor`, `IUserAccountService`, `Transaction`, `OtpService`, `.GetByIdAsync`, `ITenantRepository`, `GroupEnrollment`, `TeacherERP.Application.Features.Users.Commands.Auth.Login`, `fluentvalidation`, `AuthResponseDto`, `Error`, `.AddApiRateLimiting`, `TenantRole`, `IServiceCollection`, `.ValidateIdTokenAsync`, `CompleteProfileValidator`, `CancelSessionCommandHandler.cs`, `Centerdto.cs`, `LoggingBehavior.cs`, `ResetPasswordValidator.cs`, `VerifyResetOtpValidator.cs`?**
-  _High betweenness centrality (0.060) - this node is a cross-community bridge._
+- **Why does `TeacherERP.Application.Interfaces` connect `TimeSpan` to `TeacherERP.Domain.Shared`, `TeacherERP.Application.Interfaces`, `system`, `Guid`, `CreateAssistantCommandHandler`, `Result`, `Session`, `AttendanceRecord`, `LoginSession`, `IUserAccountService`, `PasswordController.cs`, `ITenantRepository`, `EnrollmentRequestStatus`, `Error`, `SessionValidator`, `ResetGrantService`, `ICenterRepository`, `CompleteProfileValidator`, `GetSessionsQueryHandler`, `RevokeSessionCommand`, `GetMySessionsQueryHandler`, `Centerdto.cs`, `TeacherERP.Application.Features.Students`, `UnblacklistStudentValidator.cs`, `RemoveAssistantValidator.cs`, `ResendWelcomeValidator.cs`, `TeacherERP.Application.Features.Schedule.GetSessions`?**
+  _High betweenness centrality (0.064) - this node is a cross-community bridge._
 - **Should `IActionResult` be split into smaller, more focused modules?**
   _Cohesion score 0.06885456885456885 - nodes in this community are weakly interconnected._
 - **Why does `Result` connect `.AddApplicationServices` to `IActionResult`, `Task`, `TeacherERP.Application.Interfaces`, `system`, `Session`, `DateTime`, `Group`, `AttendanceRecord`, `LoginSession`, `http`, `AttendanceController.cs`, `.SeedAsync`, `IUserAccountService`, `PasswordController.cs`, `.SaveChangesAsync`, `TenantSettings`, `AuditLog`, `BaseEntity`, `.ResolveAsync`, `ResetGrantService`, `TeacherERP.Application.Features.Students`, `UpdateGroupValidator`, `.RequiresProfileCompletion`, `RescheduleSessionValidator.cs`, `GoogleSignInValidator.cs`, `ResetPasswordValidator.cs`?**
-  _High betweenness centrality (0.059) - this node is a cross-community bridge._
+  _High betweenness centrality (0.055) - this node is a cross-community bridge._
 - **Should `Task` be split into smaller, more focused modules?**
   _Cohesion score 0.05788149164950812 - nodes in this community are weakly interconnected._
