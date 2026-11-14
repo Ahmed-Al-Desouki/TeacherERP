@@ -436,6 +436,18 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<Guid>("GroupId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<double?>("SourceLatitude")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("SourceLongitude")
+                        .HasColumnType("float");
+
+                    b.Property<Guid?>("SourceRecordedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("SourceScanMethod")
+                        .HasColumnType("int");
+
                     b.Property<Guid?>("SourceSessionId")
                         .HasColumnType("uniqueidentifier");
 
