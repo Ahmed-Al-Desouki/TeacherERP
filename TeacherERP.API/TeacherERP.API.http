@@ -4,3 +4,100 @@ GET {{TeacherERP.API_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+# ============================================================
+# متغيرات الطلبات التالية (غيّرها بقيمك)
+# token = Access Token من /api/Auth/login
+# teacherId = Id مساحة المدرس (X-Teacher-Id)
+# ============================================================
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlYzYxN2I0YS1kMWYxLTQ2MjEtOTcwOC1kYzBiMWM5ZmRjOTUiLCJlbWFpbCI6InRlYWNoZXIubWF0aEB0ZXN0LnRlYWNoZXJlcnAubG9jYWwiLCJqdGkiOiIwZGJiM2UzZC0zNTIwLTRlNmQtODk4ZC1hNDMwYzJiYzAyZGEiLCJuYW1laWQiOiJlYzYxN2I0YS1kMWYxLTQ2MjEtOTcwOC1kYzBiMWM5ZmRjOTUiLCJ1bmlxdWVfbmFtZSI6ItijLiDZhdit2YXYryDYudmE2YoiLCJzZXNzaW9uX2lkIjoiZDYyMDQ0NTUtNDBmZC00NjBlLWEyZDMtNTc5ZjY3ZDhkZDA3Iiwicm9sZSI6IlN1cGVyQWRtaW4iLCJuYmYiOjE3OTQ3MTk5ODIsImV4cCI6MTc5NDcyMzU4MiwiaWF0IjoxNzk0NzE5OTgyLCJpc3MiOiJUZWFjaGVyRVJQIiwiYXVkIjoiVGVhY2hlckVSUF9Vc2VycyJ9.RPr4iGMoGC3At-PktoGe9BoT0F9t--rsYwOIkimtmC8
+@teacherId = EC617B4A-D1F1-4621-9708-DC0B1C9FDC95
+@sessionId = D47FF7F3-0B91-4577-8FB3-A1A554414E21
+@requestId = 00000000-0000-0000-0000-000000000000
+@compensationId = FA8907C8-350F-4363-A0B4-3C4D361CA050
+
+### F3: إعدادات الحضور (المدرس): الكود الثابت يظهر في الوضع الثابت فقط
+GET {{TeacherERP.API_HostAddress}}/api/Attendance/settings
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### F3: تحويل الوضع للكود المتغير (DynamicScreenQR) أو الثابت (StaticGlobalQR)
+PUT {{TeacherERP.API_HostAddress}}/api/Attendance/settings
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "mode": "DynamicScreenQR",
+  "rejectMockLocations": true,
+  "autoRegisterOnScan": true,
+  "autoApproveGroupAdminScans": false
+}
+
+### F3: الكود المتغير الحالي لشاشة السنتر (مشتق بـ HMAC، يتجدد كل 30 ثانية)
+GET {{TeacherERP.API_HostAddress}}/api/Attendance/display-code
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### F3 + F5: مسح الطالب للكود بموقعه. غير المسجّل (Walk-in) يُحفظ موقعه في طلبه المعلّق
+POST {{TeacherERP.API_HostAddress}}/api/Attendance/scan
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "teacherId": "{{teacherId}}",
+  "code": "PASTE_CODE",
+  "latitude": 30.0444,
+  "longitude": 31.2357,
+  "accuracyMeters": 10,
+  "isMockLocation": false,
+  "groupId": null
+}
+
+### F4: إلغاء حصة (يرفض لو عليها تعويض معلّق: Session.HasPendingCompensations)
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/cancel
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "reason": "Holiday"
+}
+
+### F4: إلغاء جماعي لنطاق (للمدرس فقط، إما الكل أو لا شيء لو في تعويض معلّق)
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/bulk-cancel
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "from": "2026-12-01T00:00:00Z",
+  "to": "2026-12-08T00:00:00Z",
+  "groupIds": null,
+  "reason": "Vacation"
+}
+
+### F4: طلبات التعويض المعلّقة
+GET {{TeacherERP.API_HostAddress}}/api/Attendance/compensations/pending?page=1&pageSize=20
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### F4: قبول تعويض معلّق
+POST {{TeacherERP.API_HostAddress}}/api/Attendance/compensations/{{compensationId}}/approve
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### F4: رفض تعويض معلّق (بعده يصح إلغاء الحصة)
+POST {{TeacherERP.API_HostAddress}}/api/Attendance/compensations/{{compensationId}}/reject
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### F5: الطلبات المعلّقة (فيها طلبات الـ Walk-in)
+GET {{TeacherERP.API_HostAddress}}/api/Enrollment/requests?status=Pending&page=1&pageSize=20
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### F5: الموافقة على طلب Walk-in (تسجل الطالب وتنقل موقع مسحه لسجل الحضور)
+POST {{TeacherERP.API_HostAddress}}/api/Enrollment/requests/{{requestId}}/approve
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}

@@ -19,6 +19,9 @@ using TenantRole = TeacherERP.Domain.Entities.TenantRole;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// بيئة الاختبارات الآلية (TeacherERP.Tests): نتخطى Hangfire لأنه يتصل بـ SQL Server عند البدء
+var isTesting = builder.Environment.IsEnvironment("Testing");
+
 // Add services to the container.
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -58,13 +61,16 @@ builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // Hangfire Configuration (استخدام قاعدة البيانات لتخزين الـ Jobs)
-builder.Services.AddHangfire(config => config
-    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-    .UseSimpleAssemblyNameTypeSerializer()
-    .UseRecommendedSerializerSettings()
-    .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+if (!isTesting)
+{
+    builder.Services.AddHangfire(config => config
+        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddHangfireServer(); // لتشغيل الـ Background Server
+    builder.Services.AddHangfireServer(); // لتشغيل الـ Background Server
+}
 
 // Global Exception Handler
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -131,17 +137,20 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// مهمة دورية يومياً (3 صباحاً UTC) لحذف الجلسات المنتهية منذ أكثر من 30 يوم
-app.Services.GetRequiredService<IRecurringJobManager>()
-    .AddOrUpdate<ISessionCleanupJob>("cleanup-ended-sessions", job => job.RunAsync(), Cron.Daily(3));
+if (!isTesting)
+{
+    // مهمة دورية يومياً (3 صباحاً UTC) لحذف الجلسات المنتهية منذ أكثر من 30 يوم
+    app.Services.GetRequiredService<IRecurringJobManager>()
+        .AddOrUpdate<ISessionCleanupJob>("cleanup-ended-sessions", job => job.RunAsync(), Cron.Daily(3));
 
-// مهمة دورية يومياً (2 صباحاً UTC) لتوليد حصص الأسابيع القادمة لكل المدرسين من قوالب جداولهم
-app.Services.GetRequiredService<IRecurringJobManager>()
-    .AddOrUpdate<ISessionGenerationJob>("generate-sessions", job => job.RunAsync(), Cron.Daily(2));
+    // مهمة دورية يومياً (2 صباحاً UTC) لتوليد حصص الأسابيع القادمة لكل المدرسين من قوالب جداولهم
+    app.Services.GetRequiredService<IRecurringJobManager>()
+        .AddOrUpdate<ISessionGenerationJob>("generate-sessions", job => job.RunAsync(), Cron.Daily(2));
 
-// مهمة دورية كل 10 دقايق لحساب غياب الحصص المنتهية والإيقاف التلقائي بعد 4 غيابات متتالية
-app.Services.GetRequiredService<IRecurringJobManager>()
-    .AddOrUpdate<IAbsenceProcessingJob>("process-absences", job => job.RunAsync(), "*/10 * * * *");
+    // مهمة دورية كل 10 دقايق لحساب غياب الحصص المنتهية والإيقاف التلقائي بعد 4 غيابات متتالية
+    app.Services.GetRequiredService<IRecurringJobManager>()
+        .AddOrUpdate<IAbsenceProcessingJob>("process-absences", job => job.RunAsync(), "*/10 * * * *");
+}
 
 // الـ IP الحقيقي أولاً (لا يعمل إلا لو فُعّل من الإعدادات)، لأن كل ما بعده (Rate Limiting واللوجات) يعتمد عليه
 app.UseForwardedHeaders();
@@ -164,14 +173,17 @@ app.UseHttpsRedirection();
 app.UseCors(CorsExtensions.PolicyName);
 
 // لوحة Hangfire محمية بـ Basic Auth (البيانات من قسم HangfireDashboard في الإعدادات)
-var dashboardSettings = builder.Configuration.GetSection("HangfireDashboard");
-app.UseHangfireDashboard("/hangfire", new DashboardOptions
+if (!isTesting)
 {
-    Authorization = new IDashboardAuthorizationFilter[]
+    var dashboardSettings = builder.Configuration.GetSection("HangfireDashboard");
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
     {
-        new HangfireBasicAuthFilter(dashboardSettings["Username"] ?? string.Empty, dashboardSettings["Password"] ?? string.Empty)
-    }
-});
+        Authorization = new IDashboardAuthorizationFilter[]
+        {
+            new HangfireBasicAuthFilter(dashboardSettings["Username"] ?? string.Empty, dashboardSettings["Password"] ?? string.Empty)
+        }
+    });
+}
 
 app.UseAuthentication();
 
@@ -183,3 +195,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// يتيح لـ WebApplicationFactory في TeacherERP.Tests الوصول للـ Program (الـ Top-level statements تجعله internal)
+public partial class Program { }
