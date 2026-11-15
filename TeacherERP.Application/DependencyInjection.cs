@@ -12,6 +12,7 @@ using TeacherERP.Application.GroupAdmins;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Application.Scheduling;
 using TeacherERP.Application.Sessions;
+using TeacherERP.Application.Teachers;
 
 namespace TeacherERP.Application
 {
@@ -48,6 +49,7 @@ namespace TeacherERP.Application
             services.AddScoped<IGroupAccessService, GroupAccessService>();
             services.AddScoped<IGroupAdminService, GroupAdminService>();
             services.AddScoped<IStoredFileCleanupJob, StoredFileCleanupJob>();
+            services.AddScoped<ITeacherProvisioningService, TeacherProvisioningService>();
 
             return services;
         }

@@ -41,5 +41,22 @@ namespace TeacherERP.Infrastructure.Repositories
         {
             return _context.Centers.FirstOrDefaultAsync(center => center.Id == centerId, cancellationToken);
         }
+
+        public Task<CenterTeacher?> GetCenterTeacherAsync(Guid centerId, Guid tenantId, CancellationToken cancellationToken)
+        {
+            return _context.CenterTeachers.FirstOrDefaultAsync(
+                link => link.CenterId == centerId && link.TenantId == tenantId,
+                cancellationToken);
+        }
+
+        public void Add(Center center)
+        {
+            _context.Centers.Add(center);
+        }
+
+        public void AddCenterTeacher(CenterTeacher centerTeacher)
+        {
+            _context.CenterTeachers.Add(centerTeacher);
+        }
     }
 }

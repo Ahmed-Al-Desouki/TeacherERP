@@ -101,3 +101,39 @@ X-Teacher-Id: {{teacherId}}
 POST {{TeacherERP.API_HostAddress}}/api/Enrollment/requests/{{requestId}}/approve
 Authorization: Bearer {{token}}
 X-Teacher-Id: {{teacherId}}
+
+
+### A3: مدير النظام (Administrator): توكن حسابه من /api/Auth/login
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmMWVkZGFlZi0yOWVhLTRlYTctYTI0OS1iNDJlMTA0YTc1OGEiLCJlbWFpbCI6ImFkbWluQHNtYXJ0dGVhY2hlcmVycC5jb20iLCJqdGkiOiI2NTAxNWUwOC1lOTQyLTQ3NTEtOTM1Ny05M2Q2Yzg0MDc5YmQiLCJuYW1laWQiOiJmMWVkZGFlZi0yOWVhLTRlYTctYTI0OS1iNDJlMTA0YTc1OGEiLCJ1bmlxdWVfbmFtZSI6IlN5c3RlbSBNYWluIEFkbWluaXN0cmF0b3IiLCJzZXNzaW9uX2lkIjoiYjgyNjdiN2UtZmQwYS00NGFkLWIwZTAtZjQyZjI4YjRhYmMwIiwicm9sZSI6IlN1cGVyQWRtaW4iLCJuYmYiOjE3OTQ3NjExMDIsImV4cCI6MTc5NDc2NDcwMiwiaWF0IjoxNzk0NzYxMTAyLCJpc3MiOiJUZWFjaGVyRVJQIiwiYXVkIjoiVGVhY2hlckVSUF9Vc2VycyJ9.XkvPQs4XT1fBHFNcDIJJkFf7_iwf7q-ACLjNahfkoYU
+@newTeacherUserId = 00000000-0000-0000-0000-000000000000
+@centerId = 00000000-0000-0000-0000-000000000000
+
+### A3: إضافة مدرس بإيميله (باسورد مؤقت يصله على الإيميل). TimeZoneId اختياري (الافتراضي Africa/Cairo)
+POST {{TeacherERP.API_HostAddress}}/api/Administration/teachers
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "fullName": "Ahmed Teacher",
+  "email": "new.teacher@example.com",
+  "timeZoneId": "Africa/Cairo"
+}
+
+### A3: إنشاء سنتر مملوك لمدرس موجود (يصير مؤسسه ونشطاً فيه)
+POST {{TeacherERP.API_HostAddress}}/api/Administration/centers
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Al-Nour Center",
+  "ownerUserId": "{{newTeacherUserId}}"
+}
+
+### A3: ربط مدرس موجود بسنتر (مدرس إضافي في نفس المكان، نشط فوراً)
+POST {{TeacherERP.API_HostAddress}}/api/Administration/centers/{{centerId}}/teachers
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "teacherUserId": "{{newTeacherUserId}}"
+}

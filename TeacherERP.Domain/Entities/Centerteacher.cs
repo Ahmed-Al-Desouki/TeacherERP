@@ -58,6 +58,6 @@ namespace TeacherERP.Domain.Entities
     /// <summary>حالة المدرس في السنتر (معلّق بانتظار الدعوة أو الموافقة، نشط، أو أُزيل)</summary>
     public enum CenterTeacherStatus { Pending, Active, Removed }
 
-    /// <summary>كيف دخل المدرس السنتر (مؤسس، بدعوة من صاحب السنتر، أو بطلب منه وافق عليه صاحب السنتر)</summary>
-    public enum CenterTeacherOrigin { Founder, Invitation, Request }
+    /// <summary>كيف دخل المدرس السنتر (مؤسس، بدعوة من صاحب السنتر، بطلب منه وافق عليه صاحب السنتر، أو بربط من مدير النظام)</summary>
+    public enum CenterTeacherOrigin { Founder, Invitation, Request, Administrator }
 }

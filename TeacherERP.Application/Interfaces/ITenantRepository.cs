@@ -18,5 +18,11 @@ namespace TeacherERP.Application.Interfaces
 
         // كل عضويات المستخدم (للعرض أو التحديد التلقائي لو عضوية واحدة)
         Task<List<TenantMembershipInfo>> GetMembershipsAsync(Guid userId, CancellationToken cancellationToken);
+
+        // مساحة المدرس بمالكها (متتبّعة)، لأوامر مدير النظام التي تعمل بلا سنتر محدد. null لو الحساب ليس مدرساً
+        Task<Tenant?> GetByOwnerIdAsync(Guid ownerUserId, CancellationToken cancellationToken);
+
+        // مساحة مدرس جديدة كاملة: المساحة نفسها + عضوية Owner + إعدادات الحضور. الحفظ يتم عبر IUnitOfWork
+        void AddTeacherSpace(Tenant tenant, TenantMember ownerMembership, TenantSettings settings);
     }
 }

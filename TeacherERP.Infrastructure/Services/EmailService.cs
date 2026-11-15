@@ -65,6 +65,14 @@ namespace TeacherERP.Infrastructure.Services
                 EmailTemplates.AssistantWelcome(fullName, teacherName, temporaryPassword));
         }
 
+        public async Task SendTeacherWelcomeAsync(string toEmail, string fullName, string temporaryPassword)
+        {
+            await SendEmailAsync(
+                toEmail,
+                "Welcome to Smart Teacher ERP | أهلاً بك كمدرس",
+                EmailTemplates.TeacherWelcome(fullName, temporaryPassword));
+        }
+
         public async Task SendAddedToTeamAlertAsync(string toEmail, string fullName, string teacherName)
         {
             await SendEmailAsync(

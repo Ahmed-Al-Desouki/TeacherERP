@@ -126,6 +126,30 @@ namespace TeacherERP.Infrastructure.Services
             return Layout("👋", "#4f46e5", "Welcome to the team", "أهلاً بك في الفريق", content);
         }
 
+        public static string TeacherWelcome(string fullName, string temporaryPassword)
+        {
+            var name = WebUtility.HtmlEncode(fullName);
+            var password = WebUtility.HtmlEncode(temporaryPassword);
+
+            var content = $$"""
+                <p style="margin:0 0 6px 0;">Hello <b>{{name}}</b>, your teacher account on Smart Teacher ERP is ready.</p>
+                <p dir="rtl" style="margin:0 0 18px 0;color:#6b7280;">أهلاً <b>{{name}}</b>، حسابك كمدرس على Smart Teacher ERP جاهز.</p>
+                <p style="margin:0 0 6px 0;">Log in with this email and the temporary password below:</p>
+                <p dir="rtl" style="margin:0 0 14px 0;color:#6b7280;">سجّل الدخول بهذا الإيميل وكلمة المرور المؤقتة التالية:</p>
+                <div style="text-align:center;margin:0 0 18px 0;">
+                  <span style="display:inline-block;background:#eef2ff;color:#4338ca;font-size:26px;font-weight:700;letter-spacing:3px;padding:12px 20px;border-radius:12px;font-family:Consolas,'Courier New',monospace;" dir="ltr">{{password}}</span>
+                </div>
+                <div style="background:#eff6ff;border-radius:12px;padding:14px 16px;margin:0 0 18px 0;color:#1e40af;font-size:14px;">
+                  The first time you log in, we will send a verification code to this email. After that you can choose a new password.
+                  <span dir="rtl" style="display:block;margin-top:6px;">أول مرة تسجل فيها الدخول سنرسل كود تحقق إلى هذا الإيميل، وبعدها يمكنك اختيار كلمة مرور جديدة.</span>
+                </div>
+                <p style="margin:0 0 4px 0;color:#b91c1c;font-size:13px;"><b>Keep this email private.</b> We recommend changing the password after you log in.</p>
+                <p dir="rtl" style="margin:0;color:#b91c1c;font-size:13px;"><b>لا تشارك هذا الإيميل مع أحد.</b> ننصحك بتغيير كلمة المرور بعد تسجيل الدخول.</p>
+                """;
+
+            return Layout("🎓", "#4f46e5", "Welcome, teacher", "أهلاً بك أستاذنا", content);
+        }
+
         public static string AddedToTeam(string fullName, string teacherName)
         {
             var name = WebUtility.HtmlEncode(fullName);

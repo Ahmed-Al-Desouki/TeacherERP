@@ -25,7 +25,7 @@ namespace TeacherERP.Infrastructure.Data
                 var context = services.GetRequiredService<AppDbContext>();
 
                 // 1. التأكد من إنشاء الأدوار الأساسية
-                string[] roles = { RoleNames.SuperAdmin, RoleNames.Assistant, RoleNames.Student };
+                string[] roles = { RoleNames.Administrator, RoleNames.SuperAdmin, RoleNames.Assistant, RoleNames.Student };
                 foreach (var role in roles)
                 {
                     if (!await roleManager.RoleExistsAsync(role))
@@ -34,6 +34,9 @@ namespace TeacherERP.Infrastructure.Data
                         logger.LogInformation($"Role '{role}' created successfully.");
                     }
                 }
+
+                // 1.5 مدير النظام (حساب واحد) من قسم AdministratorSettings، مستقل عن إعدادات المدرس
+                await EnsureAdministratorAsync(userManager, configuration.GetSection("AdministratorSettings"), logger);
 
                 // 2. قراءة بيانات الـ Super Admin من ملف الإعدادات (أو الـ Environment Variables)
                 var adminConfig = configuration.GetSection("SuperAdminSettings");
@@ -77,6 +80,55 @@ namespace TeacherERP.Infrastructure.Data
                 logger.LogError(ex, "An error occurred while seeding the production database.");
                 throw;
             }
+        }
+
+        // مدير النظام: حساب واحد بالضبط. لو وُجد حساب بالدور فعلاً لا نُنشئ غيره مهما تغيّرت الإعدادات
+        private static async Task EnsureAdministratorAsync(
+            UserManager<ApplicationUser> userManager,
+            IConfigurationSection adminConfig,
+            ILogger logger)
+        {
+            var email = adminConfig["Email"];
+            var password = adminConfig["Password"];
+            var fullName = adminConfig["FullName"] ?? "System Administrator";
+
+            var existing = await userManager.GetUsersInRoleAsync(RoleNames.Administrator);
+            if (existing.Count > 0)
+            {
+                if (!string.IsNullOrEmpty(email)
+                    && !existing.Any(u => string.Equals(u.Email, email, StringComparison.OrdinalIgnoreCase)))
+                {
+                    logger.LogWarning("An Administrator account already exists. The system allows exactly one, so the configured account was not created.");
+                }
+
+                return;
+            }
+
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+            {
+                logger.LogWarning("AdministratorSettings are missing in configuration. No Administrator account was created.");
+                return;
+            }
+
+            // لا نرقّي حساباً موجوداً (مثلاً مدرس) إلى مدير نظام بالخطأ
+            if (await userManager.FindByEmailAsync(email) is not null)
+            {
+                logger.LogWarning("The configured Administrator email already belongs to another account. No Administrator account was created.");
+                return;
+            }
+
+            var administrator = ApplicationUser.CreateAdministrator(fullName, email);
+
+            var createResult = await userManager.CreateAsync(administrator, password);
+            if (!createResult.Succeeded)
+            {
+                var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
+                logger.LogError("Failed to create the Administrator account: {Errors}", errors);
+                return;
+            }
+
+            await userManager.AddToRoleAsync(administrator, RoleNames.Administrator);
+            logger.LogInformation("The Administrator account was created successfully.");
         }
 
         // سنتر المدرس: الاسم والتوقيت من الإعدادات (CenterName وTimeZoneId) أو القيم الافتراضية

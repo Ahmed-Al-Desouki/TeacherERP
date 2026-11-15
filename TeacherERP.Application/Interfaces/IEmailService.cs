@@ -15,6 +15,9 @@ namespace TeacherERP.Application.Interfaces
         // فيه باسورد مؤقت: يُستدعى مباشرة (وليس عبر Hangfire) حتى لا يُخزَّن الباسورد في جداول الـ Jobs
         Task SendAssistantWelcomeAsync(string toEmail, string fullName, string teacherName, string temporaryPassword);
 
+        // مدرس جديد أضافه مدير النظام: نفس القاعدة (باسورد مؤقت، يُستدعى مباشرة وليس عبر Hangfire)
+        Task SendTeacherWelcomeAsync(string toEmail, string fullName, string temporaryPassword);
+
         // مساعد موجود اتضاف عند مدرس إضافي (بدون أي باسورد)، يُستدعى في الـ Background
         Task SendAddedToTeamAlertAsync(string toEmail, string fullName, string teacherName);
     }

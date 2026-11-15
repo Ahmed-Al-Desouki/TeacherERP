@@ -12,6 +12,7 @@ using TeacherERP.API.Middlewares;
 using TeacherERP.API.Security;
 using TeacherERP.Application;
 using TeacherERP.Application.Interfaces;
+using TeacherERP.Domain.Shared;
 using TeacherERP.Infrastructure;
 using TeacherERP.Infrastructure.Data;
 using TenantRole = TeacherERP.Domain.Entities.TenantRole;
@@ -117,6 +118,10 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy(AuthPolicies.TenantOwner, policy =>
         policy.RequireAuthenticatedUser().AddRequirements(new TenantRequirement(TenantRole.Owner)));
+
+    // مدير النظام: من دور الـ Identity نفسه (بلا سنتر حالي)، لأنه لا ينتمي لأي مساحة مدرس
+    options.AddPolicy(AuthPolicies.AdministratorOnly, policy =>
+        policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator));
 });
 builder.Services.AddScoped<IAuthorizationHandler, CompletedProfileHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, TenantHandler>();

@@ -13,5 +13,8 @@
 
         /// <summary>نفس TenantMember لكن للمدرس (Owner) فقط</summary>
         public const string TenantOwner = "TenantOwner";
+
+        /// <summary>مدير النظام فقط (دور Administrator). لا يرتبط بأي سنتر، فلا يمر على مصدر السنتر الحالي</summary>
+        public const string AdministratorOnly = "AdministratorOnly";
     }
 }

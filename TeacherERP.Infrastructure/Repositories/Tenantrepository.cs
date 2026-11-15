@@ -51,5 +51,17 @@ namespace TeacherERP.Infrastructure.Repositories
                 .Select(m => new TenantMembershipInfo(m.TenantId, m.Tenant.Name, m.Role, m.Status, m.Tenant.Status, m.Tenant.Subject))
                 .ToListAsync(cancellationToken);
         }
+
+        public Task<Tenant?> GetByOwnerIdAsync(Guid ownerUserId, CancellationToken cancellationToken)
+        {
+            return _context.Tenants.FirstOrDefaultAsync(t => t.OwnerId == ownerUserId, cancellationToken);
+        }
+
+        public void AddTeacherSpace(Tenant tenant, TenantMember ownerMembership, TenantSettings settings)
+        {
+            _context.Tenants.Add(tenant);
+            _context.TenantMembers.Add(ownerMembership);
+            _context.TenantSettings.Add(settings);
+        }
     }
 }

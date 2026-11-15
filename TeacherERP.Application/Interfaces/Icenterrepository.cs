@@ -12,5 +12,12 @@ namespace TeacherERP.Application.Interfaces
 
         // السنتر متتبَّع للتعديل. الحفظ يتم عبر IUnitOfWork
         Task<Center?> GetByIdAsync(Guid centerId, CancellationToken cancellationToken);
+
+        // ارتباط مدرس بسنتر بأي حالة (متتبّع للتعديل)، null لو لم يكن مرتبطاً مطلقاً
+        Task<CenterTeacher?> GetCenterTeacherAsync(Guid centerId, Guid tenantId, CancellationToken cancellationToken);
+
+        void Add(Center center);
+
+        void AddCenterTeacher(CenterTeacher centerTeacher);
     }
 }

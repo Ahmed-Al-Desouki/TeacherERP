@@ -131,6 +131,41 @@ namespace TeacherERP.Domain.Entities
             };
         }
 
+        /// <summary>
+        /// مدرس ينشئه مدير النظام (أو مدرس آخر عبر الـ QR لاحقاً) بإيميله. بلا موبايل.
+        /// EmailConfirmed يبقى false حتى يفعّله بالـ OTP عند أول دخول، فهو علامة "في انتظار التفعيل".
+        /// </summary>
+        public static ApplicationUser CreateTeacher(string fullName, string email)
+        {
+            return new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                FullName = fullName,
+                Email = email,
+                UserName = email,
+                Status = StudentStatus.Active,
+                EmailConfirmed = false,
+                StaticQrCode = Guid.NewGuid().ToString()
+            };
+        }
+
+        /// <summary>
+        /// مدير النظام (حساب واحد على المنصة، يُنشأ من الـ Seeder فقط). بلا موبايل، والإيميل مؤكد من البداية.
+        /// </summary>
+        public static ApplicationUser CreateAdministrator(string fullName, string email)
+        {
+            return new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                FullName = fullName,
+                Email = email,
+                UserName = email,
+                Status = StudentStatus.Active,
+                EmailConfirmed = true,
+                StaticQrCode = Guid.NewGuid().ToString()
+            };
+        }
+
         // --- دوال التحكم في الحالة (Behavior Methods) ---
 
         /// <summary>

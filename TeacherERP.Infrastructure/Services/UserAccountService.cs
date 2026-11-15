@@ -31,6 +31,11 @@ namespace TeacherERP.Infrastructure.Services
 
         public async Task<Result<Guid>> CreateUserAsync(ApplicationUser user, string password, string role, CancellationToken cancellationToken)
         {
+            if (IsAdministratorRole(role))
+            {
+                return Result<Guid>.Failure(AdministratorRoleNotAllowed);
+            }
+
             var result = await _userManager.CreateAsync(user, password);
             if (!result.Succeeded)
             {
@@ -43,6 +48,11 @@ namespace TeacherERP.Infrastructure.Services
 
         public async Task<Result<Guid>> CreateExternalUserAsync(ApplicationUser user, string role, CancellationToken cancellationToken)
         {
+            if (IsAdministratorRole(role))
+            {
+                return Result<Guid>.Failure(AdministratorRoleNotAllowed);
+            }
+
             var result = await _userManager.CreateAsync(user);
             if (!result.Succeeded)
             {
@@ -87,6 +97,13 @@ namespace TeacherERP.Infrastructure.Services
 
             return Result<bool>.Success(true);
         }
+
+        // دور Administrator لحساب واحد يُبذر من الإعدادات فقط، فلا يُمنح عبر هذه الخدمة أبداً
+        private static readonly Error AdministratorRoleNotAllowed = new(
+            "User.RoleNotAllowed", "The Administrator role cannot be assigned through the application.");
+
+        private static bool IsAdministratorRole(string role)
+            => string.Equals(role, RoleNames.Administrator, StringComparison.OrdinalIgnoreCase);
 
         private async Task AssignRoleAsync(ApplicationUser user, string role)
         {
