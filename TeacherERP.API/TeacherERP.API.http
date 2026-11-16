@@ -10,7 +10,7 @@ Accept: application/json
 # token = Access Token من /api/Auth/login
 # teacherId = Id مساحة المدرس (X-Teacher-Id)
 # ============================================================
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlYzYxN2I0YS1kMWYxLTQ2MjEtOTcwOC1kYzBiMWM5ZmRjOTUiLCJlbWFpbCI6InRlYWNoZXIubWF0aEB0ZXN0LnRlYWNoZXJlcnAubG9jYWwiLCJqdGkiOiIwZGJiM2UzZC0zNTIwLTRlNmQtODk4ZC1hNDMwYzJiYzAyZGEiLCJuYW1laWQiOiJlYzYxN2I0YS1kMWYxLTQ2MjEtOTcwOC1kYzBiMWM5ZmRjOTUiLCJ1bmlxdWVfbmFtZSI6ItijLiDZhdit2YXYryDYudmE2YoiLCJzZXNzaW9uX2lkIjoiZDYyMDQ0NTUtNDBmZC00NjBlLWEyZDMtNTc5ZjY3ZDhkZDA3Iiwicm9sZSI6IlN1cGVyQWRtaW4iLCJuYmYiOjE3OTQ3MTk5ODIsImV4cCI6MTc5NDcyMzU4MiwiaWF0IjoxNzk0NzE5OTgyLCJpc3MiOiJUZWFjaGVyRVJQIiwiYXVkIjoiVGVhY2hlckVSUF9Vc2VycyJ9.RPr4iGMoGC3At-PktoGe9BoT0F9t--rsYwOIkimtmC8
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxODIwNGEyMC0xZDkxLTQ5NWQtYjBiOC0wYTA5YzM4ZTAzZDIiLCJlbWFpbCI6InRlYWNoZXIuMUBtYWlsbmEuY28iLCJqdGkiOiJkN2RmMTA3NC1lODVmLTQwZjItYjkzNy1jMzQyYzIyMTdlMDkiLCJuYW1laWQiOiIxODIwNGEyMC0xZDkxLTQ5NWQtYjBiOC0wYTA5YzM4ZTAzZDIiLCJ1bmlxdWVfbmFtZSI6IlRlYWNoZXItMSIsInNlc3Npb25faWQiOiJkNDdiZjBiYS1kY2I4LTRkODMtODJhYy1kMjQ4YWI2YjA5NmIiLCJyb2xlIjoiU3VwZXJBZG1pbiIsIm5iZiI6MTc5NDgzNjU2NCwiZXhwIjoxNzk0ODQwMTY0LCJpYXQiOjE3OTQ4MzY1NjQsImlzcyI6IlRlYWNoZXJFUlAiLCJhdWQiOiJUZWFjaGVyRVJQX1VzZXJzIn0.qNUeg2UZzrT7vVGToEMS0earwRldI_i46VfBnEBrCeg
 @teacherId = EC617B4A-D1F1-4621-9708-DC0B1C9FDC95
 @sessionId = D47FF7F3-0B91-4577-8FB3-A1A554414E21
 @requestId = 00000000-0000-0000-0000-000000000000
@@ -136,4 +136,83 @@ Content-Type: application/json
 
 {
   "teacherUserId": "{{newTeacherUserId}}"
+}
+
+
+
+### A4: صاحب الطلب (بلا حساب): الخطوة 1، يرسل بياناته ويصله كود على إيميله. الرد نفسه لو الإيميل مسجّل (لا نكشف الإيميلات)
+@requestEmail = teacher.3@mailna.co
+POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/submit
+Content-Type: application/json
+
+{
+  "fullName": "Teatcher-3",
+  "email": "{{requestEmail}}",
+  "subject": "Science",
+  "note": "Teaching at Al-Nawras center",
+  "timeZoneId": "Africa/Cairo"
+}
+
+### A4: الخطوة 2، تأكيد الكود فيرجع سر الـ QR (يظهر مرة واحدة وصلاحيته 72 ساعة): خذ token من الرد
+POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/verify
+Content-Type: application/json
+
+{
+  "email": "{{requestEmail}}",
+  "otpCode": "193188"
+}
+
+### A4: صاحب الطلب يتابع حالته بنفس السر (Pending / Approved / Rejected / Expired)
+@requestToken = UjLTielPPQRQIRN2wIH01YkBxeU-g_sdhCMVkOCLepo
+POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/status
+Content-Type: application/json
+
+{
+  "token": "{{requestToken}}"
+}
+
+### A4: المدرس الذي مسح الـ QR يعاين بيانات صاحب الطلب (لا يُنشأ شيء). توكن مدرس (SuperAdmin) بلا X-Teacher-Id
+POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/preview
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "token": "{{requestToken}}"
+}
+
+### A4: المدرس يقبل: يُنشأ حساب المدرس الجديد ومساحته ويصله إيميل بباسورد مؤقت. موافقة واحدة لكل مدرس كل 30 يوماً
+POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/approve
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "token": "{{requestToken}}"
+}
+
+### A4: المدرس يرفض (السبب اختياري ويظهر لصاحب الطلب)
+POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/reject
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "token": "{{requestToken}}",
+  "reason": "I do not know this teacher"
+}
+
+### A4: مدير النظام: قائمة الطلبات بصفحات (status اختياري: Pending / Approved / Rejected / Expired)
+GET {{TeacherERP.API_HostAddress}}/api/Administration/teacher-requests?status=Pending&page=1&pageSize=20
+Authorization: Bearer {{adminToken}}
+
+### A4: مدير النظام يوافق على طلب بمعرّفه (بلا سقف شهري)
+@teacherRequestId = 00000000-0000-0000-0000-000000000000
+POST {{TeacherERP.API_HostAddress}}/api/Administration/teacher-requests/{{teacherRequestId}}/approve
+Authorization: Bearer {{adminToken}}
+
+### A4: مدير النظام يرفض طلباً
+POST {{TeacherERP.API_HostAddress}}/api/Administration/teacher-requests/{{teacherRequestId}}/reject
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "reason": "Duplicate request"
 }

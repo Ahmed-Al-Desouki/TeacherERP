@@ -22,6 +22,13 @@ namespace TeacherERP.Infrastructure.Data
         public async Task<TResult> ExecuteInTransactionAsync<TResult>(
             Func<Task<TResult>> action, IsolationLevel isolationLevel, CancellationToken cancellationToken)
         {
+            // لو هناك Transaction قائمة (من خدمة أعلى) ننضم لها بدل فتح أخرى (الـ Commit والتراجع بيد صاحبها الخارجي).
+            // المستدعون الحاليون لا يتداخلون، فلا يتغير سلوكهم
+            if (_context.Database.CurrentTransaction is not null)
+            {
+                return await action();
+            }
+
             // أي استثناء قبل الـ Commit يتراجع تلقائياً عند التخلص من الـ Transaction
             await using var transaction = await _context.Database.BeginTransactionAsync(isolationLevel, cancellationToken);
 

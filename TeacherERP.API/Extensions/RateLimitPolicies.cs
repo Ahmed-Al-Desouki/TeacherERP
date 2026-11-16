@@ -21,5 +21,11 @@ namespace TeacherERP.API.Extensions
 
         /// <summary>رفع ملفات الحصص (بالمستخدم): كل طلب يرفع ملفاً لـ Cloudinary فنحميه من الإغراق</summary>
         public const string ContentUpload = "content-upload";
+
+        /// <summary>إرسال طلب مدرس من صفحة الدخول (بالـ IP وبحد صارم بالساعة)</summary>
+        public const string TeacherRequestSubmit = "teacher-request-submit";
+
+        /// <summary>معاينة وقبول ورفض طلب مدرس (بالمستخدم)</summary>
+        public const string TeacherRequestReview = "teacher-request-review";
     }
 }

@@ -26,5 +26,6 @@ ehthumbs.db
 Thumbs.db
 # Local AI & Planning files
 PLAN.md
+AGENTS.md
 CLAUDE_CONTEXT.md
 graphify-out

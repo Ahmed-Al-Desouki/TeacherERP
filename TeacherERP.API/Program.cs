@@ -122,6 +122,10 @@ builder.Services.AddAuthorization(options =>
     // مدير النظام: من دور الـ Identity نفسه (بلا سنتر حالي)، لأنه لا ينتمي لأي مساحة مدرس
     options.AddPolicy(AuthPolicies.AdministratorOnly, policy =>
         policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator));
+
+    // المدرس من دور الـ Identity (بلا سنتر حالي)، لمسار قبول طلبات المدرسين بمسح الـ QR
+    options.AddPolicy(AuthPolicies.TeacherOnly, policy =>
+        policy.RequireAuthenticatedUser().RequireRole(RoleNames.SuperAdmin));
 });
 builder.Services.AddScoped<IAuthorizationHandler, CompletedProfileHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, TenantHandler>();

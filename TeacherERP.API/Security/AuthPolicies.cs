@@ -16,5 +16,8 @@
 
         /// <summary>مدير النظام فقط (دور Administrator). لا يرتبط بأي سنتر، فلا يمر على مصدر السنتر الحالي</summary>
         public const string AdministratorOnly = "AdministratorOnly";
+
+        /// <summary>المدرس (دور SuperAdmin) بلا سنتر حالي: مساحة المدرس المراجِع تُجلب بمالكها، لأن إنشاء مساحة المدرس الجديد لا يجوز تحت سنتر حالي مختلف</summary>
+        public const string TeacherOnly = "TeacherOnly";
     }
 }

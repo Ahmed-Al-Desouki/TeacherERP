@@ -50,6 +50,7 @@ namespace TeacherERP.Application
             services.AddScoped<IGroupAdminService, GroupAdminService>();
             services.AddScoped<IStoredFileCleanupJob, StoredFileCleanupJob>();
             services.AddScoped<ITeacherProvisioningService, TeacherProvisioningService>();
+            services.AddScoped<ITeacherRequestReviewService, TeacherRequestReviewService>();
 
             return services;
         }

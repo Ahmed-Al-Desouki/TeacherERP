@@ -52,6 +52,7 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<TeacherAccessRequest> TeacherAccessRequests { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -301,6 +302,27 @@ namespace TeacherERP.Infrastructure.Data
 
                 entity.HasIndex(a => new { a.TenantId, a.CreatedAt });
                 entity.HasIndex(a => new { a.TenantId, a.TargetUserId });
+            });
+
+            // 5.3.3 طلبات انضمام المدرسين: غير تابعة لمساحة، والمراجِع والحساب المُنشأ بلا Foreign Keys (سجل تاريخي)
+            builder.Entity<TeacherAccessRequest>(entity =>
+            {
+                entity.Property(r => r.FullName).HasMaxLength(100).IsRequired();
+                entity.Property(r => r.Email).HasMaxLength(256).IsRequired();
+                entity.Property(r => r.Subject).HasMaxLength(100).IsRequired();
+                entity.Property(r => r.Note).HasMaxLength(300);
+                entity.Property(r => r.TimeZoneId).HasMaxLength(64).IsRequired();
+                entity.Property(r => r.TokenHash).HasMaxLength(64).IsRequired();
+                entity.Property(r => r.Status).HasConversion<string>().HasMaxLength(16);
+                entity.Property(r => r.DecisionNote).HasMaxLength(300);
+
+                // البحث بالسر (QR) وطلب معلّق واحد فقط لكل إيميل
+                entity.HasIndex(r => r.TokenHash).IsUnique();
+                entity.HasIndex(r => r.Email).IsUnique().HasFilter("[Status] = 'Pending'");
+
+                // سقف الإدخال الدوري وقائمة مدير النظام
+                entity.HasIndex(r => new { r.ReviewedByUserId, r.ReviewedAtUtc });
+                entity.HasIndex(r => new { r.Status, r.CreatedAt });
             });
 
             // 5.4 تسجيل الطالب في مجموعة: تسجيل نشط واحد فقط للطالب عند كل مدرس

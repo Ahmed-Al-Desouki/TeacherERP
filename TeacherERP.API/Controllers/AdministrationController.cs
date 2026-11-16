@@ -5,6 +5,7 @@ using TeacherERP.API.Security;
 using TeacherERP.Application.Features.Administration.CreateCenter;
 using TeacherERP.Application.Features.Administration.CreateTeacher;
 using TeacherERP.Application.Features.Administration.LinkTeacherToCenter;
+using TeacherERP.Application.Features.TeacherRequests.Admin;
 
 namespace TeacherERP.API.Controllers
 {
@@ -44,6 +45,32 @@ namespace TeacherERP.API.Controllers
         {
             var result = await _mediator.Send(new LinkTeacherToCenterCommand(centerId, request.TeacherUserId), cancellationToken);
             return ToResponse(result);
+        }
+
+        // طلبات انضمام المدرسين بصفحات (الأحدث أولاً)، مع تصفية اختيارية بالحالة
+        [HttpGet("teacher-requests")]
+        public async Task<IActionResult> ListTeacherRequests([FromQuery] ListTeacherRequestsQuery query, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(query, cancellationToken);
+            return ToResponse(result);
+        }
+
+        // يوافق على طلب مدرس: يُنشأ حسابه بباسورد مؤقت يصله على إيميله (بلا سقف شهري)
+        [HttpPost("teacher-requests/{requestId:guid}/approve")]
+        public async Task<IActionResult> ApproveTeacherRequest(Guid requestId, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new ApproveTeacherRequestByAdminCommand(requestId), cancellationToken);
+            return ToResponse(result);
+        }
+
+        [HttpPost("teacher-requests/{requestId:guid}/reject")]
+        public async Task<IActionResult> RejectTeacherRequest(
+            Guid requestId,
+            [FromBody] RejectTeacherRequestRequest request,
+            CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new RejectTeacherRequestByAdminCommand(requestId, request.Reason), cancellationToken);
+            return ToResponse(result, new { Message = "The request was rejected." });
         }
     }
 }

@@ -49,6 +49,8 @@ namespace TeacherERP.Domain.Entities
         GroupAdminRemoved,
         GroupAdminAttendanceRecorded,
         SessionAttachmentUploaded,
-        SessionAttachmentDeleted
+        SessionAttachmentDeleted,
+        TeacherAdmitted,
+        TeacherRequestRejected
     }
 }

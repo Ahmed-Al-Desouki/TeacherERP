@@ -17,7 +17,8 @@ namespace TeacherERP.Application.Interfaces
     {
         Registration,
         PasswordReset,
-        Activation
+        Activation,
+        TeacherRequest
     }
 
     /// <summary>نتيجة توليد الكود، تتضمن الأزمنة التي يحتاجها التطبيق للعد التنازلي</summary>

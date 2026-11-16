@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Hangfire;
 using Microsoft.Extensions.Caching.Memory;
 using TeacherERP.Application.Interfaces;
@@ -27,22 +27,25 @@ namespace TeacherERP.Application.Features.Users.Commands.CreateStudent
 
         public async Task<Result<string>> Handle(CreateStudentCommand request, CancellationToken cancellationToken)
         {
-            // 1. التحقق من عدم وجود الإيميل في قاعدة البيانات مسبقاً
-            var emailExistsResult = await _userAccountService.CheckEmailExistsAsync(request.Email, cancellationToken);
-            if (emailExistsResult.Value)
-            {
-                return Result<string>.Failure(new Error("User.EmailExists", "This email is already registered."));
-            }
+            // 1. هل الإيميل مسجّل؟ لا نكشف الإجابة في الرد (منع تعداد الإيميلات المسجّلة)
+            var emailExists = (await _userAccountService.CheckEmailExistsAsync(request.Email, cancellationToken)).Value;
 
-            // 2. توليد الـ OTP (كود آمن + فترة انتظار بين الطلبات + قفل بعد المحاولات الخاطئة)
-            // نولّد الكود أولاً حتى لا نستبدل بيانات تسجيل معلقة إذا كان الطلب مرفوضاً
+            // 2. توليد الـ OTP في الحالتين (كود آمن + فترة انتظار بين الطلبات + قفل بعد المحاولات الخاطئة)
+            // فتتساوى حدود الإرسال والانتظار بين الإيميل المسجّل وغير المسجّل، ولا يمكن التفريق بينهما من الردود
+            // ونولّد الكود قبل التخزين حتى لا نستبدل بيانات تسجيل معلقة إذا كان الطلب مرفوضاً
             var otpResult = await _otpService.GenerateAsync(OtpPurpose.Registration, request.Email, cancellationToken);
             if (otpResult.IsFailure)
             {
                 return Result<string>.Failure(otpResult.Error);
             }
 
-            // 3. تخزين بيانات التسجيل في الـ Cache لمدة 10 دقائق
+            // 3. إيميل مسجّل: نفس رد النجاح، بدون تخزين بيانات ولا إرسال كود (صاحب الحساب يدخل أو يستعيد باسورده)
+            if (emailExists)
+            {
+                return Result<string>.Success(request.Email);
+            }
+
+            // 4. تخزين بيانات التسجيل في الـ Cache لمدة 10 دقائق
             var cacheData = new CachedRegistrationData
             {
                 FullName = request.FullName,
@@ -52,12 +55,12 @@ namespace TeacherERP.Application.Features.Users.Commands.CreateStudent
 
             _cache.Set(RegistrationCacheKey.For(request.Email), cacheData, TimeSpan.FromMinutes(10));
 
-            // 4. إرسال الإيميل في الخلفية
+            // 5. إرسال الإيميل في الخلفية
             var otpCode = otpResult.Value!.Code;
             _backgroundJobClient.Enqueue<IEmailService>(emailService =>
                 emailService.SendOtpEmailAsync(request.Email, otpCode));
 
-            // 5. إرجاع الإيميل بنجاح للخطوة التالية
+            // 6. إرجاع الإيميل بنجاح للخطوة التالية
             return Result<string>.Success(request.Email);
         }
     }
