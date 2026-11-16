@@ -61,8 +61,7 @@ namespace TeacherERP.Infrastructure.Data
                 var ownCenter = await context.Centers.FirstOrDefaultAsync(c => c.OwnerUserId == teacher.Id);
                 if (ownCenter is null)
                 {
-                    ownCenter = Center.Create("Test Center", teacher.Id);
-                    ownCenter.UpdateDetails("Test Center", "Nasr City, Cairo", 30.0561, 31.3301, Center.DefaultGeofenceRadiusMeters);
+                    ownCenter = Center.Create("Test Center", teacher.Id, 30.0561, 31.3301, "Nasr City, Cairo");
                     context.Centers.Add(ownCenter);
                 }
 

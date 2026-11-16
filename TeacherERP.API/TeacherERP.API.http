@@ -14,6 +14,7 @@ Accept: application/json
 @teacherId = EC617B4A-D1F1-4621-9708-DC0B1C9FDC95
 @sessionId = D47FF7F3-0B91-4577-8FB3-A1A554414E21
 @requestId = 00000000-0000-0000-0000-000000000000
+@centerId = 00000000-0000-0000-0000-000000000000
 @compensationId = FA8907C8-350F-4363-A0B4-3C4D361CA050
 
 ### F3: إعدادات الحضور (المدرس): الكود الثابت يظهر في الوضع الثابت فقط
@@ -103,6 +104,79 @@ Authorization: Bearer {{token}}
 X-Teacher-Id: {{teacherId}}
 
 
+### A5: إنشاء سنتر للمدرس (الموقع إلزامي) [AUTO-INTEGRATION: الموقع مطلوب، منع التكرار ضمن 50م، والإنشاء بموقع مختلف]
+POST {{TeacherERP.API_HostAddress}}/api/Centers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "سنتر النور",
+  "address": "العاشر من رمضان، الشرقية",
+  "latitude": 30.296,
+  "longitude": 31.743,
+  "geofenceRadiusMeters": 50
+}
+
+### A5: تعديل موقع السنتر (الإحداثيات إلزامية) [AUTO-INTEGRATION: تحديث الإحداثيات ونطاق Geofence]
+PUT {{TeacherERP.API_HostAddress}}/api/Centers/{{centerId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "سنتر النور",
+  "address": "العاشر من رمضان، الشرقية",
+  "latitude": 30.296,
+  "longitude": 31.743,
+  "geofenceRadiusMeters": 50
+}
+
+### A5: إرسال طلب انضمام لسنتر [AUTO-INTEGRATION: إنشاء الطلب وسقف 3 طلبات]
+# MANUAL REQUIRED: تأكد من وصول رسالة الطلب الفعلية إلى بريد صاحب السنتر عبر SMTP.
+POST {{TeacherERP.API_HostAddress}}/api/Centers/{{centerId}}/join-requests
+Authorization: Bearer {{token}}
+
+### A5: طلباتي وحالتها [AUTO-INTEGRATION: ظهور حالة الرفض وسببه]
+GET {{TeacherERP.API_HostAddress}}/api/Centers/join-requests/mine?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### A5: الطلبات الواردة لسنتراتي (لصاحب السنتر) [AUTO-INTEGRATION: استعلام الطلبات المعلقة]
+GET {{TeacherERP.API_HostAddress}}/api/Centers/join-requests/received?page=1&pageSize=20&status=Pending
+Authorization: Bearer {{token}}
+
+### A5: تذكير صاحب السنتر بالطلب (مرة كل 24 ساعة) [AUTO-INTEGRATION: نجاح التذكير ورفض التكرار قبل 24 ساعة]
+# MANUAL REQUIRED: تأكد من وصول رسالة التذكير الفعلية عبر SMTP.
+POST {{TeacherERP.API_HostAddress}}/api/Centers/join-requests/{{requestId}}/resend
+Authorization: Bearer {{token}}
+
+### A5: إلغاء طلبي المعلّق [AUTO-INTEGRATION: الإلغاء يحرر مكانًا من سقف الطلبات]
+DELETE {{TeacherERP.API_HostAddress}}/api/Centers/join-requests/{{requestId}}
+Authorization: Bearer {{token}}
+
+### A5: موافقة صاحب السنتر [AUTO-INTEGRATION: تفعيل عضوية المدرس]
+POST {{TeacherERP.API_HostAddress}}/api/Centers/join-requests/{{requestId}}/approve
+Authorization: Bearer {{token}}
+
+### A5: رفض صاحب السنتر [AUTO-INTEGRATION: الرفض وظهور السبب لصاحب الطلب]
+POST {{TeacherERP.API_HostAddress}}/api/Centers/join-requests/{{requestId}}/reject
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "reason": "التخصص غير مناسب حالياً" }
+
+### A5: إنشاء دعوة خاصة (أرسل الرمز للمدرس المقصود فقط) [AUTO-INTEGRATION: إنشاء الدعوة]
+POST {{TeacherERP.API_HostAddress}}/api/Centers/{{centerId}}/invitations
+Authorization: Bearer {{token}}
+
+### A5: قبول دعوة [AUTO-INTEGRATION: تفعيل العضوية ومنع إعادة استخدام الرمز]
+POST {{TeacherERP.API_HostAddress}}/api/Centers/invitations/accept
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "token": "PASTE_PRIVATE_INVITATION_TOKEN" }
+
+# MANUAL REQUIRED: اختبر إنشاء QR وقراءته بكاميرا تطبيق Flutter؛ قبول الرمز عبر API مغطى آليًا.
+
+
 ### A3: مدير النظام (Administrator): توكن حسابه من /api/Auth/login
 @adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmMWVkZGFlZi0yOWVhLTRlYTctYTI0OS1iNDJlMTA0YTc1OGEiLCJlbWFpbCI6ImFkbWluQHNtYXJ0dGVhY2hlcmVycC5jb20iLCJqdGkiOiI2NTAxNWUwOC1lOTQyLTQ3NTEtOTM1Ny05M2Q2Yzg0MDc5YmQiLCJuYW1laWQiOiJmMWVkZGFlZi0yOWVhLTRlYTctYTI0OS1iNDJlMTA0YTc1OGEiLCJ1bmlxdWVfbmFtZSI6IlN5c3RlbSBNYWluIEFkbWluaXN0cmF0b3IiLCJzZXNzaW9uX2lkIjoiYjgyNjdiN2UtZmQwYS00NGFkLWIwZTAtZjQyZjI4YjRhYmMwIiwicm9sZSI6IlN1cGVyQWRtaW4iLCJuYmYiOjE3OTQ3NjExMDIsImV4cCI6MTc5NDc2NDcwMiwiaWF0IjoxNzk0NzYxMTAyLCJpc3MiOiJUZWFjaGVyRVJQIiwiYXVkIjoiVGVhY2hlckVSUF9Vc2VycyJ9.XkvPQs4XT1fBHFNcDIJJkFf7_iwf7q-ACLjNahfkoYU
 @newTeacherUserId = 00000000-0000-0000-0000-000000000000
@@ -126,7 +200,11 @@ Content-Type: application/json
 
 {
   "name": "Al-Nour Center",
-  "ownerUserId": "{{newTeacherUserId}}"
+  "ownerUserId": "{{newTeacherUserId}}",
+  "address": "Nasr City, Cairo",
+  "latitude": 30.0561,
+  "longitude": 31.3301,
+  "geofenceRadiusMeters": 50
 }
 
 ### A3: ربط مدرس موجود بسنتر (مدرس إضافي في نفس المكان، نشط فوراً)
@@ -140,7 +218,7 @@ Content-Type: application/json
 
 
 
-### A4: صاحب الطلب (بلا حساب): الخطوة 1، يرسل بياناته ويصله كود على إيميله. الرد نفسه لو الإيميل مسجّل (لا نكشف الإيميلات)
+### A4: صاحب الطلب (بلا حساب): الخطوة 1، يرسل بياناته ويصله كود على إيميله [AUTO-INTEGRATION للمنطق؛ MANUAL REQUIRED لتأكيد وصول OTP عبر SMTP]
 @requestEmail = teacher.3@mailna.co
 POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/submit
 Content-Type: application/json
@@ -180,7 +258,7 @@ Content-Type: application/json
   "token": "{{requestToken}}"
 }
 
-### A4: المدرس يقبل: يُنشأ حساب المدرس الجديد ومساحته ويصله إيميل بباسورد مؤقت. موافقة واحدة لكل مدرس كل 30 يوماً
+### A4: المدرس يقبل: يُنشأ حساب المدرس الجديد ومساحته [AUTO-INTEGRATION للإنشاء؛ MANUAL REQUIRED لوصول إيميل الباسورد المؤقت وتجربة تسجيل الدخول به]
 POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/approve
 Authorization: Bearer {{token}}
 Content-Type: application/json

@@ -1,4 +1,5 @@
 using FluentValidation;
+using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Features.Administration.CreateCenter
 {
@@ -13,6 +14,11 @@ namespace TeacherERP.Application.Features.Administration.CreateCenter
 
             RuleFor(x => x.OwnerUserId)
                 .NotEmpty().WithMessage("Owner teacher is required.");
+
+            RuleFor(x => x.Address).MaximumLength(300);
+            RuleFor(x => x.Latitude).NotNull().InclusiveBetween(-90d, 90d);
+            RuleFor(x => x.Longitude).NotNull().InclusiveBetween(-180d, 180d);
+            RuleFor(x => x.GeofenceRadiusMeters).InclusiveBetween(10, 500);
         }
     }
 }

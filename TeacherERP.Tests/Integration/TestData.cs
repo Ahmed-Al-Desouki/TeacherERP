@@ -23,7 +23,7 @@ public static class TestData
         db.Users.Add(owner);
 
         var tenant = Tenant.Create(owner.FullName, owner.Id, "UTC");
-        var center = Center.Create($"Center {n}", owner.Id);
+        var center = Center.Create($"Center {n}", owner.Id, 30.0561, 31.3301, "Nasr City, Cairo");
         db.Tenants.Add(tenant);
         db.Centers.Add(center);
 

@@ -159,6 +159,9 @@ if (!isTesting)
     // مهمة دورية كل 10 دقايق لحساب غياب الحصص المنتهية والإيقاف التلقائي بعد 4 غيابات متتالية
     app.Services.GetRequiredService<IRecurringJobManager>()
         .AddOrUpdate<IAbsenceProcessingJob>("process-absences", job => job.RunAsync(), "*/10 * * * *");
+
+    app.Services.GetRequiredService<IRecurringJobManager>()
+        .AddOrUpdate<ICenterMembershipCleanupJob>("cleanup-center-membership", job => job.RunAsync(), "0 4 * * 0");
 }
 
 // الـ IP الحقيقي أولاً (لا يعمل إلا لو فُعّل من الإعدادات)، لأن كل ما بعده (Rate Limiting واللوجات) يعتمد عليه

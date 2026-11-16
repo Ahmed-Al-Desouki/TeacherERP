@@ -81,6 +81,15 @@ namespace TeacherERP.Infrastructure.Services
                 EmailTemplates.AddedToTeam(fullName, teacherName));
         }
 
+        public async Task SendCenterJoinRequestEmailAsync(string toEmail, string ownerName, string teacherName, string centerName, bool isReminder)
+        {
+            var reminder = isReminder ? "Reminder: " : string.Empty;
+            await SendEmailAsync(
+                toEmail,
+                $"{reminder}Teacher join request | طلب انضمام مدرس",
+                EmailTemplates.CenterJoinRequest(ownerName, teacherName, centerName, isReminder));
+        }
+
         private async Task SendEmailAsync(string toEmail, string subject, string body)
         {
             try

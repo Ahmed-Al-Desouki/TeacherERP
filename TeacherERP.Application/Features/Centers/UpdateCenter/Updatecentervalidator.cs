@@ -18,20 +18,13 @@ namespace TeacherERP.Application.Features.Centers.UpdateCenter
 
             // الإحداثيات اختيارية، لكن تُرسل معاً أو لا تُرسل
             RuleFor(x => x.Latitude)
-                .InclusiveBetween(-90d, 90d).WithMessage("Latitude must be between -90 and 90.")
-                .When(x => x.Latitude.HasValue);
+                .NotNull().WithMessage("Latitude is required.")
+                .InclusiveBetween(-90d, 90d).WithMessage("Latitude must be between -90 and 90.");
 
             RuleFor(x => x.Longitude)
-                .InclusiveBetween(-180d, 180d).WithMessage("Longitude must be between -180 and 180.")
-                .When(x => x.Longitude.HasValue);
+                .NotNull().WithMessage("Longitude is required.")
+                .InclusiveBetween(-180d, 180d).WithMessage("Longitude must be between -180 and 180.");
 
-            RuleFor(x => x.Latitude)
-                .NotNull().WithMessage("Latitude and longitude must be sent together.")
-                .When(x => x.Longitude.HasValue);
-
-            RuleFor(x => x.Longitude)
-                .NotNull().WithMessage("Latitude and longitude must be sent together.")
-                .When(x => x.Latitude.HasValue);
 
             RuleFor(x => x.GeofenceRadiusMeters)
                 .InclusiveBetween(10, 500).WithMessage("Geofence radius must be between 10 and 500 meters.");

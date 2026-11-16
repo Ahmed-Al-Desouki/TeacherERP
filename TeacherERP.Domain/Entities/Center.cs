@@ -17,7 +17,7 @@ namespace TeacherERP.Domain.Entities
         public Guid OwnerUserId { get; private set; }
 
         // --- الحماية الجغرافية (Geofencing): الموقع للمكان نفسه، حتى لو فيه أكتر من مدرس ---
-        // اختيارية: السنتر الجديد لم يضبط موقعه بعد
+        // nullable للتوافق مع السجلات القديمة؛ كل إنشاء أو تعديل جديد يفرض الموقع في طبقة التطبيق.
         public double? Latitude { get; private set; }
         public double? Longitude { get; private set; }
 
@@ -26,18 +26,23 @@ namespace TeacherERP.Domain.Entities
 
         private Center() { }
 
-        public static Center Create(string name, Guid ownerUserId)
+        public static Center Create(
+            string name, Guid ownerUserId, double latitude, double longitude, string? address = null,
+            int geofenceRadiusMeters = DefaultGeofenceRadiusMeters)
         {
             return new Center
             {
                 Name = name.Trim(),
                 OwnerUserId = ownerUserId,
-                GeofenceRadiusMeters = DefaultGeofenceRadiusMeters
+                Address = string.IsNullOrWhiteSpace(address) ? null : address.Trim(),
+                Latitude = latitude,
+                Longitude = longitude,
+                GeofenceRadiusMeters = geofenceRadiusMeters
             };
         }
 
-        /// <summary>استبدال كامل لبيانات السنتر (الإحداثيات اختيارية وتُرسل معاً)</summary>
-        public void UpdateDetails(string name, string? address, double? latitude, double? longitude, int geofenceRadiusMeters)
+        /// <summary>استبدال كامل لبيانات السنتر، بما فيها الإحداثيات الإلزامية</summary>
+        public void UpdateDetails(string name, string? address, double latitude, double longitude, int geofenceRadiusMeters)
         {
             Name = name.Trim();
             Address = string.IsNullOrWhiteSpace(address) ? null : address.Trim();

@@ -26,6 +26,22 @@ namespace TeacherERP.Infrastructure.Services
             return Layout("✉️", "#4f46e5", "Verify your email", "تأكيد البريد الإلكتروني", content);
         }
 
+        public static string CenterJoinRequest(string ownerName, string teacherName, string centerName, bool isReminder)
+        {
+            var owner = WebUtility.HtmlEncode(ownerName);
+            var teacher = WebUtility.HtmlEncode(teacherName);
+            var center = WebUtility.HtmlEncode(centerName);
+            var lead = isReminder ? "A teacher is still waiting for your decision." : "A teacher asked to join your center.";
+            var arLead = isReminder ? "ما زال هناك مدرس ينتظر قرارك بشأن طلب الانضمام." : "أرسل مدرس طلباً للانضمام إلى السنتر.";
+            var content = $$"""
+                <p style="margin:0 0 6px 0;">Hello {{owner}}, {{lead}}</p>
+                <p style="margin:0 0 18px 0;">Teacher: <b>{{teacher}}</b><br/>Center: <b>{{center}}</b></p>
+                <p dir="rtl" style="margin:0 0 6px 0;color:#6b7280;">مرحباً {{owner}}، {{arLead}}</p>
+                <p dir="rtl" style="margin:0;">المدرس: <b>{{teacher}}</b><br/>السنتر: <b>{{center}}</b></p>
+                """;
+            return Layout("🏫", "#2563eb", "Teacher join request", "طلب انضمام مدرس", content);
+        }
+
         public static string PasswordResetOtp(string otpCode)
         {
             var code = WebUtility.HtmlEncode(otpCode);

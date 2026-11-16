@@ -13,6 +13,7 @@ using TeacherERP.Application.Interfaces;
 using TeacherERP.Application.Scheduling;
 using TeacherERP.Application.Sessions;
 using TeacherERP.Application.Teachers;
+using TeacherERP.Application.Centers;
 
 namespace TeacherERP.Application
 {
@@ -51,6 +52,9 @@ namespace TeacherERP.Application
             services.AddScoped<IStoredFileCleanupJob, StoredFileCleanupJob>();
             services.AddScoped<ITeacherProvisioningService, TeacherProvisioningService>();
             services.AddScoped<ITeacherRequestReviewService, TeacherRequestReviewService>();
+            services.AddScoped<ICenterProvisioningService, CenterProvisioningService>();
+            services.AddScoped<ICenterMembershipCleanupJob, CenterMembershipCleanupJob>();
+            services.AddScoped<ICenterJoinRequestNotifier, CenterJoinRequestNotifier>();
 
             return services;
         }

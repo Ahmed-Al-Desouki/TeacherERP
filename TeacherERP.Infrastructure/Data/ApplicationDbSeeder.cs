@@ -145,6 +145,10 @@ namespace TeacherERP.Infrastructure.Data
 
             var centerName = adminConfig["CenterName"] ?? "Main Center";
             var timeZoneId = adminConfig["TimeZoneId"] ?? "Africa/Cairo";
+            var hasLatitude = double.TryParse(adminConfig["CenterLatitude"], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var latitude);
+            var hasLongitude = double.TryParse(adminConfig["CenterLongitude"], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var longitude);
 
             if (!string.Equals(timeZoneId, "UTC", StringComparison.OrdinalIgnoreCase) && !UserTime.IsValid(timeZoneId))
             {
@@ -154,17 +158,25 @@ namespace TeacherERP.Infrastructure.Data
 
             // مساحة المدرس باسمه، والسنتر المكاني باسم الإعدادات، ويربطهما CenterTeacher (المدرس مؤسس السنتر)
             var tenant = Tenant.Create(owner.FullName, owner.Id, timeZoneId);
-            var center = Center.Create(centerName, owner.Id);
-
             context.Tenants.Add(tenant);
-            context.Centers.Add(center);
-            context.CenterTeachers.Add(CenterTeacher.CreateFounder(center.Id, tenant.Id));
             context.TenantMembers.Add(TenantMember.Create(tenant.Id, owner.Id, TenantRole.Owner));
             context.TenantSettings.Add(TenantSettings.Create(tenant.Id));
 
+            if (hasLatitude && hasLongitude && latitude is >= -90 and <= 90 && longitude is >= -180 and <= 180)
+            {
+                var center = Center.Create(centerName, owner.Id, latitude, longitude,
+                    adminConfig["CenterAddress"], Center.DefaultGeofenceRadiusMeters);
+                context.Centers.Add(center);
+                context.CenterTeachers.Add(CenterTeacher.CreateFounder(center.Id, tenant.Id));
+            }
+            else
+            {
+                logger.LogWarning("Default center was not created because SuperAdminSettings:CenterLatitude and CenterLongitude are missing or invalid.");
+            }
+
             await context.SaveChangesAsync();
 
-            logger.LogInformation("Center '{CenterName}' and the teacher space were created for the default SuperAdmin.", centerName);
+            logger.LogInformation("Teacher space for the default SuperAdmin was created. Center configured: {CenterConfigured}.", hasLatitude && hasLongitude);
         }
     }
 }

@@ -13,6 +13,11 @@ namespace TeacherERP.Application.Interfaces
         // السنتر متتبَّع للتعديل. الحفظ يتم عبر IUnitOfWork
         Task<Center?> GetByIdAsync(Guid centerId, CancellationToken cancellationToken);
 
+        // السناتر التي أسسها المدرس فقط (لا تشمل السناتر التي انضم إليها)
+        Task<List<Center>> GetOwnedByUserAsync(Guid ownerUserId, CancellationToken cancellationToken);
+
+        Task<Center?> GetOwnedByIdAsync(Guid centerId, Guid ownerUserId, CancellationToken cancellationToken);
+
         // ارتباط مدرس بسنتر بأي حالة (متتبّع للتعديل)، null لو لم يكن مرتبطاً مطلقاً
         Task<CenterTeacher?> GetCenterTeacherAsync(Guid centerId, Guid tenantId, CancellationToken cancellationToken);
 

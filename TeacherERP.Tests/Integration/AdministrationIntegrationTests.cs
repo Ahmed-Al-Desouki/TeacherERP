@@ -69,7 +69,7 @@ public class AdministrationIntegrationTests : IClassFixture<CustomWebApplication
         var name = $"Al-Amal {Guid.NewGuid():N}";
 
         var response = await AdministratorClient()
-            .PostAsJsonAsync("api/Administration/centers", new { name, ownerUserId = teacher.OwnerId });
+            .PostAsJsonAsync("api/Administration/centers", new { name, ownerUserId = teacher.OwnerId, address = "New Cairo", latitude = 30.1, longitude = 31.5, geofenceRadiusMeters = 50 });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -87,7 +87,7 @@ public class AdministrationIntegrationTests : IClassFixture<CustomWebApplication
     public async Task CreateCenter_WhenOwnerIsNotATeacher_ReturnsBadRequest()
     {
         var response = await AdministratorClient()
-            .PostAsJsonAsync("api/Administration/centers", new { name = "Ghost Center", ownerUserId = Guid.NewGuid() });
+            .PostAsJsonAsync("api/Administration/centers", new { name = "Ghost Center", ownerUserId = Guid.NewGuid(), latitude = 30.1, longitude = 31.5 });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("Administration.TeacherNotFound", await response.Content.ReadAsStringAsync());

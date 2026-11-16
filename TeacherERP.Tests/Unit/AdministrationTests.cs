@@ -163,22 +163,20 @@ public class CreateTeacherValidatorTests
 public class CreateCenterCommandHandlerTests
 {
     private readonly ITenantRepository _tenants = Substitute.For<ITenantRepository>();
-    private readonly ICenterRepository _centers = Substitute.For<ICenterRepository>();
-    private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly ICenterProvisioningService _provisioning = Substitute.For<ICenterProvisioningService>();
 
-    private CreateCenterCommandHandler CreateHandler() => new(_tenants, _centers, _unitOfWork);
+    private CreateCenterCommandHandler CreateHandler() => new(_tenants, _provisioning);
 
     [Fact]
     public async Task Handle_WhenOwnerIsNotATeacher_Fails()
     {
         _tenants.GetByOwnerIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Tenant?)null);
 
-        var result = await CreateHandler().Handle(new CreateCenterCommand("Center", Guid.NewGuid()), CancellationToken.None);
+        var result = await CreateHandler().Handle(new CreateCenterCommand("Center", Guid.NewGuid(), null, 30.05, 31.33), CancellationToken.None);
 
         Assert.True(result.IsFailure);
         Assert.Equal(AdministrationErrors.TeacherNotFound, result.Error);
-        _centers.DidNotReceiveWithAnyArgs().Add(default!);
-        await _unitOfWork.DidNotReceiveWithAnyArgs().SaveChangesAsync(default);
+        await _provisioning.DidNotReceiveWithAnyArgs().CreateAsync(default, default!, default, default, default, default, default);
     }
 
     [Fact]
@@ -188,17 +186,15 @@ public class CreateCenterCommandHandlerTests
         var tenant = Tenant.Create("Teacher", ownerId, "Africa/Cairo");
         _tenants.GetByOwnerIdAsync(ownerId, Arg.Any<CancellationToken>()).Returns(tenant);
 
-        var result = await CreateHandler().Handle(new CreateCenterCommand("  Al-Nour  ", ownerId), CancellationToken.None);
+        var center = Center.Create("Al-Nour", ownerId, 30.05, 31.33);
+        _provisioning.CreateAsync(ownerId, "Al-Nour", "Nasr City", 30.05, 31.33, 50, Arg.Any<CancellationToken>())
+            .Returns(Result<Center>.Success(center));
+        var result = await CreateHandler().Handle(new CreateCenterCommand("  Al-Nour  ", ownerId, "Nasr City", 30.05, 31.33), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Al-Nour", result.Value!.Name);
         Assert.Equal(ownerId, result.Value.OwnerUserId);
-        _centers.Received(1).Add(Arg.Is<Center>(c => c.OwnerUserId == ownerId));
-        _centers.Received(1).AddCenterTeacher(Arg.Is<CenterTeacher>(link =>
-            link.TenantId == tenant.Id
-            && link.Status == CenterTeacherStatus.Active
-            && link.Origin == CenterTeacherOrigin.Founder));
-        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _provisioning.Received(1).CreateAsync(ownerId, "Al-Nour", "Nasr City", 30.05, 31.33, 50, Arg.Any<CancellationToken>());
     }
 }
 
@@ -215,7 +211,7 @@ public class LinkTeacherToCenterCommandHandlerTests
 
     public LinkTeacherToCenterCommandHandlerTests()
     {
-        _center = Center.Create("Center", Guid.NewGuid());
+        _center = Center.Create("Center", Guid.NewGuid(), 30.05, 31.33);
         _tenant = Tenant.Create("Teacher", _teacherId, "Africa/Cairo");
         _centers.GetByIdAsync(_center.Id, Arg.Any<CancellationToken>()).Returns(_center);
         _tenants.GetByOwnerIdAsync(_teacherId, Arg.Any<CancellationToken>()).Returns(_tenant);

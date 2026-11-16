@@ -27,5 +27,7 @@ namespace TeacherERP.API.Extensions
 
         /// <summary>معاينة وقبول ورفض طلب مدرس (بالمستخدم)</summary>
         public const string TeacherRequestReview = "teacher-request-review";
+
+        public const string CenterMembershipWrite = "center-membership-write";
     }
 }

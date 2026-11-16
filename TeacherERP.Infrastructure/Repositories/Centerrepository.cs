@@ -42,6 +42,20 @@ namespace TeacherERP.Infrastructure.Repositories
             return _context.Centers.FirstOrDefaultAsync(center => center.Id == centerId, cancellationToken);
         }
 
+        public Task<List<Center>> GetOwnedByUserAsync(Guid ownerUserId, CancellationToken cancellationToken)
+        {
+            return _context.Centers
+                .Where(center => center.OwnerUserId == ownerUserId)
+                .OrderBy(center => center.Id)
+                .ToListAsync(cancellationToken);
+        }
+
+        public Task<Center?> GetOwnedByIdAsync(Guid centerId, Guid ownerUserId, CancellationToken cancellationToken)
+        {
+            return _context.Centers.FirstOrDefaultAsync(
+                center => center.Id == centerId && center.OwnerUserId == ownerUserId, cancellationToken);
+        }
+
         public Task<CenterTeacher?> GetCenterTeacherAsync(Guid centerId, Guid tenantId, CancellationToken cancellationToken)
         {
             return _context.CenterTeachers.FirstOrDefaultAsync(

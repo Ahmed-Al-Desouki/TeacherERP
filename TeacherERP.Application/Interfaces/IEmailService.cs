@@ -20,5 +20,7 @@ namespace TeacherERP.Application.Interfaces
 
         // مساعد موجود اتضاف عند مدرس إضافي (بدون أي باسورد)، يُستدعى في الـ Background
         Task SendAddedToTeamAlertAsync(string toEmail, string fullName, string teacherName);
+
+        Task SendCenterJoinRequestEmailAsync(string toEmail, string ownerName, string teacherName, string centerName, bool isReminder);
     }
 }

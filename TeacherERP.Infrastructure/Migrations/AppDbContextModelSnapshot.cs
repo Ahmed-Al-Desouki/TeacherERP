@@ -376,6 +376,44 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.ToTable("Centers");
                 });
 
+            modelBuilder.Entity("TeacherERP.Domain.Entities.CenterInvitation", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<DateTime>("CreatedAt").HasColumnType("datetime2");
+                    b.Property<Guid>("CreatedByUserId").HasColumnType("uniqueidentifier");
+                    b.Property<Guid>("CenterId").HasColumnType("uniqueidentifier");
+                    b.Property<DateTime?>("AcceptedAtUtc").HasColumnType("datetime2");
+                    b.Property<Guid?>("AcceptedByTenantId").HasColumnType("uniqueidentifier");
+                    b.Property<DateTime>("ExpiresAtUtc").HasColumnType("datetime2");
+                    b.Property<string>("Status").IsRequired().HasMaxLength(16).HasColumnType("nvarchar(16)");
+                    b.Property<string>("TokenHash").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<DateTime?>("UpdatedAt").HasColumnType("datetime2");
+                    b.HasKey("Id");
+                    b.HasIndex("CenterId", "Status", "CreatedAt");
+                    b.HasIndex("ExpiresAtUtc");
+                    b.HasIndex("TokenHash").IsUnique();
+                    b.ToTable("CenterInvitations");
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.CenterJoinRequest", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<DateTime>("CreatedAt").HasColumnType("datetime2");
+                    b.Property<Guid>("CenterId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("DecisionNote").HasMaxLength(300).HasColumnType("nvarchar(300)");
+                    b.Property<DateTime>("LastNotifiedAtUtc").HasColumnType("datetime2");
+                    b.Property<DateTime?>("ReviewedAtUtc").HasColumnType("datetime2");
+                    b.Property<Guid?>("ReviewedByUserId").HasColumnType("uniqueidentifier");
+                    b.Property<string>("Status").IsRequired().HasMaxLength(16).HasColumnType("nvarchar(16)");
+                    b.Property<Guid>("TenantId").HasColumnType("uniqueidentifier");
+                    b.Property<DateTime?>("UpdatedAt").HasColumnType("datetime2");
+                    b.HasKey("Id");
+                    b.HasIndex("CenterId", "Status", "CreatedAt");
+                    b.HasIndex("TenantId", "Status");
+                    b.HasIndex("CenterId", "TenantId").IsUnique().HasFilter("[Status] = 'Pending'");
+                    b.ToTable("CenterJoinRequests");
+                });
+
             modelBuilder.Entity("TeacherERP.Domain.Entities.CenterTeacher", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1315,6 +1353,20 @@ namespace TeacherERP.Infrastructure.Migrations
                         .HasForeignKey("OwnerUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.CenterInvitation", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.Center", null).WithMany().HasForeignKey("CenterId")
+                        .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.CenterJoinRequest", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.Center", null).WithMany().HasForeignKey("CenterId")
+                        .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null).WithMany().HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict).IsRequired();
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.CenterTeacher", b =>

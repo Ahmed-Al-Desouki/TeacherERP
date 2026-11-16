@@ -3,7 +3,8 @@ using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Administration.CreateCenter
 {
-    // مدير النظام ينشئ سنتراً مملوكاً لمدرس موجود، ويصبح هذا المدرس مؤسسه ونشطاً فيه.
-    // العنوان والموقع يضبطهما المدرس بعدها من شاشة تعديل السنتر
-    public record CreateCenterCommand(string Name, Guid OwnerUserId) : IRequest<Result<AdminCenterDto>>;
+    // مدير النظام ينشئ سنتراً لمدرس موجود. الموقع مطلوب ويصبح المدرس مؤسسه النشط.
+    public record CreateCenterCommand(
+        string Name, Guid OwnerUserId, string? Address, double? Latitude, double? Longitude,
+        int GeofenceRadiusMeters = 50) : IRequest<Result<AdminCenterDto>>;
 }

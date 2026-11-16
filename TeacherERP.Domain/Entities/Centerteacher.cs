@@ -42,9 +42,13 @@ namespace TeacherERP.Domain.Entities
             };
         }
 
-        public void Activate()
+        public void Activate(CenterTeacherOrigin? origin = null)
         {
             Status = CenterTeacherStatus.Active;
+            if (origin.HasValue)
+            {
+                Origin = origin.Value;
+            }
             MarkAsUpdated();
         }
 

@@ -40,6 +40,8 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<TenantMember> TenantMembers { get; set; }
         public DbSet<Center> Centers { get; set; }
         public DbSet<CenterTeacher> CenterTeachers { get; set; }
+        public DbSet<CenterJoinRequest> CenterJoinRequests { get; set; }
+        public DbSet<CenterInvitation> CenterInvitations { get; set; }
         public DbSet<TenantSettings> TenantSettings { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<GroupScheduleSlot> GroupScheduleSlots { get; set; }
@@ -145,6 +147,28 @@ namespace TeacherERP.Infrastructure.Data
 
                 entity.HasIndex(x => new { x.CenterId, x.TenantId }).IsUnique();
                 entity.HasIndex(x => x.TenantId);
+            });
+
+            builder.Entity<CenterJoinRequest>(entity =>
+            {
+                entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+                entity.Property(x => x.DecisionNote).HasMaxLength(300);
+                entity.HasOne<Center>().WithMany().HasForeignKey(x => x.CenterId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(x => new { x.CenterId, x.TenantId }).IsUnique()
+                    .HasFilter("[Status] = 'Pending'");
+                entity.HasIndex(x => new { x.TenantId, x.Status });
+                entity.HasIndex(x => new { x.CenterId, x.Status, x.CreatedAt });
+            });
+
+            builder.Entity<CenterInvitation>(entity =>
+            {
+                entity.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
+                entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+                entity.HasOne<Center>().WithMany().HasForeignKey(x => x.CenterId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(x => x.TokenHash).IsUnique();
+                entity.HasIndex(x => new { x.CenterId, x.Status, x.CreatedAt });
+                entity.HasIndex(x => x.ExpiresAtUtc);
             });
 
             // 3. عضوية المستخدم في السنتر (الحساب واحد، والعضويات بعدد السناتر)
