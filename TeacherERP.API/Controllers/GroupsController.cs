@@ -38,7 +38,7 @@ namespace TeacherERP.API.Controllers
         public async Task<IActionResult> UpdateGroup(Guid id, [FromBody] UpdateGroupRequest request, CancellationToken cancellationToken)
         {
             var command = new UpdateGroupCommand(
-                id, request.Name, request.GradeLevel, request.CenterId, request.Room,
+                id, request.Name, request.Grade, request.CenterId, request.Room,
                 request.Capacity, request.WhatsAppGroupLink, request.IsActive);
 
             var result = await _mediator.Send(command, cancellationToken);

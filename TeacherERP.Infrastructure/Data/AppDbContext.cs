@@ -223,6 +223,15 @@ namespace TeacherERP.Infrastructure.Data
             {
                 entity.Property(g => g.Name).HasMaxLength(150).IsRequired();
                 entity.Property(g => g.GradeLevel).HasMaxLength(50).IsRequired();
+                entity.Ignore(g => g.SchoolGrade);
+                entity.Property(g => g.EducationStage).HasConversion<string>().HasMaxLength(20).HasColumnType("nvarchar(20)");
+                entity.Property(g => g.GradeNumber).HasColumnType("int");
+                entity.ToTable(table => table.HasCheckConstraint(
+                    "CK_Groups_SchoolGrade",
+                    "([EducationStage] IS NULL AND [GradeNumber] IS NULL) OR " +
+                    "([EducationStage] IS NOT NULL AND [GradeNumber] IS NOT NULL AND ((" +
+                    "[EducationStage] = 'Primary' AND [GradeNumber] BETWEEN 1 AND 6) OR " +
+                    "([EducationStage] IN ('Preparatory', 'Secondary') AND [GradeNumber] BETWEEN 1 AND 3)))"));
                 entity.Property(g => g.Room).HasMaxLength(50);
                 entity.Property(g => g.WhatsAppGroupLink).HasMaxLength(500);
 

@@ -1,4 +1,5 @@
 ﻿using TeacherERP.Domain.Entities;
+using TeacherERP.Domain.ValueObjects;
 
 namespace TeacherERP.Application.Features.Groups
 {
@@ -8,6 +9,7 @@ namespace TeacherERP.Application.Features.Groups
         Guid Id,
         string Name,
         string GradeLevel,
+        SchoolGrade? Grade,
         Guid CenterId,
         string? Room,
         int? Capacity,
@@ -20,6 +22,7 @@ namespace TeacherERP.Application.Features.Groups
                 group.Id,
                 group.Name,
                 group.GradeLevel,
+                group.SchoolGrade,
                 group.CenterId,
                 group.Room,
                 group.Capacity,

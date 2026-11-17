@@ -48,7 +48,7 @@ namespace TeacherERP.Application.Features.Groups.CreateGroup
             }
 
             var group = Group.Create(
-                tenant.TenantId, request.Name, request.GradeLevel, request.CenterId,
+                tenant.TenantId, request.Name, request.Grade, request.CenterId,
                 request.Room, request.Capacity, request.WhatsAppGroupLink);
 
             foreach (var slot in request.Slots)

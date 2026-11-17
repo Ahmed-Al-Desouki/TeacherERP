@@ -52,7 +52,7 @@ namespace TeacherERP.Application.Features.Groups.UpdateGroup
                 return Result<GroupDto>.Failure(GroupErrors.NameTaken);
             }
 
-            group.UpdateDetails(request.Name, request.GradeLevel, request.CenterId, request.Room, request.Capacity, request.WhatsAppGroupLink);
+            group.UpdateDetails(request.Name, request.Grade, request.CenterId, request.Room, request.Capacity, request.WhatsAppGroupLink);
             group.SetActive(request.IsActive);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -48,6 +48,10 @@ namespace TeacherERP.Application.Enrollment
                 if (active.GroupId == targetGroupId)
                     return Result<bool>.Failure(EnrollmentErrors.SameGroup);
 
+                var gradeError = await ValidateTransferGradeAsync(tenantId, active, group, cancellationToken);
+                if (gradeError is not null)
+                    return Result<bool>.Failure(gradeError);
+
                 if (group.Capacity is { } capacity
                     && await _repository.CountActiveAsync(tenantId, targetGroupId, cancellationToken) >= capacity)
                     return Result<bool>.Failure(EnrollmentErrors.GroupFull);
@@ -99,6 +103,12 @@ namespace TeacherERP.Application.Enrollment
                 {
                     return Result<bool>.Failure(EnrollmentErrors.SameGroup);
                 }
+
+                var gradeError = await ValidateTransferGradeAsync(request.TenantId, active, group, cancellationToken);
+                if (gradeError is not null)
+                {
+                    return Result<bool>.Failure(gradeError);
+                }
             }
 
             if (group.Capacity is { } capacity
@@ -127,6 +137,22 @@ namespace TeacherERP.Application.Enrollment
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result<bool>.Success(true);
+        }
+
+        private async Task<Error?> ValidateTransferGradeAsync(
+            Guid tenantId, GroupEnrollment activeEnrollment, GroupJoinInfo targetGroup, CancellationToken cancellationToken)
+        {
+            if (targetGroup.EducationStage is not { } targetStage || targetGroup.GradeNumber is not { } targetGrade)
+                return EnrollmentErrors.GradeLevelNotConfigured;
+
+            var sourceGroup = await _repository.GetGroupJoinInfoAsync(activeEnrollment.GroupId, cancellationToken);
+            if (sourceGroup is null || sourceGroup.TenantId != tenantId
+                || sourceGroup.EducationStage is not { } sourceStage || sourceGroup.GradeNumber is not { } sourceGrade)
+                return EnrollmentErrors.GradeLevelNotConfigured;
+
+            return sourceStage == targetStage && sourceGrade == targetGrade
+                ? null
+                : EnrollmentErrors.GradeLevelMismatch;
         }
     }
 }

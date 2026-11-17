@@ -1,11 +1,13 @@
 // موجود (تعديل) — TeacherERP.Application/Interfaces/IEnrollmentRepository.cs
 using TeacherERP.Application.Common;
 using TeacherERP.Domain.Entities;
+using TeacherERP.Domain.ValueObjects;
 
 namespace TeacherERP.Application.Interfaces
 {
     public record GroupJoinInfo(
-        Guid GroupId, string GroupName, Guid TenantId, bool GroupIsActive, int? Capacity, TenantStatus TenantStatus, bool AutoApprove);
+        Guid GroupId, string GroupName, Guid TenantId, bool GroupIsActive, int? Capacity,
+        EducationStage? EducationStage, int? GradeNumber, TenantStatus TenantStatus, bool AutoApprove);
 
     public record EnrollmentRequestListItem(
         Guid Id, Guid StudentId, string StudentName, Guid GroupId, string GroupName,

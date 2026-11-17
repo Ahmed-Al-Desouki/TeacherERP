@@ -1,5 +1,6 @@
 using TeacherERP.Domain.Entities;
 using TeacherERP.Infrastructure.Data;
+using TeacherERP.Domain.ValueObjects;
 
 namespace TeacherERP.Tests.Integration;
 
@@ -31,7 +32,7 @@ public static class TestData
         db.TenantMembers.Add(TenantMember.Create(tenant.Id, owner.Id, TenantRole.Owner));
         db.TenantSettings.Add(TenantSettings.Create(tenant.Id));
 
-        var group = Group.Create(tenant.Id, $"Group {n}", "Grade 1", center.Id, null, null, null);
+        var group = Group.Create(tenant.Id, $"Group {n}", new SchoolGrade(EducationStage.Primary, 1), center.Id, null, null, null);
         db.Groups.Add(group);
 
         await db.SaveChangesAsync();
@@ -41,7 +42,7 @@ public static class TestData
 
     public static async Task<Guid> AddGroupAsync(AppDbContext db, SeededTeacher teacher)
     {
-        var group = Group.Create(teacher.TenantId, $"Group {Next()}", "Grade 1", teacher.CenterId, null, null, null);
+        var group = Group.Create(teacher.TenantId, $"Group {Next()}", new SchoolGrade(EducationStage.Primary, 1), teacher.CenterId, null, null, null);
         db.Groups.Add(group);
         await db.SaveChangesAsync();
         return group.Id;

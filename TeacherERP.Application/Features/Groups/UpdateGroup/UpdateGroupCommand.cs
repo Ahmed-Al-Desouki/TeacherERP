@@ -1,6 +1,7 @@
 ﻿// جديد — TeacherERP.Application/Features/Groups/UpdateGroup/UpdateGroupCommand.cs
 using MediatR;
 using TeacherERP.Domain.Shared;
+using TeacherERP.Domain.ValueObjects;
 
 namespace TeacherERP.Application.Features.Groups.UpdateGroup
 {
@@ -8,7 +9,7 @@ namespace TeacherERP.Application.Features.Groups.UpdateGroup
     public record UpdateGroupCommand(
         Guid GroupId,
         string Name,
-        string GradeLevel,
+        SchoolGrade Grade,
         Guid CenterId,
         string? Room,
         int? Capacity,

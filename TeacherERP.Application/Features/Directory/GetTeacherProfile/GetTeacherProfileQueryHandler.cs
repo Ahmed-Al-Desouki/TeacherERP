@@ -35,7 +35,7 @@ namespace TeacherERP.Application.Features.Directory.GetTeacherProfile
                 var dto = GroupDto.From(group);
 
                 return new DirectoryGroupDto(
-                    group.Id, group.Name, group.GradeLevel, group.CenterId, group.Room, group.Capacity, available, dto.Slots);
+                    group.Id, group.Name, group.GradeLevel, group.SchoolGrade, group.CenterId, group.Room, group.Capacity, available, dto.Slots);
             });
 
             return Result<TeacherProfileDto>.Success(new TeacherProfileDto(

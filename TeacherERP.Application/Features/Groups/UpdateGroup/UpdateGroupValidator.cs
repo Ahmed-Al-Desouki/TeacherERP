@@ -1,5 +1,6 @@
 ﻿// جديد — TeacherERP.Application/Features/Groups/UpdateGroup/UpdateGroupValidator.cs
 using FluentValidation;
+using TeacherERP.Domain.ValueObjects;
 
 namespace TeacherERP.Application.Features.Groups.UpdateGroup
 {
@@ -14,9 +15,10 @@ namespace TeacherERP.Application.Features.Groups.UpdateGroup
                 .NotEmpty().WithMessage("Group name is required.")
                 .MaximumLength(150).WithMessage("Group name must not exceed 150 characters.");
 
-            RuleFor(x => x.GradeLevel)
-                .NotEmpty().WithMessage("Grade level is required.")
-                .MaximumLength(50).WithMessage("Grade level must not exceed 50 characters.");
+            RuleFor(x => x.Grade)
+                .NotNull().WithMessage("Grade is required.")
+                .Must(grade => grade is not null && grade.IsValid())
+                .WithMessage("Choose a valid school stage and grade number.");
 
             RuleFor(x => x.CenterId)
                 .NotEmpty().WithMessage("Center id is required.");

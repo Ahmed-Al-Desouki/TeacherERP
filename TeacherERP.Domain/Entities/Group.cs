@@ -1,6 +1,7 @@
 ﻿// موجود (تعديل) — TeacherERP.Domain/Entities/Group.cs
 using System;
 using System.Collections.Generic;
+using TeacherERP.Domain.ValueObjects;
 
 namespace TeacherERP.Domain.Entities
 {
@@ -14,6 +15,11 @@ namespace TeacherERP.Domain.Entities
 
         public string Name { get; private set; }
         public string GradeLevel { get; private set; }
+        public EducationStage? EducationStage { get; private set; }
+        public int? GradeNumber { get; private set; }
+        public SchoolGrade? SchoolGrade => EducationStage is { } stage && GradeNumber is { } number
+            ? new SchoolGrade(stage, number)
+            : null;
 
         /// <summary>السنتر الذي تنعقد فيه المجموعة (منه الموقع الجغرافي للحضور)</summary>
         public Guid CenterId { get; private set; }
@@ -40,6 +46,33 @@ namespace TeacherERP.Domain.Entities
         public static Group Create(
             Guid tenantId,
             string name,
+            SchoolGrade grade,
+            Guid centerId,
+            string? room,
+            int? capacity,
+            string? whatsappLink)
+        {
+            return new Group
+            {
+                TenantId = tenantId,
+                Name = name.Trim(),
+                GradeLevel = grade.ToDisplayName(),
+                EducationStage = grade.Stage,
+                GradeNumber = grade.Number,
+                CenterId = centerId,
+                Room = Clean(room),
+                Capacity = capacity,
+                WhatsAppGroupLink = Clean(whatsappLink),
+                IsActive = true,
+                Slots = new List<GroupScheduleSlot>(),
+                Sessions = new List<Session>(),
+            };
+        }
+
+        // Legacy factory retained for existing records and fixtures; API commands use the structured overload.
+        public static Group Create(
+            Guid tenantId,
+            string name,
             string gradeLevel,
             Guid centerId,
             string? room,
@@ -51,6 +84,8 @@ namespace TeacherERP.Domain.Entities
                 TenantId = tenantId,
                 Name = name.Trim(),
                 GradeLevel = gradeLevel.Trim(),
+                EducationStage = null,
+                GradeNumber = null,
                 CenterId = centerId,
                 Room = Clean(room),
                 Capacity = capacity,
@@ -81,6 +116,21 @@ namespace TeacherERP.Domain.Entities
         {
             Name = name.Trim();
             GradeLevel = gradeLevel.Trim();
+            EducationStage = null;
+            GradeNumber = null;
+            CenterId = centerId;
+            Room = Clean(room);
+            Capacity = capacity;
+            WhatsAppGroupLink = Clean(whatsappLink);
+            MarkAsUpdated();
+        }
+
+        public void UpdateDetails(string name, SchoolGrade grade, Guid centerId, string? room, int? capacity, string? whatsappLink)
+        {
+            Name = name.Trim();
+            GradeLevel = grade.ToDisplayName();
+            EducationStage = grade.Stage;
+            GradeNumber = grade.Number;
             CenterId = centerId;
             Room = Clean(room);
             Capacity = capacity;

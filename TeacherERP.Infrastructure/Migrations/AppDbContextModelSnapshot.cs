@@ -540,6 +540,13 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("GradeNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EducationStage")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("GradeLevel")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -574,7 +581,7 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.HasIndex("TenantId", "Name")
                         .IsUnique();
 
-                    b.ToTable("Groups");
+                    b.ToTable("Groups", t => t.HasCheckConstraint("CK_Groups_SchoolGrade", "([EducationStage] IS NULL AND [GradeNumber] IS NULL) OR ([EducationStage] IS NOT NULL AND [GradeNumber] IS NOT NULL AND (([EducationStage] = 'Primary' AND [GradeNumber] BETWEEN 1 AND 6) OR ([EducationStage] IN ('Preparatory', 'Secondary') AND [GradeNumber] BETWEEN 1 AND 3)))"));
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.GroupAdminRequest", b =>

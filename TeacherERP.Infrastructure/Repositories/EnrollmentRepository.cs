@@ -24,7 +24,8 @@ namespace TeacherERP.Infrastructure.Repositories
             return (from g in _context.Groups.IgnoreQueryFilters().AsNoTracking()
                     join t in _context.Tenants.AsNoTracking() on g.TenantId equals t.Id
                     where g.Id == groupId
-                    select new GroupJoinInfo(g.Id, g.Name, g.TenantId, g.IsActive, g.Capacity, t.Status, t.AutoApproveJoinRequests))
+                    select new GroupJoinInfo(g.Id, g.Name, g.TenantId, g.IsActive, g.Capacity,
+                        g.EducationStage, g.GradeNumber, t.Status, t.AutoApproveJoinRequests))
                 .FirstOrDefaultAsync(cancellationToken);
         }
 

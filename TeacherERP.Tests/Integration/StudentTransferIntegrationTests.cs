@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using TeacherERP.Domain.Entities;
+using TeacherERP.Domain.ValueObjects;
 
 namespace TeacherERP.Tests.Integration;
 
@@ -52,6 +53,74 @@ public sealed class StudentTransferIntegrationTests : IClassFixture<CustomWebApp
     }
 
     [Fact]
+    public async Task MoveAndApprovedStudentTransfer_RejectDifferentStructuredGradesWithoutChangingEnrollment()
+    {
+        SeededTeacher teacher = null!;
+        Guid studentId = default;
+        Guid targetGroupId = default;
+        Guid requestId = default;
+        await _factory.SeedAsync(async db =>
+        {
+            teacher = await TestData.CreateTeacherAsync(db);
+            studentId = await TestData.AddStudentAsync(db, teacher.TenantId, teacher.GroupId);
+            var target = Group.Create(teacher.TenantId, $"Secondary {Guid.NewGuid():N}",
+                new SchoolGrade(EducationStage.Secondary, 1), teacher.CenterId, null, null, null);
+            db.Groups.Add(target);
+            var pending = EnrollmentRequest.Create(teacher.TenantId, studentId, target.Id, EnrollmentRequestType.Transfer);
+            db.EnrollmentRequests.Add(pending);
+            await db.SaveChangesAsync();
+            targetGroupId = target.Id;
+            requestId = pending.Id;
+        });
+        var client = _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId);
+
+        var directMove = await client.PostAsJsonAsync(
+            $"api/Enrollment/students/{studentId}/move", new { targetGroupId });
+        var requestApproval = await client.PostAsync($"api/Enrollment/requests/{requestId}/approve", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, directMove.StatusCode);
+        Assert.Contains("Enrollment.GradeLevelMismatch", await directMove.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.BadRequest, requestApproval.StatusCode);
+        Assert.Contains("Enrollment.GradeLevelMismatch", await requestApproval.Content.ReadAsStringAsync());
+        Assert.True(await _factory.QueryAsync(db => db.GroupEnrollments.IgnoreQueryFilters().AnyAsync(e =>
+            e.TenantId == teacher.TenantId && e.StudentId == studentId && e.GroupId == teacher.GroupId && e.Status == EnrollmentStatus.Active)));
+        Assert.Equal(EnrollmentRequestStatus.Pending, await _factory.QueryAsync(db => db.EnrollmentRequests.IgnoreQueryFilters()
+            .Where(r => r.Id == requestId).Select(r => r.Status).SingleAsync()));
+    }
+
+    [Fact]
+    public async Task Move_RejectsLegacyGroupsUntilStructuredGradeIsSet()
+    {
+        SeededTeacher teacher = null!;
+        Guid studentId = default;
+        Guid targetGroupId = default;
+        await _factory.SeedAsync(async db =>
+        {
+            teacher = await TestData.CreateTeacherAsync(db);
+            studentId = await TestData.AddStudentAsync(db, teacher.TenantId, teacher.GroupId);
+            var target = Group.Create(teacher.TenantId, $"Structured {Guid.NewGuid():N}",
+                new SchoolGrade(EducationStage.Primary, 1), teacher.CenterId, null, null, null);
+            db.Groups.Add(target);
+            targetGroupId = target.Id;
+            var legacySource = Group.Create(teacher.TenantId, $"Source {Guid.NewGuid():N}",
+                "Prep 1", teacher.CenterId, null, null, null);
+            db.Groups.Add(legacySource);
+            // Preserve this scenario as a legacy source by moving the enrollment before the HTTP operation.
+            var oldEnrollment = await db.GroupEnrollments.IgnoreQueryFilters().SingleAsync(e => e.StudentId == studentId);
+            oldEnrollment.End(DateTime.UtcNow);
+            await db.SaveChangesAsync();
+            db.GroupEnrollments.Add(GroupEnrollment.Create(teacher.TenantId, legacySource.Id, studentId, DateTime.UtcNow, null));
+            await db.SaveChangesAsync();
+        });
+
+        var response = await _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId)
+            .PostAsJsonAsync($"api/Enrollment/students/{studentId}/move", new { targetGroupId });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Enrollment.GradeLevelNotConfigured", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task AssistantCanMoveStudentInTheirTeacherSpace()
     {
         SeededTeacher teacher = null!;
@@ -86,7 +155,7 @@ public sealed class StudentTransferIntegrationTests : IClassFixture<CustomWebApp
         {
             teacher = await TestData.CreateTeacherAsync(db);
             studentId = await TestData.AddStudentAsync(db, teacher.TenantId, teacher.GroupId);
-            var fullGroup = Group.Create(teacher.TenantId, $"Full {Guid.NewGuid():N}", "Grade 1", teacher.CenterId, null, 1, null);
+            var fullGroup = Group.Create(teacher.TenantId, $"Full {Guid.NewGuid():N}", new SchoolGrade(EducationStage.Primary, 1), teacher.CenterId, null, 1, null);
             db.Groups.Add(fullGroup);
             targetGroupId = fullGroup.Id;
             await TestData.AddStudentAsync(db, teacher.TenantId, targetGroupId);
@@ -131,7 +200,7 @@ public sealed class StudentTransferIntegrationTests : IClassFixture<CustomWebApp
         {
             teacher = await TestData.CreateTeacherAsync(db);
             studentId = await TestData.AddStudentAsync(db, teacher.TenantId, teacher.GroupId);
-            var target = Group.Create(teacher.TenantId, $"Archived {Guid.NewGuid():N}", "Grade 1", teacher.CenterId, null, null, null);
+            var target = Group.Create(teacher.TenantId, $"Archived {Guid.NewGuid():N}", new SchoolGrade(EducationStage.Primary, 1), teacher.CenterId, null, null, null);
             target.SetActive(false);
             db.Groups.Add(target);
             await db.SaveChangesAsync();
