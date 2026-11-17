@@ -8,6 +8,7 @@ using TeacherERP.Application.Features.Enrollment.ApproveRequest;
 using TeacherERP.Application.Features.Enrollment.CancelRequest;
 using TeacherERP.Application.Features.Enrollment.GetMyEnrollments;
 using TeacherERP.Application.Features.Enrollment.GetRequests;
+using TeacherERP.Application.Features.Enrollment.MoveStudent;
 using TeacherERP.Application.Features.Enrollment.RejectRequest;
 using TeacherERP.Application.Features.Enrollment.RequestGroup;
 using TeacherERP.Domain.Entities;
@@ -85,5 +86,17 @@ namespace TeacherERP.API.Controllers
             var result = await _mediator.Send(new RejectRequestCommand(id, request.Note), cancellationToken);
             return ToResponse(result, new { Message = "The request was rejected." });
         }
+
+        [HttpPost("students/{studentId:guid}/move")]
+        [Authorize(Policy = AuthPolicies.TenantStaff)]
+        public async Task<IActionResult> MoveStudent(
+            Guid studentId, [FromBody] MoveStudentRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(
+                new MoveStudentCommand(studentId, request.TargetGroupId), cancellationToken);
+            return ToResponse(result, new { Message = "The student was moved to the target group." });
+        }
     }
+
+    public sealed record MoveStudentRequest(Guid TargetGroupId);
 }

@@ -62,6 +62,14 @@ namespace TeacherERP.Infrastructure.Repositories
                     cancellationToken);
         }
 
+        public Task<EnrollmentRequest?> GetPendingRequestAsync(Guid tenantId, Guid studentId, CancellationToken cancellationToken)
+        {
+            return _context.EnrollmentRequests
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(r => r.TenantId == tenantId && r.StudentId == studentId
+                    && r.Status == EnrollmentRequestStatus.Pending, cancellationToken);
+        }
+
         public void AddRequest(EnrollmentRequest request) => _context.EnrollmentRequests.Add(request);
 
         public void AddEnrollment(GroupEnrollment enrollment) => _context.GroupEnrollments.Add(enrollment);

@@ -294,3 +294,32 @@ Content-Type: application/json
 {
   "reason": "Duplicate request"
 }
+
+### B4: المدرس أو المساعد ينقل طالباً لمجموعة أخرى في نفس مساحة المدرس
+POST {{TeacherERP.API_HostAddress}}/api/Enrollment/students/{{studentId}}/move
+Authorization: Bearer {{staffToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "targetGroupId": "{{targetGroupId}}"
+}
+
+### A7: حساب Google: إضافة أول كلمة مرور بعد تسجيل الدخول
+POST {{TeacherERP.API_HostAddress}}/api/Users/me/set-password
+Authorization: Bearer {{googleAccessToken}}
+Content-Type: application/json
+
+{
+  "newPassword": "{{newPassword}}"
+}
+
+### A7: تغيير كلمة المرور لحساب لديه كلمة مرور محلية (يتطلب الحالية)
+POST {{TeacherERP.API_HostAddress}}/api/Users/me/password
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "currentPassword": "{{currentPassword}}",
+  "newPassword": "{{newPassword}}"
+}

@@ -32,6 +32,17 @@ public class AdministrationIntegrationTests : IClassFixture<CustomWebApplication
         })
         .Build();
 
+    [Theory]
+    [InlineData("api/Roles/00000000-0000-0000-0000-000000000001/promote-to-admin")]
+    [InlineData("api/Roles/00000000-0000-0000-0000-000000000001/promote-to-super-admin")]
+    public async Task RemovedRolePromotionEndpoints_ReturnNotFound(string route)
+    {
+        var response = await _factory.CreateClientFor(Guid.NewGuid(), role: "SuperAdmin")
+            .PostAsync(route, content: null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     // ---------- الصلاحيات ----------
 
     [Theory]

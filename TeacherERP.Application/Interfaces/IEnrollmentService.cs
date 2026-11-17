@@ -9,5 +9,6 @@ namespace TeacherERP.Application.Interfaces
     {
         // decidedByUserId فارغ لو القبول تلقائي. يحفظ التغييرات داخل Transaction، والطلب لازم يكون متتبَّعاً
         Task<Result<bool>> ApproveAsync(EnrollmentRequest request, Guid? decidedByUserId, CancellationToken cancellationToken);
+        Task<Result<bool>> MoveStudentAsync(Guid tenantId, Guid studentId, Guid targetGroupId, Guid movedByUserId, CancellationToken cancellationToken);
     }
 }

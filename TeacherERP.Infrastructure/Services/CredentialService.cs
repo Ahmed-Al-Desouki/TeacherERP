@@ -75,6 +75,31 @@ namespace TeacherERP.Infrastructure.Services
             return Result<bool>.Success(true);
         }
 
+        public async Task<Result<bool>> SetPasswordAsync(ApplicationUser user, string newPassword, CancellationToken cancellationToken)
+        {
+            if (await _userManager.HasPasswordAsync(user))
+            {
+                return Result<bool>.Failure(new Error(
+                    "Auth.PasswordAlreadySet", "A password is already set. Use the change-password flow."));
+            }
+
+            var logins = await _userManager.GetLoginsAsync(user);
+            if (!logins.Any(login => string.Equals(login.LoginProvider, "Google", StringComparison.OrdinalIgnoreCase)))
+            {
+                return Result<bool>.Failure(new Error(
+                    "Auth.GoogleLoginRequired", "Only an account linked to Google can set its first password."));
+            }
+
+            var result = await _userManager.AddPasswordAsync(user, newPassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(" ", result.Errors.Select(error => error.Description));
+                return Result<bool>.Failure(new Error("Auth.PasswordSetFail", errors));
+            }
+
+            return Result<bool>.Success(true);
+        }
+
         public async Task<Result<bool>> ChangePasswordAsync(ApplicationUser user, string currentPassword, string newPassword, CancellationToken cancellationToken)
         {
             // نفس حماية الدخول: توكن مسروق لا يُستخدم لتخمين الباسورد الحالي

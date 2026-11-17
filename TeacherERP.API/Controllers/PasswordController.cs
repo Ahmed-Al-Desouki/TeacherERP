@@ -7,6 +7,7 @@ using TeacherERP.API.Extensions;
 using TeacherERP.Application.Features.Users.Commands.Auth.ChangePassword;
 using TeacherERP.Application.Features.Users.Commands.Auth.ForgotPassword;
 using TeacherERP.Application.Features.Users.Commands.Auth.ResetPassword;
+using TeacherERP.Application.Features.Users.Commands.Auth.SetPassword;
 using TeacherERP.Application.Features.Users.Commands.Auth.VerifyResetOtp;
 
 namespace TeacherERP.API.Controllers
@@ -53,6 +54,16 @@ namespace TeacherERP.API.Controllers
         {
             var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result, new { Message = "Password changed successfully. Your other devices were signed out." });
+        }
+
+        // إضافة أول كلمة مرور لحساب Google المسجّل دخوله. الأجهزة الأخرى تخرج بعد نجاح الإضافة.
+        [Authorize]
+        [HttpPost("~/api/Users/me/set-password")]
+        [EnableRateLimiting(RateLimitPolicies.AuthLogin)]
+        public async Task<IActionResult> SetPassword([FromBody] SetPasswordCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return ToResponse(result, new { Message = "Password set successfully. Your other devices were signed out." });
         }
     }
 }

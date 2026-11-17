@@ -29,6 +29,42 @@ namespace TeacherERP.Application.Enrollment
                 cancellationToken);
         }
 
+        public Task<Result<bool>> MoveStudentAsync(
+            Guid tenantId, Guid studentId, Guid targetGroupId, Guid movedByUserId, CancellationToken cancellationToken)
+        {
+            return _unitOfWork.ExecuteInTransactionAsync(async () =>
+            {
+                var group = await _repository.GetGroupJoinInfoAsync(targetGroupId, cancellationToken);
+                if (group is null || group.TenantId != tenantId || !group.GroupIsActive || group.TenantStatus != TenantStatus.Active)
+                    return Result<bool>.Failure(EnrollmentErrors.GroupNotFound);
+
+                var member = await _repository.GetMemberAsync(tenantId, studentId, cancellationToken);
+                if (member is null || member.Status == MembershipStatus.Blacklisted)
+                    return Result<bool>.Failure(EnrollmentErrors.NotAllowed);
+
+                var active = await _repository.GetActiveEnrollmentAsync(tenantId, studentId, cancellationToken);
+                if (active is null)
+                    return Result<bool>.Failure(EnrollmentErrors.NotEnrolled);
+                if (active.GroupId == targetGroupId)
+                    return Result<bool>.Failure(EnrollmentErrors.SameGroup);
+
+                if (group.Capacity is { } capacity
+                    && await _repository.CountActiveAsync(tenantId, targetGroupId, cancellationToken) >= capacity)
+                    return Result<bool>.Failure(EnrollmentErrors.GroupFull);
+
+                var now = _timeProvider.GetUtcNow().UtcDateTime;
+                var pendingRequest = await _repository.GetPendingRequestAsync(tenantId, studentId, cancellationToken);
+                pendingRequest?.Cancel(now);
+
+                active.End(now);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                _repository.AddEnrollment(GroupEnrollment.Create(tenantId, targetGroupId, studentId, now, movedByUserId));
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return Result<bool>.Success(true);
+            }, IsolationLevel.Serializable, cancellationToken);
+        }
+
         private async Task<Result<bool>> ApproveCoreAsync(EnrollmentRequest request, Guid? decidedByUserId, CancellationToken cancellationToken)
         {
             var group = await _repository.GetGroupJoinInfoAsync(request.GroupId, cancellationToken);

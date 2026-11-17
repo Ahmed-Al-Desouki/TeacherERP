@@ -26,6 +26,7 @@ namespace TeacherERP.Application.Interfaces
         Task<int> CountActiveAsync(Guid tenantId, Guid groupId, CancellationToken cancellationToken);
         Task<TenantMember?> GetMemberAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken);
         Task<bool> HasPendingRequestAsync(Guid tenantId, Guid studentId, CancellationToken cancellationToken);
+        Task<EnrollmentRequest?> GetPendingRequestAsync(Guid tenantId, Guid studentId, CancellationToken cancellationToken);
 
         void AddRequest(EnrollmentRequest request);
         void AddEnrollment(GroupEnrollment enrollment);
