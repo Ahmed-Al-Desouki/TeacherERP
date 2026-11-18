@@ -51,6 +51,8 @@ namespace TeacherERP.Domain.Entities
         SessionAttachmentUploaded,
         SessionAttachmentDeleted,
         TeacherAdmitted,
-        TeacherRequestRejected
+        TeacherRequestRejected,
+        CompensationApproved,
+        CompensationRejected
     }
 }

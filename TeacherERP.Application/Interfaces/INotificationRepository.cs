@@ -13,6 +13,9 @@ namespace TeacherERP.Application.Interfaces
         // مدرس المساحة وكل مساعديه النشطين
         Task<List<Guid>> GetStaffRecipientIdsAsync(Guid tenantId, CancellationToken cancellationToken);
 
+        // مالك مساحة المدرس فقط، لإشعارات القرارات الموجهة إليه حصراً
+        Task<Guid> GetTeacherRecipientIdAsync(Guid tenantId, CancellationToken cancellationToken);
+
         // إشعاراتي بصفحات، الأحدث أولاً
         Task<PagedResult<NotificationItem>> GetMinePageAsync(
             Guid userId, bool unreadOnly, PageRequest page, CancellationToken cancellationToken);

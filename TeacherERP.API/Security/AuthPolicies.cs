@@ -5,7 +5,7 @@
         /// <summary>يمنع الطالب صاحب البروفايل الناقص (المدرس والمساعد مستثنيان)</summary>
         public const string CompletedProfile = "CompletedProfile";
 
-        /// <summary>يحدد السنتر الحالي (X-Center-Id أو تلقائياً لو عضوية واحدة) ويتأكد من عضوية المستخدم فيه</summary>
+        /// <summary>يحدد السنتر الحالي (X-Teacher-Id أو تلقائياً لو عضوية واحدة) ويتأكد من عضوية المستخدم فيه</summary>
         public const string TenantMember = "TenantMember";
 
         /// <summary>نفس TenantMember لكن للمدرس (Owner) أو المساعد (Assistant) فقط</summary>

@@ -15,6 +15,7 @@ namespace TeacherERP.Application.Features.Attendance.ApproveCompensation
         private readonly IAttendanceRepository _attendanceRepository;
         private readonly IEnrollmentRepository _enrollmentRepository;
         private readonly IAuditRepository _auditRepository;
+        private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
 
         public ApproveCompensationCommandHandler(
@@ -23,6 +24,7 @@ namespace TeacherERP.Application.Features.Attendance.ApproveCompensation
             IAttendanceRepository attendanceRepository,
             IEnrollmentRepository enrollmentRepository,
             IAuditRepository auditRepository,
+            INotificationService notificationService,
             IUnitOfWork unitOfWork)
         {
             _currentUser = currentUser;
@@ -30,6 +32,7 @@ namespace TeacherERP.Application.Features.Attendance.ApproveCompensation
             _attendanceRepository = attendanceRepository;
             _enrollmentRepository = enrollmentRepository;
             _auditRepository = auditRepository;
+            _notificationService = notificationService;
             _unitOfWork = unitOfWork;
         }
 
@@ -80,6 +83,17 @@ namespace TeacherERP.Application.Features.Attendance.ApproveCompensation
                     _auditRepository.Add(AuditLog.Create(
                         tenant.TenantId, userId, AuditAction.StudentReinstatedByCompensation, member.UserId, "Compensation session approved"));
                 }
+            }
+
+            _auditRepository.Add(AuditLog.Create(
+                tenant.TenantId, userId, AuditAction.CompensationApproved, record.StudentId,
+                $"Compensation record {record.Id} approved."));
+
+            if (tenant.Role == TenantRole.Assistant)
+            {
+                await _notificationService.NotifyTeacherAsync(
+                    tenant.TenantId, NotificationType.CompensationApproved,
+                    $"Assistant approved compensation request {record.Id}.", record.Id, cancellationToken);
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

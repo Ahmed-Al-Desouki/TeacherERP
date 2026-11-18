@@ -226,4 +226,113 @@ public sealed class SessionGenerationIntegrationTests : IClassFixture<CustomWebA
 
     private static DateOnly NextOrSame(DateOnly date, DayOfWeek day)
         => date.AddDays(((int)day - (int)date.DayOfWeek + 7) % 7);
+
+    [Fact]
+    public async Task ArchiveGroup_PreservesExistingSessions_StopsGeneration_AndReactivationGeneratesMissingSlotsOnly()
+    {
+        SeededTeacher teacher = null!;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var firstSessionDate = today.AddDays(5);
+        var addedSlotDate = firstSessionDate.AddDays(1);
+        var firstSlotTime = TimeSpan.FromHours(10);
+        var addedSlotTime = TimeSpan.FromHours(14);
+
+        await _factory.SeedAsync(async db =>
+        {
+            teacher = await TestData.CreateTeacherAsync(db);
+            var group = await db.Groups.IgnoreQueryFilters().Include(g => g.Slots)
+                .SingleAsync(g => g.Id == teacher.GroupId);
+            db.GroupScheduleSlots.Add(group.AddSlot(firstSessionDate.DayOfWeek, firstSlotTime, 60));
+            await db.SaveChangesAsync();
+        });
+
+        int initiallyGenerated;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            scope.ServiceProvider.GetRequiredService<ICurrentTenantAccessor>()
+                .Set(new TenantContext(teacher.TenantId, TenantRole.Owner, MembershipStatus.Active));
+            initiallyGenerated = await scope.ServiceProvider.GetRequiredService<ISessionGenerator>()
+                .GenerateForGroupAsync(teacher.GroupId, CancellationToken.None);
+        }
+        Assert.True(initiallyGenerated > 0);
+
+        var client = _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId);
+        var groupName = $"Archive lifecycle {teacher.GroupId:N}";
+        var archived = await client.PutAsJsonAsync($"/api/Groups/{teacher.GroupId}", new
+        {
+            name = groupName,
+            grade = new { stage = "Primary", number = 1 },
+            centerId = teacher.CenterId,
+            room = (string?)null,
+            capacity = (int?)null,
+            whatsAppGroupLink = (string?)null,
+            isActive = false
+        });
+        Assert.Equal(System.Net.HttpStatusCode.OK, archived.StatusCode);
+        Assert.False(await _factory.QueryAsync(db => db.Groups.IgnoreQueryFilters()
+            .Where(g => g.Id == teacher.GroupId).Select(g => g.IsActive).SingleAsync()));
+
+        // أضف موعدًا جديدًا أثناء الأرشفة؛ يجب ألا يولّد له النظام حصصًا حتى إعادة التفعيل.
+        var scheduleWhileArchived = await client.PutAsJsonAsync($"/api/Groups/{teacher.GroupId}/schedule", new
+        {
+            effectiveFrom = today.ToString("yyyy-MM-dd"),
+            slots = new[]
+            {
+                new { day = firstSessionDate.DayOfWeek.ToString(), startTime = "10:00:00", durationMinutes = 60 },
+                new { day = addedSlotDate.DayOfWeek.ToString(), startTime = "14:00:00", durationMinutes = 60 }
+            }
+        });
+        Assert.Equal(System.Net.HttpStatusCode.OK, scheduleWhileArchived.StatusCode);
+
+        int generatedWhileArchived;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            scope.ServiceProvider.GetRequiredService<ICurrentTenantAccessor>()
+                .Set(new TenantContext(teacher.TenantId, TenantRole.Owner, MembershipStatus.Active));
+            var activeGroups = await scope.ServiceProvider.GetRequiredService<IGroupRepository>()
+                .GetActiveWithSlotsAsync(CancellationToken.None);
+            Assert.DoesNotContain(activeGroups, group => group.Id == teacher.GroupId);
+            generatedWhileArchived = await scope.ServiceProvider.GetRequiredService<ISessionGenerator>()
+                .GenerateForGroupAsync(teacher.GroupId, CancellationToken.None);
+        }
+        Assert.Equal(0, generatedWhileArchived);
+
+        var beforeReactivation = await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
+            .Where(session => session.TenantId == teacher.TenantId && session.GroupId == teacher.GroupId)
+            .ToListAsync());
+        Assert.Equal(initiallyGenerated, beforeReactivation.Count);
+        Assert.DoesNotContain(beforeReactivation, session =>
+            session.StartTime == addedSlotDate.ToDateTime(TimeOnly.FromTimeSpan(addedSlotTime), DateTimeKind.Utc));
+        var existingIds = beforeReactivation.Select(session => session.Id).ToHashSet();
+
+        var reactivated = await client.PutAsJsonAsync($"/api/Groups/{teacher.GroupId}", new
+        {
+            name = groupName,
+            grade = new { stage = "Primary", number = 1 },
+            centerId = teacher.CenterId,
+            room = (string?)null,
+            capacity = (int?)null,
+            whatsAppGroupLink = (string?)null,
+            isActive = true
+        });
+        Assert.Equal(System.Net.HttpStatusCode.OK, reactivated.StatusCode);
+        Assert.True(await _factory.QueryAsync(db => db.Groups.IgnoreQueryFilters()
+            .Where(g => g.Id == teacher.GroupId).Select(g => g.IsActive).SingleAsync()));
+        using (var scope = _factory.Services.CreateScope())
+        {
+            scope.ServiceProvider.GetRequiredService<ICurrentTenantAccessor>()
+                .Set(new TenantContext(teacher.TenantId, TenantRole.Owner, MembershipStatus.Active));
+            var activeGroups = await scope.ServiceProvider.GetRequiredService<IGroupRepository>()
+                .GetActiveWithSlotsAsync(CancellationToken.None);
+            Assert.Contains(activeGroups, group => group.Id == teacher.GroupId);
+        }
+
+        var afterReactivation = await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
+            .Where(session => session.TenantId == teacher.TenantId && session.GroupId == teacher.GroupId)
+            .ToListAsync());
+        Assert.All(existingIds, id => Assert.Contains(afterReactivation, session => session.Id == id));
+        Assert.True(afterReactivation.Count > beforeReactivation.Count);
+        Assert.Contains(afterReactivation, session =>
+            session.StartTime == addedSlotDate.ToDateTime(TimeOnly.FromTimeSpan(addedSlotTime), DateTimeKind.Utc));
+    }
 }

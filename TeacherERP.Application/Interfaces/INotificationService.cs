@@ -8,5 +8,9 @@ namespace TeacherERP.Application.Interfaces
         // يضيف إشعاراً للمدرس ومساعديه (بدون حفظ: يُحفظ مع باقي تغييرات الطلب)
         Task NotifyStaffAsync(
             Guid tenantId, NotificationType type, string message, Guid? relatedId, CancellationToken cancellationToken);
+
+        // يضيف إشعاراً لمالك مساحة المدرس فقط، بدون حفظ مستقل
+        Task NotifyTeacherAsync(
+            Guid tenantId, NotificationType type, string message, Guid? relatedId, CancellationToken cancellationToken);
     }
 }

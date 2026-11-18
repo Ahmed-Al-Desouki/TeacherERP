@@ -19,6 +19,14 @@ namespace TeacherERP.Infrastructure.Repositories
 
         public void Add(Notification notification) => _context.Notifications.Add(notification);
 
+        public Task<Guid> GetTeacherRecipientIdAsync(Guid tenantId, CancellationToken cancellationToken)
+        {
+            return _context.Tenants.AsNoTracking()
+                .Where(t => t.Id == tenantId)
+                .Select(t => t.OwnerId)
+                .FirstAsync(cancellationToken);
+        }
+
         public async Task<List<Guid>> GetStaffRecipientIdsAsync(Guid tenantId, CancellationToken cancellationToken)
         {
             var ownerId = await _context.Tenants

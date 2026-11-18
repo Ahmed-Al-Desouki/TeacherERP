@@ -17,6 +17,8 @@ namespace TeacherERP.Application.Features.Attendance.RejectCompensation
         private readonly IGroupSessionRepository _sessionRepository;
         private readonly IAbsenceRepository _absenceRepository;
         private readonly IAbsenceService _absenceService;
+        private readonly IAuditRepository _auditRepository;
+        private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
 
         public RejectCompensationCommandHandler(
@@ -27,6 +29,8 @@ namespace TeacherERP.Application.Features.Attendance.RejectCompensation
             IGroupSessionRepository sessionRepository,
             IAbsenceRepository absenceRepository,
             IAbsenceService absenceService,
+            IAuditRepository auditRepository,
+            INotificationService notificationService,
             IUnitOfWork unitOfWork)
         {
             _currentUser = currentUser;
@@ -36,12 +40,14 @@ namespace TeacherERP.Application.Features.Attendance.RejectCompensation
             _sessionRepository = sessionRepository;
             _absenceRepository = absenceRepository;
             _absenceService = absenceService;
+            _auditRepository = auditRepository;
+            _notificationService = notificationService;
             _unitOfWork = unitOfWork;
         }
 
         public async Task<Result<bool>> Handle(RejectCompensationCommand request, CancellationToken cancellationToken)
         {
-            if (_currentUser.UserId is not { })
+            if (_currentUser.UserId is not { } userId)
             {
                 return Result<bool>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
             }
@@ -66,6 +72,17 @@ namespace TeacherERP.Application.Features.Attendance.RejectCompensation
             return await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
                 record.RejectCompensation();
+                _auditRepository.Add(AuditLog.Create(
+                    tenant.TenantId, userId, AuditAction.CompensationRejected, record.StudentId,
+                    $"Compensation record {record.Id} rejected."));
+
+                if (tenant.Role == TenantRole.Assistant)
+                {
+                    await _notificationService.NotifyTeacherAsync(
+                        tenant.TenantId, NotificationType.CompensationRejected,
+                        $"Assistant rejected compensation request {record.Id}.", record.Id, cancellationToken);
+                }
+
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // الحصة الأصلية اللي كان التعويض يغطيها ممكن تكون اتعالجت بدون غياب (لأنه كان معلّقاً): الغياب يُحسب الآن.
