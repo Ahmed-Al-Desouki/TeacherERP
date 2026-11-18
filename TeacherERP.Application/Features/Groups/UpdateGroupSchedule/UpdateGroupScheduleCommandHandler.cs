@@ -1,6 +1,7 @@
 ﻿// جديد — TeacherERP.Application/Features/Groups/UpdateGroupSchedule/UpdateGroupScheduleCommandHandler.cs
 using MediatR;
 using TeacherERP.Application.Features.Tenants;
+using TeacherERP.Application.Features.Schedule;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Application.Scheduling;
 using TeacherERP.Domain.Entities;
@@ -60,6 +61,19 @@ namespace TeacherERP.Application.Features.Groups.UpdateGroupSchedule
             if (effectiveFromUtc < nowUtc)
             {
                 effectiveFromUtc = nowUtc;
+            }
+
+            if (group.IsActive)
+            {
+                var templateConflicts = await _sessionRepository.GetTemplateConflictsAsync(
+                    current.TenantId, group.Id, group.CenterId, group.Room, tenant?.TimeZoneId ?? "UTC",
+                    request.Slots.Select(x => new ScheduleSlotCandidate(x.Day, x.StartTime, x.DurationMinutes)).ToArray(),
+                    effectiveDate, cancellationToken);
+                if (templateConflicts.Any(x => x.TenantId == current.TenantId))
+                    return Result<GroupDto>.Failure(ScheduleErrors.TimeConflict);
+                var roomConflicts = templateConflicts.Where(x => x.TenantId != current.TenantId).ToArray();
+                if (roomConflicts.Length > 0 && !request.ConfirmRoomConflicts)
+                    return Result<GroupDto>.Failure(ScheduleErrors.RoomConflictConfirmationRequired, roomConflicts);
             }
 
             // مقارنة القالب القديم بالجديد بمفتاح (اليوم، وقت البداية)

@@ -39,7 +39,7 @@ namespace TeacherERP.API.Controllers
         public async Task<IActionResult> RescheduleSession(Guid id, [FromBody] RescheduleSessionRequest request, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(
-                new RescheduleSessionCommand(id, request.NewStartTime, request.DurationMinutes), cancellationToken);
+                new RescheduleSessionCommand(id, request.NewStartTime, request.DurationMinutes, request.ConfirmRoomConflicts), cancellationToken);
             return ToResponse(result);
         }
 
@@ -55,9 +55,9 @@ namespace TeacherERP.API.Controllers
         // التراجع عن إلغاء حصة قادمة (للمدرس أو المساعد)
         [HttpPost("sessions/{id:guid}/restore")]
         [Authorize(Policy = AuthPolicies.TenantStaff)]
-        public async Task<IActionResult> RestoreSession(Guid id, CancellationToken cancellationToken)
+        public async Task<IActionResult> RestoreSession(Guid id, CancellationToken cancellationToken, [FromQuery] bool confirmRoomConflicts = false)
         {
-            var result = await _mediator.Send(new RestoreSessionCommand(id), cancellationToken);
+            var result = await _mediator.Send(new RestoreSessionCommand(id, confirmRoomConflicts), cancellationToken);
             return ToResponse(result);
         }
 

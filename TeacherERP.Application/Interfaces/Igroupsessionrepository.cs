@@ -15,6 +15,10 @@ namespace TeacherERP.Application.Interfaces
         string? CancelReason,
         bool IsModified);
 
+    public record ScheduleConflictItem(Guid TenantId, Guid GroupId, string GroupName, Guid CenterId,
+        string CenterName, string? Room, DateTime StartTime, DateTime EndTime);
+    public record ScheduleSlotCandidate(DayOfWeek Day, TimeSpan StartTime, int DurationMinutes);
+
     // حصص المجموعات (ليس جلسات الدخول: تلك ISessionRepository)
     public interface IGroupSessionRepository
     {
@@ -40,6 +44,14 @@ namespace TeacherERP.Application.Interfaces
         // هل يتعارض الوقت مع حصة أخرى لنفس المجموعة؟ (نفس وقت البداية حتى لو ملغاة بسبب الـ Index الفريد، أو تداخل مع غير ملغاة)
         Task<bool> HasConflictAsync(
             Guid groupId, DateTime startUtc, DateTime endUtc, IReadOnlyCollection<Guid> excludeSessionIds, CancellationToken cancellationToken);
+
+        Task<List<ScheduleConflictItem>> GetCrossGroupConflictsAsync(Guid tenantId, Guid groupId, Guid centerId,
+            string? room, DateTime startUtc, DateTime endUtc, IReadOnlyCollection<Guid> excludeSessionIds,
+            CancellationToken cancellationToken);
+
+        Task<List<ScheduleConflictItem>> GetTemplateConflictsAsync(Guid tenantId, Guid groupId, Guid centerId,
+            string? room, string timeZoneId, IReadOnlyCollection<ScheduleSlotCandidate> slots,
+            DateOnly? effectiveFrom, CancellationToken cancellationToken);
 
         // حصص النطاق بصفحات (للعرض فقط)، مرتبة بوقت البداية ثم الـ Id
         Task<PagedResult<SessionListItem>> GetByRangeAsync(

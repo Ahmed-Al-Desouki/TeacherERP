@@ -39,7 +39,7 @@ namespace TeacherERP.API.Controllers
         {
             var command = new UpdateGroupCommand(
                 id, request.Name, request.Grade, request.CenterId, request.Room,
-                request.Capacity, request.WhatsAppGroupLink, request.IsActive);
+                request.Capacity, request.WhatsAppGroupLink, request.IsActive, request.ConfirmRoomConflicts);
 
             var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result);
@@ -51,7 +51,7 @@ namespace TeacherERP.API.Controllers
         public async Task<IActionResult> UpdateGroupSchedule(Guid id, [FromBody] UpdateGroupScheduleRequest request, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(
-                new UpdateGroupScheduleCommand(id, request.EffectiveFrom, request.Slots), cancellationToken);
+                new UpdateGroupScheduleCommand(id, request.EffectiveFrom, request.Slots, request.ConfirmRoomConflicts), cancellationToken);
             return ToResponse(result);
         }
 

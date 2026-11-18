@@ -15,11 +15,17 @@ namespace TeacherERP.API.Controllers
             }
 
             // تحويل الـ Error الموحد إلى استجابة خطأ واضحة ومنظمة
-            return BadRequest(new
+            if (result.Error.Code == "Schedule.RoomConflictConfirmationRequired")
             {
-                errorCode = result.Error.Code,
-                errorMessage = result.Error.Message
-            });
+                return Conflict(new
+                {
+                    errorCode = result.Error.Code,
+                    errorMessage = result.Error.Message,
+                    details = result.Details
+                });
+            }
+
+            return BadRequest(new { errorCode = result.Error.Code, errorMessage = result.Error.Message });
         }
     }
 }

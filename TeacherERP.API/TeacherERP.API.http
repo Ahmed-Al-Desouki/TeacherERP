@@ -363,3 +363,73 @@ Content-Type: application/json
   "whatsAppGroupLink": null,
   "isActive": true
 }
+
+### B6: إعادة جدولة حصة — في حال تعارض غرفة مشتركة يرجع 409 بالتفاصيل؛ أعد الطلب مع التأكيد
+PUT {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/reschedule
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "newStartTime": "2026-12-01T15:00:00Z",
+  "durationMinutes": 60,
+  "confirmRoomConflicts": false
+}
+
+### B6: بعد مراجعة تفاصيل 409، أعد الطلب نفسه بتأكيد إشغال الغرفة
+PUT {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/reschedule
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "newStartTime": "2026-12-01T15:00:00Z",
+  "durationMinutes": 60,
+  "confirmRoomConflicts": true
+}
+
+### B6: الحصة الإضافية — تحذير الغرفة المشتركة يتطلب إعادة الطلب مع confirmRoomConflicts=true
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "groupId": "{{groupId}}",
+  "startTime": "2026-12-01T15:00:00Z",
+  "durationMinutes": 60,
+  "confirmRoomConflicts": false
+}
+
+### B6: التحريك الجماعي — إذا ظهر 409 بالتفاصيل، أعد الدفعة نفسها مع التأكيد
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/bulk-shift
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "from": "2026-12-01T00:00:00Z",
+  "to": "2026-12-08T00:00:00Z",
+  "groupIds": ["{{groupId}}"],
+  "shiftMinutes": 30,
+  "confirmRoomConflicts": true
+}
+
+### B6: تعديل قالب المجموعة أو إنشاؤه يقبل confirmRoomConflicts؛ تعارض المدرس يرجع 400
+PUT {{TeacherERP.API_HostAddress}}/api/Groups/{{groupId}}/schedule
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "effectiveFrom": null,
+  "confirmRoomConflicts": true,
+  "slots": [
+    { "day": "Monday", "startTime": "15:00:00", "durationMinutes": 60 }
+  ]
+}
+
+### B6: استعادة حصة ملغاة بعد مراجعة التحذير
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/restore?confirmRoomConflicts=true
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}

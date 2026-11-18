@@ -11,5 +11,6 @@ namespace TeacherERP.Application.Features.Groups.UpdateGroup
         string? Room,
         int? Capacity,
         string? WhatsAppGroupLink,
-        bool IsActive);
+        bool IsActive,
+        bool ConfirmRoomConflicts = false);
 }

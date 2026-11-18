@@ -62,6 +62,14 @@ namespace TeacherERP.Application.Features.Schedule.AddExtraSession
                 return Result<SessionTimeDto>.Failure(ScheduleErrors.TimeConflict);
             }
 
+            var overlaps = await _sessionRepository.GetCrossGroupConflictsAsync(
+                tenant.TenantId, group.Id, group.CenterId, group.Room, start, end, Array.Empty<Guid>(), cancellationToken);
+            if (overlaps.Any(x => x.TenantId == tenant.TenantId))
+                return Result<SessionTimeDto>.Failure(ScheduleErrors.TimeConflict);
+            var roomConflicts = overlaps.Where(x => x.TenantId != tenant.TenantId).ToArray();
+            if (roomConflicts.Length > 0 && !request.ConfirmRoomConflicts)
+                return Result<SessionTimeDto>.Failure(ScheduleErrors.RoomConflictConfirmationRequired, roomConflicts);
+
             var session = Session.CreateExtra(tenant.TenantId, group.Id, start, end);
             _sessionRepository.AddRange(new[] { session });
             await _unitOfWork.SaveChangesAsync(cancellationToken);

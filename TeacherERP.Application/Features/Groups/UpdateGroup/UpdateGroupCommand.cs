@@ -14,5 +14,6 @@ namespace TeacherERP.Application.Features.Groups.UpdateGroup
         string? Room,
         int? Capacity,
         string? WhatsAppGroupLink,
-        bool IsActive) : IRequest<Result<GroupDto>>;
+        bool IsActive,
+        bool ConfirmRoomConflicts = false) : IRequest<Result<GroupDto>>;
 }

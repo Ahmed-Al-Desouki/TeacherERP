@@ -10,17 +10,20 @@ namespace TeacherERP.Application.Features.Schedule.BulkShiftSessions
     {
         private readonly ICurrentTenantAccessor _currentTenant;
         private readonly IGroupSessionRepository _sessionRepository;
+        private readonly IGroupRepository _groupRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
 
         public BulkShiftSessionsCommandHandler(
             ICurrentTenantAccessor currentTenant,
             IGroupSessionRepository sessionRepository,
+            IGroupRepository groupRepository,
             IUnitOfWork unitOfWork,
             TimeProvider timeProvider)
         {
             _currentTenant = currentTenant;
             _sessionRepository = sessionRepository;
+            _groupRepository = groupRepository;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
         }
@@ -50,6 +53,23 @@ namespace TeacherERP.Application.Features.Schedule.BulkShiftSessions
 
             var movedIds = movable.Select(s => s.Id).ToArray();
             var occupiedStarts = movable.Select(s => (s.GroupId, s.StartTime)).ToHashSet();
+            var roomConflicts = new Dictionary<(Guid GroupId, DateTime Start, Guid ConflictGroupId, DateTime ConflictStart), ScheduleConflictItem>();
+
+            // فحص أزواج الحصص المختارة بعد إزاحتها يمنع التعارض بين مجموعات المدرس حتى داخل الدفعة نفسها.
+            for (var i = 0; i < movable.Count; i++)
+            {
+                var left = movable[i];
+                var leftStart = left.StartTime.AddMinutes(request.ShiftMinutes);
+                var leftEnd = left.EndTime.AddMinutes(request.ShiftMinutes);
+                for (var j = i + 1; j < movable.Count; j++)
+                {
+                    var right = movable[j];
+                    var rightStart = right.StartTime.AddMinutes(request.ShiftMinutes);
+                    var rightEnd = right.EndTime.AddMinutes(request.ShiftMinutes);
+                    if (left.GroupId != right.GroupId && leftStart < rightEnd && leftEnd > rightStart)
+                        return Result<BulkResultDto>.Failure(ScheduleErrors.TimeConflict);
+                }
+            }
 
             // التحقق من كل الحصص أولاً، فإما يتأجل الكل أو لا شيء (لا تأجيل جزئي)
             foreach (var session in movable)
@@ -68,7 +88,20 @@ namespace TeacherERP.Application.Features.Schedule.BulkShiftSessions
                 {
                     return Result<BulkResultDto>.Failure(ScheduleErrors.TimeConflict);
                 }
+
+                var group = await _groupRepository.GetWithSlotsAsync(session.GroupId, cancellationToken);
+                if (group is null) return Result<BulkResultDto>.Failure(ScheduleErrors.NotFound);
+                var overlaps = await _sessionRepository.GetCrossGroupConflictsAsync(
+                    session.TenantId, group.Id, group.CenterId, group.Room, newStart, newEnd, movedIds, cancellationToken);
+                if (overlaps.Any(x => x.TenantId == session.TenantId))
+                    return Result<BulkResultDto>.Failure(ScheduleErrors.TimeConflict);
+                foreach (var item in overlaps.Where(x => x.TenantId != session.TenantId))
+                    roomConflicts[(group.Id, newStart, item.GroupId, item.StartTime)] = item;
             }
+
+            if (roomConflicts.Count > 0 && !request.ConfirmRoomConflicts)
+                return Result<BulkResultDto>.Failure(ScheduleErrors.RoomConflictConfirmationRequired,
+                    roomConflicts.Values.OrderBy(x => x.StartTime).ToArray());
 
             foreach (var session in movable)
             {

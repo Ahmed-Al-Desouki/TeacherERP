@@ -9,17 +9,20 @@ namespace TeacherERP.Application.Features.Schedule.RestoreSession
     {
         private readonly ICurrentTenantAccessor _currentTenant;
         private readonly IGroupSessionRepository _sessionRepository;
+        private readonly IGroupRepository _groupRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
 
         public RestoreSessionCommandHandler(
             ICurrentTenantAccessor currentTenant,
             IGroupSessionRepository sessionRepository,
+            IGroupRepository groupRepository,
             IUnitOfWork unitOfWork,
             TimeProvider timeProvider)
         {
             _currentTenant = currentTenant;
             _sessionRepository = sessionRepository;
+            _groupRepository = groupRepository;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
         }
@@ -45,6 +48,18 @@ namespace TeacherERP.Application.Features.Schedule.RestoreSession
             // الاسترجاع المتكرر ينجح بدون تغيير (Idempotent)
             if (session.IsCancelled)
             {
+                var group = await _groupRepository.GetWithSlotsAsync(session.GroupId, cancellationToken);
+                if (group is null) return Result<SessionTimeDto>.Failure(ScheduleErrors.NotFound);
+
+                var overlaps = await _sessionRepository.GetCrossGroupConflictsAsync(
+                    session.TenantId, group.Id, group.CenterId, group.Room, session.StartTime, session.EndTime,
+                    new[] { session.Id }, cancellationToken);
+                if (overlaps.Any(x => x.TenantId == session.TenantId))
+                    return Result<SessionTimeDto>.Failure(ScheduleErrors.TimeConflict);
+                var roomConflicts = overlaps.Where(x => x.TenantId != session.TenantId).ToArray();
+                if (roomConflicts.Length > 0 && !request.ConfirmRoomConflicts)
+                    return Result<SessionTimeDto>.Failure(ScheduleErrors.RoomConflictConfirmationRequired, roomConflicts);
+
                 // أثناء الإلغاء ممكن يكون وقتها اتشغل بحصة أخرى للمجموعة
                 if (await _sessionRepository.HasConflictAsync(
                         session.GroupId, session.StartTime, session.EndTime, new[] { session.Id }, cancellationToken))

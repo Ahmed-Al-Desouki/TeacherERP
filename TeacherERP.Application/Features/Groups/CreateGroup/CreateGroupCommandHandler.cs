@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using TeacherERP.Application.Features.Tenants;
+using TeacherERP.Application.Features.Schedule;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
@@ -11,6 +12,8 @@ namespace TeacherERP.Application.Features.Groups.CreateGroup
         private readonly ICurrentTenantAccessor _currentTenant;
         private readonly ICenterRepository _centerRepository;
         private readonly IGroupRepository _groupRepository;
+        private readonly ITenantRepository _tenantRepository;
+        private readonly IGroupSessionRepository _sessionRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly ISessionGenerator _sessionGenerator;
 
@@ -18,12 +21,16 @@ namespace TeacherERP.Application.Features.Groups.CreateGroup
             ICurrentTenantAccessor currentTenant,
             ICenterRepository centerRepository,
             IGroupRepository groupRepository,
+            ITenantRepository tenantRepository,
+            IGroupSessionRepository sessionRepository,
             IUnitOfWork unitOfWork,
             ISessionGenerator sessionGenerator)
         {
             _currentTenant = currentTenant;
             _centerRepository = centerRepository;
             _groupRepository = groupRepository;
+            _tenantRepository = tenantRepository;
+            _sessionRepository = sessionRepository;
             _unitOfWork = unitOfWork;
             _sessionGenerator = sessionGenerator;
         }
@@ -46,6 +53,16 @@ namespace TeacherERP.Application.Features.Groups.CreateGroup
             {
                 return Result<GroupDto>.Failure(GroupErrors.NameTaken);
             }
+
+            var tenantProfile = await _tenantRepository.GetByIdAsync(tenant.TenantId, cancellationToken);
+            var templateConflicts = await _sessionRepository.GetTemplateConflictsAsync(
+                tenant.TenantId, Guid.Empty, request.CenterId, request.Room, tenantProfile?.TimeZoneId ?? "UTC",
+                request.Slots.Select(x => new ScheduleSlotCandidate(x.Day, x.StartTime, x.DurationMinutes)).ToArray(), null, cancellationToken);
+            if (templateConflicts.Any(x => x.TenantId == tenant.TenantId))
+                return Result<GroupDto>.Failure(ScheduleErrors.TimeConflict);
+            var roomConflicts = templateConflicts.Where(x => x.TenantId != tenant.TenantId).ToArray();
+            if (roomConflicts.Length > 0 && !request.ConfirmRoomConflicts)
+                return Result<GroupDto>.Failure(ScheduleErrors.RoomConflictConfirmationRequired, roomConflicts);
 
             var group = Group.Create(
                 tenant.TenantId, request.Name, request.Grade, request.CenterId,
