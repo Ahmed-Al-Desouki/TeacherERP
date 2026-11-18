@@ -199,4 +199,101 @@ public sealed class GroupAdminAttendanceIntegrationTests : IClassFixture<CustomW
         Assert.Equal(2, await _factory.QueryAsync(db => db.GroupEnrollments.IgnoreQueryFilters()
             .CountAsync(e => e.TenantId == s.Teacher.TenantId && e.GroupId == s.Teacher.GroupId && e.IsGroupAdmin)));
     }
+
+    [Theory]
+    [InlineData(false, "PendingCompensation", AttendanceStatus.PendingCompensation)]
+    [InlineData(true, "Recorded", AttendanceStatus.Present)]
+    public async Task GroupScan_CrossGroupCompensationFollowsAutoApprovalSetting(
+        bool autoApprove, string expectedOutcome, AttendanceStatus expectedStatus)
+    {
+        SeededTeacher teacher = null!;
+        Guid adminStudentId = default, targetStudentId = default, compensableSessionId = default;
+        var now = DateTime.UtcNow;
+        await _factory.SeedAsync(async db =>
+        {
+            teacher = await TestData.CreateTeacherAsync(db);
+            var otherGroupId = await TestData.AddGroupAsync(db, teacher);
+            adminStudentId = await TestData.AddStudentAsync(db, teacher.TenantId, teacher.GroupId);
+            targetStudentId = await TestData.AddStudentAsync(db, teacher.TenantId);
+            db.GroupEnrollments.Add(GroupEnrollment.Create(
+                teacher.TenantId, otherGroupId, targetStudentId, now.AddDays(-30), null));
+            await TestData.AddSessionAsync(db, teacher.TenantId, teacher.GroupId,
+                now.AddMinutes(-5), TimeSpan.FromMinutes(45));
+            compensableSessionId = await TestData.AddSessionAsync(db, teacher.TenantId, otherGroupId,
+                now.AddDays(-1), TimeSpan.FromHours(1));
+
+            var settings = await db.TenantSettings.IgnoreQueryFilters().SingleAsync(s => s.TenantId == teacher.TenantId);
+            settings.UpdateAttendance(AttendanceMode.StaticGlobalQR, rejectMockLocations: false,
+                autoRegisterOnScan: true, autoApproveGroupAdminScans: autoApprove);
+            await db.SaveChangesAsync();
+        });
+
+        var owner = _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId);
+        Assert.Equal(HttpStatusCode.OK, (await owner.PutAsync(
+            $"/api/Groups/{teacher.GroupId}/admins/{adminStudentId}", null)).StatusCode);
+        var admin = _factory.CreateClientFor(adminStudentId, teacher.TenantId, "Student");
+        var response = await admin.PostAsJsonAsync("/api/Attendance/group-scan", new
+        {
+            studentQrCode = await GetQrAsync(targetStudentId),
+            latitude = 30.0561,
+            longitude = 31.3301,
+            isMockLocation = false
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(expectedOutcome, body.GetProperty("outcome").GetString());
+        var record = await _factory.QueryAsync(db => db.AttendanceRecords.IgnoreQueryFilters()
+            .SingleAsync(a => a.TenantId == teacher.TenantId && a.StudentId == targetStudentId
+                              && a.SessionId != compensableSessionId));
+        Assert.Equal(expectedStatus, record.Status);
+        Assert.Equal(compensableSessionId, record.CompensatesSessionId);
+        Assert.Equal(adminStudentId, record.RecordedByUserId);
+    }
+
+    [Theory]
+    [InlineData(false, "PendingApproval")]
+    [InlineData(true, "Recorded")]
+    public async Task GroupScan_WalkInUsesGroupAdminAutoApprovalIndependentlyOfSelfScanSetting(
+        bool autoApprove, string expectedOutcome)
+    {
+        SeededTeacher teacher = null!;
+        Guid adminStudentId = default, walkInStudentId = default, sessionId = default;
+        await _factory.SeedAsync(async db =>
+        {
+            teacher = await TestData.CreateTeacherAsync(db);
+            adminStudentId = await TestData.AddStudentAsync(db, teacher.TenantId, teacher.GroupId);
+            walkInStudentId = await TestData.AddStudentAsync(db, teacher.TenantId, withMembership: false);
+            sessionId = await TestData.AddSessionAsync(db, teacher.TenantId, teacher.GroupId,
+                DateTime.UtcNow.AddMinutes(-5), TimeSpan.FromMinutes(45));
+            var settings = await db.TenantSettings.IgnoreQueryFilters().SingleAsync(s => s.TenantId == teacher.TenantId);
+            settings.UpdateAttendance(AttendanceMode.StaticGlobalQR, rejectMockLocations: false,
+                autoRegisterOnScan: false, autoApproveGroupAdminScans: autoApprove);
+            await db.SaveChangesAsync();
+        });
+
+        var owner = _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId);
+        Assert.Equal(HttpStatusCode.OK, (await owner.PutAsync(
+            $"/api/Groups/{teacher.GroupId}/admins/{adminStudentId}", null)).StatusCode);
+        var admin = _factory.CreateClientFor(adminStudentId, teacher.TenantId, "Student");
+        var response = await admin.PostAsJsonAsync("/api/Attendance/group-scan", new
+        {
+            studentQrCode = await GetQrAsync(walkInStudentId),
+            latitude = 30.0561,
+            longitude = 31.3301,
+            isMockLocation = false
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(expectedOutcome, body.GetProperty("outcome").GetString());
+        Assert.Equal(autoApprove, await _factory.QueryAsync(db => db.TenantMembers.IgnoreQueryFilters()
+            .AnyAsync(m => m.TenantId == teacher.TenantId && m.UserId == walkInStudentId)));
+        Assert.Equal(autoApprove, await _factory.QueryAsync(db => db.AttendanceRecords.IgnoreQueryFilters()
+            .AnyAsync(a => a.TenantId == teacher.TenantId && a.SessionId == sessionId
+                           && a.StudentId == walkInStudentId && a.Status == AttendanceStatus.Present)));
+        Assert.Equal(!autoApprove, await _factory.QueryAsync(db => db.EnrollmentRequests.IgnoreQueryFilters()
+            .AnyAsync(r => r.TenantId == teacher.TenantId && r.StudentId == walkInStudentId
+                           && r.Status == EnrollmentRequestStatus.Pending)));
+    }
 }

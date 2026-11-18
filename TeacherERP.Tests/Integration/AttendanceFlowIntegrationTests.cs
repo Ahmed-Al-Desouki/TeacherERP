@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.ValueObjects;
 
@@ -224,6 +226,59 @@ public sealed class AttendanceFlowIntegrationTests : IClassFixture<CustomWebAppl
         Assert.True(await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters().AnyAsync(log =>
             log.TenantId == teacher.TenantId && log.Action == AuditAction.StudentReinstatedByCompensation
             && log.TargetUserId == studentId && log.ActorUserId == teacher.OwnerId)));
+    }
+
+    [Fact]
+    public async Task RejectingPendingCompensationAfterAbsenceJob_RestoresOriginalAbsence()
+    {
+        SeededTeacher teacher = null!;
+        Guid studentId = default, originalSessionId = default, compensationRecordId = default;
+        var now = DateTime.UtcNow;
+        await _factory.SeedAsync(async db =>
+        {
+            teacher = await TestData.CreateTeacherAsync(db);
+            studentId = await TestData.AddStudentAsync(db, teacher.TenantId);
+            db.GroupEnrollments.Add(GroupEnrollment.Create(
+                teacher.TenantId, teacher.GroupId, studentId, now.AddDays(-30), null));
+            var otherGroupId = await TestData.AddGroupAsync(db, teacher);
+            originalSessionId = await TestData.AddSessionAsync(
+                db, teacher.TenantId, teacher.GroupId, now.AddHours(-4), TimeSpan.FromHours(1));
+            var compensationSessionId = await TestData.AddSessionAsync(
+                db, teacher.TenantId, otherGroupId, now.AddHours(-2), TimeSpan.FromHours(1));
+            var compensation = AttendanceRecord.RecordPresence(
+                teacher.TenantId, compensationSessionId, studentId, ScanMethod.AdminScan,
+                null, null, teacher.OwnerId, AttendanceStatus.PendingCompensation, originalSessionId);
+            db.AttendanceRecords.Add(compensation);
+            await db.SaveChangesAsync();
+            compensationRecordId = compensation.Id;
+        });
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var currentTenant = scope.ServiceProvider.GetRequiredService<ICurrentTenantAccessor>();
+            currentTenant.Set(new TenantContext(teacher.TenantId, TenantRole.Owner, MembershipStatus.Active));
+            var processor = scope.ServiceProvider.GetRequiredService<IAbsenceProcessor>();
+            Assert.Equal(0, await processor.ProcessAsync(CancellationToken.None));
+        }
+
+        Assert.False(await _factory.QueryAsync(db => db.AttendanceRecords.IgnoreQueryFilters()
+            .AnyAsync(a => a.SessionId == originalSessionId && a.StudentId == studentId
+                           && a.Status == AttendanceStatus.Absent)));
+        Assert.NotNull(await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
+            .Where(s => s.Id == originalSessionId).Select(s => s.AbsencesProcessedAt).SingleAsync()));
+
+        var rejected = await _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId)
+            .PostAsync($"/api/Attendance/compensations/{compensationRecordId}/reject", null);
+
+        Assert.Equal(HttpStatusCode.OK, rejected.StatusCode);
+        Assert.Equal(AttendanceStatus.Rejected, await _factory.QueryAsync(db => db.AttendanceRecords.IgnoreQueryFilters()
+            .Where(a => a.Id == compensationRecordId).Select(a => a.Status).SingleAsync()));
+        Assert.True(await _factory.QueryAsync(db => db.AttendanceRecords.IgnoreQueryFilters()
+            .AnyAsync(a => a.SessionId == originalSessionId && a.StudentId == studentId
+                           && a.Status == AttendanceStatus.Absent)));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.TenantMembers.IgnoreQueryFilters()
+            .Where(m => m.TenantId == teacher.TenantId && m.UserId == studentId)
+            .Select(m => m.ConsecutiveAbsences).SingleAsync()));
     }
 
     [Fact]
