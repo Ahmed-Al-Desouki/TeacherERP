@@ -70,6 +70,44 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
     }
 
     [Fact]
+    public async Task Reschedule_ChangesDurationWithoutChangingStartTime_AndRejectsDurationOverlap()
+    {
+        SeededTeacher teacher = null!;
+        Guid sessionId = default;
+        var start = DateTime.UtcNow.Date.AddDays(4).AddHours(10);
+        await _factory.SeedAsync(async db =>
+        {
+            teacher = await TestData.CreateTeacherAsync(db);
+            sessionId = await TestData.AddSessionAsync(db, teacher.TenantId, teacher.GroupId, start);
+            await TestData.AddSessionAsync(db, teacher.TenantId, teacher.GroupId, start.AddHours(2));
+        });
+
+        var client = _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId);
+        var overlap = await client.PutAsJsonAsync($"/api/Schedule/sessions/{sessionId}/reschedule", new
+        {
+            newStartTime = start,
+            durationMinutes = 180
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, overlap.StatusCode);
+        Assert.Equal("Session.TimeConflict", await ErrorCodeAsync(overlap));
+        var unchanged = await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
+            .Where(s => s.Id == sessionId).Select(s => new { s.StartTime, s.EndTime }).SingleAsync());
+        Assert.Equal(start, unchanged.StartTime);
+        Assert.Equal(start.AddHours(1), unchanged.EndTime);
+
+        var durationOnly = await client.PutAsJsonAsync($"/api/Schedule/sessions/{sessionId}/reschedule", new
+        {
+            newStartTime = start,
+            durationMinutes = 90
+        });
+        Assert.Equal(HttpStatusCode.OK, durationOnly.StatusCode);
+        var updated = await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
+            .Where(s => s.Id == sessionId).Select(s => new { s.StartTime, s.EndTime }).SingleAsync());
+        Assert.Equal(start, updated.StartTime);
+        Assert.Equal(start.AddMinutes(90), updated.EndTime);
+    }
+
+    [Fact]
     public async Task BulkShift_MovesAllSelectedSessionsAndLeavesAllUntouchedWhenAnyConflicts()
     {
         SeededTeacher teacher = null!;

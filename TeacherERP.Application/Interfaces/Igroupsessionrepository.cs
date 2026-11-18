@@ -18,6 +18,7 @@ namespace TeacherERP.Application.Interfaces
     public record ScheduleConflictItem(Guid TenantId, Guid GroupId, string GroupName, Guid CenterId,
         string CenterName, string? Room, DateTime StartTime, DateTime EndTime);
     public record ScheduleSlotCandidate(DayOfWeek Day, TimeSpan StartTime, int DurationMinutes);
+    public record SessionMoveBlockers(bool HasAttendance, bool HasCompensationReference, bool HasPendingWalkInRequest);
 
     // حصص المجموعات (ليس جلسات الدخول: تلك ISessionRepository)
     public interface IGroupSessionRepository
@@ -36,6 +37,8 @@ namespace TeacherERP.Application.Interfaces
 
         // حصة متتبَّعة للتعديل. الحفظ يتم عبر IUnitOfWork
         Task<Session?> GetByIdAsync(Guid sessionId, CancellationToken cancellationToken);
+
+        Task<SessionMoveBlockers> GetMoveBlockersAsync(Guid sessionId, CancellationToken cancellationToken);
 
         // حصص متتبَّعة في نطاق للتعديل الجماعي (groupIds فارغة = كل المجموعات)
         Task<List<Session>> GetTrackedByRangeAsync(

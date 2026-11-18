@@ -21,6 +21,9 @@ namespace TeacherERP.Domain.Entities
         public DateTime StartTime { get; private set; }
         public DateTime EndTime { get; private set; }
 
+        /// <summary>موعدها الأصلي في القالب قبل أول نقل يدوي؛ يمنع المولّد من إعادة إنشائها</summary>
+        public DateTime? OriginalStartTime { get; private set; }
+
         /// <summary>حالة توضح إذا تم إلغاء الحصة (لطرد ومنع حضور الطلاب)</summary>
         public bool IsCancelled { get; private set; }
 
@@ -69,10 +72,30 @@ namespace TeacherERP.Domain.Entities
         /// <summary>تأجيل أو تقديم الحصة (الأوقات UTC)</summary>
         public void Reschedule(DateTime startTime, DateTime endTime)
         {
+            PreserveTemplateOccurrence();
             StartTime = startTime;
             EndTime = endTime;
             IsModified = true;
             MarkAsUpdated();
+        }
+
+        /// <summary>نقل الحصة الواحدة لمجموعة أخرى مع إبقاء ارتباطها بموعد القالب الأصلي لاستثنائه مرة واحدة</summary>
+        public void MoveToGroup(Guid targetGroupId, DateTime startTime, DateTime endTime)
+        {
+            PreserveTemplateOccurrence();
+            GroupId = targetGroupId;
+            StartTime = startTime;
+            EndTime = endTime;
+            IsModified = true;
+            MarkAsUpdated();
+        }
+
+        private void PreserveTemplateOccurrence()
+        {
+            if (SlotId.HasValue && OriginalStartTime is null)
+            {
+                OriginalStartTime = StartTime;
+            }
         }
 
         /// <summary>فصل الحصة عن حصة القالب بعد حذفها من القالب (تبقى الحصة كما هي)</summary>

@@ -13,6 +13,7 @@ Accept: application/json
 @token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxODIwNGEyMC0xZDkxLTQ5NWQtYjBiOC0wYTA5YzM4ZTAzZDIiLCJlbWFpbCI6InRlYWNoZXIuMUBtYWlsbmEuY28iLCJqdGkiOiJkN2RmMTA3NC1lODVmLTQwZjItYjkzNy1jMzQyYzIyMTdlMDkiLCJuYW1laWQiOiIxODIwNGEyMC0xZDkxLTQ5NWQtYjBiOC0wYTA5YzM4ZTAzZDIiLCJ1bmlxdWVfbmFtZSI6IlRlYWNoZXItMSIsInNlc3Npb25faWQiOiJkNDdiZjBiYS1kY2I4LTRkODMtODJhYy1kMjQ4YWI2YjA5NmIiLCJyb2xlIjoiU3VwZXJBZG1pbiIsIm5iZiI6MTc5NDgzNjU2NCwiZXhwIjoxNzk0ODQwMTY0LCJpYXQiOjE3OTQ4MzY1NjQsImlzcyI6IlRlYWNoZXJFUlAiLCJhdWQiOiJUZWFjaGVyRVJQX1VzZXJzIn0.qNUeg2UZzrT7vVGToEMS0earwRldI_i46VfBnEBrCeg
 @teacherId = EC617B4A-D1F1-4621-9708-DC0B1C9FDC95
 @sessionId = D47FF7F3-0B91-4577-8FB3-A1A554414E21
+@currentSessionStart = 2026-12-01T15:00:00Z
 @requestId = 00000000-0000-0000-0000-000000000000
 @centerId = 00000000-0000-0000-0000-000000000000
 @compensationId = FA8907C8-350F-4363-A0B4-3C4D361CA050
@@ -388,6 +389,18 @@ Content-Type: application/json
   "confirmRoomConflicts": true
 }
 
+### B9: غيّر currentSessionStart إلى وقت بداية الحصة الحالي قبل الإرسال
+PUT {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/reschedule
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "newStartTime": "{{currentSessionStart}}",
+  "durationMinutes": 90,
+  "confirmRoomConflicts": false
+}
+
 ### B6: الحصة الإضافية — تحذير الغرفة المشتركة يتطلب إعادة الطلب مع confirmRoomConflicts=true
 POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions
 Authorization: Bearer {{teacherToken}}
@@ -399,6 +412,32 @@ Content-Type: application/json
   "startTime": "2026-12-01T15:00:00Z",
   "durationMinutes": 60,
   "confirmRoomConflicts": false
+}
+
+### B8: نقل حصة واحدة لمجموعة أخرى كاستثناء لموعدها؛ عند تعارض الغرفة راجع 409 ثم أكّد
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/move
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "targetGroupId": "{{targetGroupId}}",
+  "newStartTime": "2026-12-03T16:00:00Z",
+  "durationMinutes": null,
+  "confirmRoomConflicts": false
+}
+
+### B8: بعد مراجعة تفاصيل تعارض الغرفة، أعد الطلب مع التأكيد
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/move
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "targetGroupId": "{{targetGroupId}}",
+  "newStartTime": "2026-12-03T16:00:00Z",
+  "durationMinutes": null,
+  "confirmRoomConflicts": true
 }
 
 ### B6: التحريك الجماعي — إذا ظهر 409 بالتفاصيل، أعد الدفعة نفسها مع التأكيد

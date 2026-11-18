@@ -59,12 +59,42 @@ namespace TeacherERP.Infrastructure.Repositories
                 .Select(s => s.StartTime)
                 .ToListAsync(cancellationToken);
 
+            // الحصة المنقولة تحتفظ بموعدها الأصلي في SlotId؛ احسب هذا الموعد مشغولاً في المجموعة المصدر
+            var slotIds = await _context.GroupScheduleSlots
+                .AsNoTracking()
+                .Where(slot => slot.GroupId == groupId)
+                .Select(slot => slot.Id)
+                .ToListAsync(cancellationToken);
+            if (slotIds.Count > 0)
+            {
+                var originalStarts = await _context.Sessions
+                    .AsNoTracking()
+                    .Where(s => s.SlotId.HasValue && slotIds.Contains(s.SlotId.Value)
+                        && s.OriginalStartTime >= fromUtc && s.OriginalStartTime < toUtc)
+                    .Select(s => s.OriginalStartTime!.Value)
+                    .ToListAsync(cancellationToken);
+                times.AddRange(originalStarts);
+            }
+
             return times.ToHashSet();
         }
 
         public Task<Session?> GetByIdAsync(Guid sessionId, CancellationToken cancellationToken)
         {
             return _context.Sessions.FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken);
+        }
+
+        public async Task<SessionMoveBlockers> GetMoveBlockersAsync(Guid sessionId, CancellationToken cancellationToken)
+        {
+            var hasAttendance = await _context.AttendanceRecords
+                .AnyAsync(record => record.SessionId == sessionId, cancellationToken);
+            var hasCompensationReference = await _context.AttendanceRecords
+                .AnyAsync(record => record.CompensatesSessionId == sessionId, cancellationToken);
+            var hasPendingWalkInRequest = await _context.EnrollmentRequests
+                .AnyAsync(request => request.SourceSessionId == sessionId
+                    && request.Status == EnrollmentRequestStatus.Pending, cancellationToken);
+
+            return new SessionMoveBlockers(hasAttendance, hasCompensationReference, hasPendingWalkInRequest);
         }
 
         public Task<List<Session>> GetTrackedByRangeAsync(

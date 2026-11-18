@@ -870,6 +870,9 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<bool>("IsModified")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("OriginalStartTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<Guid?>("SlotId")
                         .HasColumnType("uniqueidentifier");
 

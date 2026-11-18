@@ -8,6 +8,7 @@ using TeacherERP.Application.Features.Schedule.BulkCancelSessions;
 using TeacherERP.Application.Features.Schedule.BulkShiftSessions;
 using TeacherERP.Application.Features.Schedule.CancelSession;
 using TeacherERP.Application.Features.Schedule.GetSessions;
+using TeacherERP.Application.Features.Schedule.MoveSession;
 using TeacherERP.Application.Features.Schedule.RescheduleSession;
 using TeacherERP.Application.Features.Schedule.RestoreSession;
 
@@ -40,6 +41,17 @@ namespace TeacherERP.API.Controllers
         {
             var result = await _mediator.Send(
                 new RescheduleSessionCommand(id, request.NewStartTime, request.DurationMinutes, request.ConfirmRoomConflicts), cancellationToken);
+            return ToResponse(result);
+        }
+
+        // نقل حصة مستقبلية لمجموعة أخرى داخل مساحة المدرس (للمدرس فقط)
+        [HttpPost("sessions/{id:guid}/move")]
+        [Authorize(Policy = AuthPolicies.TenantOwner)]
+        public async Task<IActionResult> MoveSession(Guid id, [FromBody] MoveSessionRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(
+                new MoveSessionCommand(id, request.TargetGroupId, request.NewStartTime,
+                    request.DurationMinutes, request.ConfirmRoomConflicts), cancellationToken);
             return ToResponse(result);
         }
 
