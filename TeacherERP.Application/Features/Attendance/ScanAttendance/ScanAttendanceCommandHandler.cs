@@ -1,5 +1,6 @@
 ﻿// موجود (تعديل) — TeacherERP.Application/Features/Attendance/ScanAttendance/ScanAttendanceCommandHandler.cs
 using MediatR;
+using TeacherERP.Application.Attendance;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
@@ -53,6 +54,16 @@ namespace TeacherERP.Application.Features.Attendance.ScanAttendance
                 return Result<AttendanceResultDto>.Failure(AttendanceErrors.InvalidCode);
             }
 
+            if (request.AccuracyMeters is not { } accuracy)
+            {
+                return Result<AttendanceResultDto>.Failure(AttendanceErrors.LocationAccuracyRequired);
+            }
+
+            if (accuracy > AttendancePolicy.MaximumLocationAccuracyMeters)
+            {
+                return Result<AttendanceResultDto>.Failure(AttendanceErrors.LocationAccuracyInsufficient);
+            }
+
             // الـ Flag يرسله التطبيق (لا يمكن التحقق منه من السيرفر)، فنأخذه كخط دفاع أول لا وحيد
             if (settings.RejectMockLocations && request.IsMockLocation)
             {
@@ -63,7 +74,8 @@ namespace TeacherERP.Application.Features.Attendance.ScanAttendance
                 new AttendanceRequest(
                     settings.TenantId, studentId, ScanMethod.SelfScan, request.Latitude, request.Longitude,
                     RecordedByUserId: null, PreferredGroupId: request.GroupId,
-                    EnforceGeofence: true, RegisterImmediately: settings.AutoRegisterOnScan, RestrictToGroupId: null),
+                    EnforceGeofence: true, RegisterImmediately: settings.AutoRegisterOnScan, RestrictToGroupId: null,
+                    AccuracyMeters: accuracy),
                 cancellationToken);
         }
     }

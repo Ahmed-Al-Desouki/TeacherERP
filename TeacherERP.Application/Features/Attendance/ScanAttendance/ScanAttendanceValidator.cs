@@ -1,5 +1,6 @@
 ﻿// جديد — TeacherERP.Application/Features/Attendance/ScanAttendance/ScanAttendanceValidator.cs
 using FluentValidation;
+using TeacherERP.Application.Attendance;
 
 namespace TeacherERP.Application.Features.Attendance.ScanAttendance
 {
@@ -21,8 +22,10 @@ namespace TeacherERP.Application.Features.Attendance.ScanAttendance
                 .InclusiveBetween(-180d, 180d).WithMessage("Longitude must be between -180 and 180.");
 
             RuleFor(x => x.AccuracyMeters)
-                .GreaterThanOrEqualTo(0).When(x => x.AccuracyMeters.HasValue)
-                .WithMessage("Accuracy must not be negative.");
+                .NotNull().WithMessage("Location accuracy is required.")
+                .GreaterThanOrEqualTo(0).WithMessage("Accuracy must not be negative.")
+                .LessThanOrEqualTo(AttendancePolicy.MaximumLocationAccuracyMeters)
+                .WithMessage($"Accuracy must not exceed {AttendancePolicy.MaximumLocationAccuracyMeters} meters.");
         }
     }
 }

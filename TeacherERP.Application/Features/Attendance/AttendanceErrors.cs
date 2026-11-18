@@ -14,6 +14,8 @@ namespace TeacherERP.Application.Features.Attendance
         public static readonly Error Suspended = new("Attendance.Suspended", "Your attendance with this teacher is suspended.");
         public static readonly Error CenterLocationNotSet = new("Attendance.CenterLocationNotSet", "The center location is not set yet.");
         public static readonly Error LocationRequired = new("Attendance.LocationRequired", "Your location is required.");
+        public static readonly Error LocationAccuracyRequired = new("Attendance.LocationAccuracyRequired", "Location accuracy is required.");
+        public static readonly Error LocationAccuracyInsufficient = new("Attendance.LocationAccuracyInsufficient", "Your location accuracy is insufficient.");
         public static readonly Error OutOfRange = new("Attendance.OutOfRange", "You are not at the center.");
         public static readonly Error StudentNotFound = new("Attendance.StudentNotFound", "The student card was not found.");
         public static readonly Error NotDynamicMode = new("Attendance.NotDynamicMode", "The attendance mode is not the rotating code.");

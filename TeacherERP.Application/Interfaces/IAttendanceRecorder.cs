@@ -22,7 +22,8 @@ namespace TeacherERP.Application.Interfaces
         bool EnforceGeofence,
         bool RegisterImmediately,
         Guid? RestrictToGroupId,
-        bool AutoApproveCompensation = false);
+        bool AutoApproveCompensation = false,
+        double? AccuracyMeters = null);
 
     // مصدر واحد لقواعد الحضور: اختيار الحصة، الموقع، التسجيل التلقائي، التعويض، والإشعارات
     public interface IAttendanceRecorder

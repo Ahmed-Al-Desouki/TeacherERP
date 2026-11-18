@@ -63,14 +63,14 @@ public sealed class AttendanceFlowIntegrationTests : IClassFixture<CustomWebAppl
         => _factory.CreateClientFor(s.StudentId, s.Teacher.TenantId, "Student");
 
     private static object ScanBody(ScanScenario s, string? code = null, double latitude = CenterLatitude,
-        double longitude = CenterLongitude, bool mock = false)
+        double longitude = CenterLongitude, bool mock = false, double? accuracyMeters = 5)
         => new
         {
             teacherId = s.Teacher.TenantId,
             code = code ?? s.Code,
             latitude,
             longitude,
-            accuracyMeters = 5,
+            accuracyMeters,
             isMockLocation = mock,
             groupId = s.Teacher.GroupId
         };
@@ -110,6 +110,31 @@ public sealed class AttendanceFlowIntegrationTests : IClassFixture<CustomWebAppl
         Assert.Equal("Attendance.OutOfRange", await ErrorCodeAsync(outside));
         Assert.False(await _factory.QueryAsync(db => db.AttendanceRecords.IgnoreQueryFilters()
             .AnyAsync(a => a.StudentId == s.StudentId)));
+    }
+
+    [Fact]
+    public async Task SelfScan_RequiresAccurateLocationAndAcceptsTheMaximumAllowedAccuracy()
+    {
+        var rejected = await SeedScanAsync();
+        var client = StudentClient(rejected);
+
+        var missingAccuracy = await client.PostAsJsonAsync(
+            "/api/Attendance/scan", ScanBody(rejected, accuracyMeters: null));
+        var poorAccuracy = await client.PostAsJsonAsync(
+            "/api/Attendance/scan", ScanBody(rejected, accuracyMeters: 100.01));
+
+        Assert.Equal(HttpStatusCode.BadRequest, missingAccuracy.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, poorAccuracy.StatusCode);
+        Assert.False(await _factory.QueryAsync(db => db.AttendanceRecords.IgnoreQueryFilters()
+            .AnyAsync(a => a.StudentId == rejected.StudentId)));
+
+        var boundary = await SeedScanAsync();
+        var accepted = await StudentClient(boundary).PostAsJsonAsync(
+            "/api/Attendance/scan", ScanBody(boundary, accuracyMeters: 100));
+
+        Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+        Assert.True(await _factory.QueryAsync(db => db.AttendanceRecords.IgnoreQueryFilters()
+            .AnyAsync(a => a.StudentId == boundary.StudentId && a.Status == AttendanceStatus.Present)));
     }
 
     [Fact]

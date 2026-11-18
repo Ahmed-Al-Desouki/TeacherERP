@@ -97,6 +97,12 @@ namespace TeacherERP.Application.Attendance
                     return Result<AttendanceResultDto>.Failure(AttendanceErrors.LocationRequired);
                 }
 
+                if (request.AccuracyMeters is { } accuracy
+                    && accuracy > AttendancePolicy.MaximumLocationAccuracyMeters)
+                {
+                    return Result<AttendanceResultDto>.Failure(AttendanceErrors.LocationAccuracyInsufficient);
+                }
+
                 if (GeoDistance.Meters(lat, lon, centerLat, centerLon) > session.GeofenceRadiusMeters)
                 {
                     return Result<AttendanceResultDto>.Failure(AttendanceErrors.OutOfRange);

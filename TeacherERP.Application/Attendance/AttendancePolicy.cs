@@ -6,6 +6,9 @@ namespace TeacherERP.Application.Attendance
         /// <summary>يُسمح بتسجيل الحضور قبل بداية الحصة بهذه الدقائق، وحتى نهايتها</summary>
         public const int EarlyCheckInMinutes = 15;
 
+        /// <summary>أقصى دقة مقبولة لموقع الطالب أثناء المسح الذاتي</summary>
+        public const double MaximumLocationAccuracyMeters = 100;
+
         /// <summary>عمر الكود المتغير بالثواني (يُقبل الحالي والسابق)</summary>
         public const int DynamicCodeWindowSeconds = 30;
 

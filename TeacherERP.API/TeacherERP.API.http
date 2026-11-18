@@ -41,7 +41,7 @@ GET {{TeacherERP.API_HostAddress}}/api/Attendance/display-code
 Authorization: Bearer {{token}}
 X-Teacher-Id: {{teacherId}}
 
-### F3 + F5: مسح الطالب للكود بموقعه. غير المسجّل (Walk-in) يُحفظ موقعه في طلبه المعلّق
+### F3 + F5 + F7: مسح الطالب للكود بموقعه (دقة الموقع مطلوبة وبحد أقصى 100 متر). غير المسجّل (Walk-in) يُحفظ موقعه في طلبه المعلّق
 POST {{TeacherERP.API_HostAddress}}/api/Attendance/scan
 Authorization: Bearer {{token}}
 Content-Type: application/json
