@@ -117,4 +117,113 @@ public sealed class SessionGenerationIntegrationTests : IClassFixture<CustomWebA
         Assert.Equal(TimeSpan.FromMinutes(90), modifiedFuture.EndTime - modifiedFuture.StartTime);
         Assert.Null(modifiedFuture.SlotId);
     }
+
+    [Fact]
+    public async Task UpdateGroupSchedule_SwapsWeeklyDaysFromEffectiveDate_AndRegeneratesOnlyUntouchedFutureOccurrences()
+    {
+        SeededTeacher teacher = null!;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var effectiveDate = NextOrSame(today.AddDays(10), DayOfWeek.Monday);
+        var previousMonday = effectiveDate.AddDays(-7);
+        var previousWednesday = effectiveDate.AddDays(-5);
+        var nextWednesday = effectiveDate.AddDays(2);
+        var followingMonday = effectiveDate.AddDays(7);
+        var followingWednesday = effectiveDate.AddDays(9);
+        var mondayTime = TimeSpan.FromHours(10);
+        var wednesdayTime = TimeSpan.FromHours(16);
+        Guid previousMondayId = default, previousWednesdayId = default;
+        Guid removedMondayId = default, removedWednesdayId = default;
+        Guid modifiedFutureId = default, attendedFutureId = default;
+        Guid originalMondaySlotId = default, originalWednesdaySlotId = default, studentId = default;
+
+        await _factory.SeedAsync(async db =>
+        {
+            teacher = await TestData.CreateTeacherAsync(db);
+            var group = await db.Groups.IgnoreQueryFilters().Include(g => g.Slots)
+                .SingleAsync(g => g.Id == teacher.GroupId);
+            var mondaySlot = group.AddSlot(DayOfWeek.Monday, mondayTime, 60);
+            var wednesdaySlot = group.AddSlot(DayOfWeek.Wednesday, wednesdayTime, 90);
+            db.GroupScheduleSlots.AddRange(mondaySlot, wednesdaySlot);
+            originalMondaySlotId = mondaySlot.Id;
+            originalWednesdaySlotId = wednesdaySlot.Id;
+
+            Session AddAt(DateOnly date, TimeSpan time, int minutes, Guid slotId)
+            {
+                var start = date.ToDateTime(TimeOnly.FromTimeSpan(time), DateTimeKind.Utc);
+                var session = Session.Create(teacher.TenantId, group.Id, start, start.AddMinutes(minutes), slotId);
+                db.Sessions.Add(session);
+                return session;
+            }
+
+            var previousMondaySession = AddAt(previousMonday, mondayTime, 60, mondaySlot.Id);
+            var previousWednesdaySession = AddAt(previousWednesday, wednesdayTime, 90, wednesdaySlot.Id);
+            var removedMondaySession = AddAt(effectiveDate, mondayTime, 60, mondaySlot.Id);
+            var removedWednesdaySession = AddAt(nextWednesday, wednesdayTime, 90, wednesdaySlot.Id);
+            var modifiedSession = AddAt(followingMonday, mondayTime, 60, mondaySlot.Id);
+            modifiedSession.Reschedule(modifiedSession.StartTime, modifiedSession.EndTime.AddMinutes(30));
+            var attendedSession = AddAt(followingWednesday, wednesdayTime, 90, wednesdaySlot.Id);
+
+            studentId = await TestData.AddStudentAsync(db, teacher.TenantId, withMembership: false);
+            db.AttendanceRecords.Add(AttendanceRecord.RecordPresence(
+                teacher.TenantId, attendedSession.Id, studentId, ScanMethod.ManualEntry, null, null, teacher.OwnerId));
+            await db.SaveChangesAsync();
+
+            previousMondayId = previousMondaySession.Id;
+            previousWednesdayId = previousWednesdaySession.Id;
+            removedMondayId = removedMondaySession.Id;
+            removedWednesdayId = removedWednesdaySession.Id;
+            modifiedFutureId = modifiedSession.Id;
+            attendedFutureId = attendedSession.Id;
+        });
+
+        var response = await _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId)
+            .PutAsJsonAsync($"/api/Groups/{teacher.GroupId}/schedule", new
+            {
+                effectiveFrom = effectiveDate.ToString("yyyy-MM-dd"),
+                slots = new[]
+                {
+                    new { day = "Monday", startTime = "16:00:00", durationMinutes = 90 },
+                    new { day = "Wednesday", startTime = "10:00:00", durationMinutes = 60 }
+                }
+            });
+
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+
+        var sessions = await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
+            .Where(s => s.TenantId == teacher.TenantId && s.GroupId == teacher.GroupId)
+            .ToListAsync());
+        var byId = sessions.ToDictionary(session => session.Id);
+
+        Assert.True(byId.TryGetValue(previousMondayId, out var previousMondaySession));
+        Assert.Null(previousMondaySession!.SlotId);
+        Assert.True(byId.TryGetValue(previousWednesdayId, out var previousWednesdaySession));
+        Assert.Null(previousWednesdaySession!.SlotId);
+        Assert.DoesNotContain(removedMondayId, byId.Keys);
+        Assert.DoesNotContain(removedWednesdayId, byId.Keys);
+
+        Assert.True(byId.TryGetValue(modifiedFutureId, out var modifiedFuture));
+        Assert.Equal(followingMonday.ToDateTime(TimeOnly.FromTimeSpan(mondayTime), DateTimeKind.Utc), modifiedFuture!.StartTime);
+        Assert.Equal(TimeSpan.FromMinutes(90), modifiedFuture.EndTime - modifiedFuture.StartTime);
+        Assert.Null(modifiedFuture.SlotId);
+
+        Assert.True(byId.TryGetValue(attendedFutureId, out var attendedFuture));
+        Assert.Null(attendedFuture!.SlotId);
+        Assert.True(await _factory.QueryAsync(db => db.AttendanceRecords.IgnoreQueryFilters()
+            .AnyAsync(record => record.SessionId == attendedFutureId && record.StudentId == studentId)));
+
+        DateTime At(DateOnly date, TimeSpan time) => date.ToDateTime(TimeOnly.FromTimeSpan(time), DateTimeKind.Utc);
+        Assert.Contains(sessions, session => session.StartTime == At(effectiveDate, wednesdayTime)
+                                             && session.EndTime - session.StartTime == TimeSpan.FromMinutes(90));
+        Assert.Contains(sessions, session => session.StartTime == At(nextWednesday, mondayTime)
+                                             && session.EndTime - session.StartTime == TimeSpan.FromMinutes(60));
+        Assert.Contains(sessions, session => session.StartTime == At(followingMonday, wednesdayTime)
+                                             && session.EndTime - session.StartTime == TimeSpan.FromMinutes(90));
+        Assert.Contains(sessions, session => session.StartTime == At(followingWednesday, mondayTime)
+                                             && session.EndTime - session.StartTime == TimeSpan.FromMinutes(60));
+        Assert.DoesNotContain(sessions, session => session.SlotId == originalMondaySlotId
+                                                    || session.SlotId == originalWednesdaySlotId);
+    }
+
+    private static DateOnly NextOrSame(DateOnly date, DayOfWeek day)
+        => date.AddDays(((int)day - (int)date.DayOfWeek + 7) % 7);
 }

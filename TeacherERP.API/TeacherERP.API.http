@@ -468,6 +468,21 @@ Content-Type: application/json
   ]
 }
 
+### B11: تبديل المواعيد الأسبوعية من تاريخ سريان — أرسل القالب كاملًا، مع كل المواعيد التي تريد الإبقاء عليها
+PUT {{TeacherERP.API_HostAddress}}/api/Groups/{{groupId}}/schedule
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "effectiveFrom": "2026-12-07",
+  "confirmRoomConflicts": false,
+  "slots": [
+    { "day": "Monday", "startTime": "16:00:00", "durationMinutes": 90 },
+    { "day": "Wednesday", "startTime": "10:00:00", "durationMinutes": 60 }
+  ]
+}
+
 ### B6: استعادة حصة ملغاة بعد مراجعة التحذير
 POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/restore?confirmRoomConflicts=true
 Authorization: Bearer {{teacherToken}}
