@@ -14,6 +14,7 @@ using TeacherERP.Application.Scheduling;
 using TeacherERP.Application.Sessions;
 using TeacherERP.Application.Teachers;
 using TeacherERP.Application.Centers;
+using TeacherERP.Application.Finance;
 
 namespace TeacherERP.Application
 {
@@ -55,6 +56,7 @@ namespace TeacherERP.Application
             services.AddScoped<ICenterProvisioningService, CenterProvisioningService>();
             services.AddScoped<ICenterMembershipCleanupJob, CenterMembershipCleanupJob>();
             services.AddScoped<ICenterJoinRequestNotifier, CenterJoinRequestNotifier>();
+            services.AddScoped<IFinancialLedgerService, FinancialLedgerService>();
 
             return services;
         }

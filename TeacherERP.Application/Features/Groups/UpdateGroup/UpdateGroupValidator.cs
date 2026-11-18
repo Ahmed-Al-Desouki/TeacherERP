@@ -34,6 +34,8 @@ namespace TeacherERP.Application.Features.Groups.UpdateGroup
                 .MaximumLength(500).WithMessage("WhatsApp link must not exceed 500 characters.")
                 .Must(BeHttpUrl).WithMessage("WhatsApp link must be a valid http or https URL.")
                 .When(x => !string.IsNullOrWhiteSpace(x.WhatsAppGroupLink));
+
+            Include(new GroupPricingRules<UpdateGroupCommand>());
         }
 
         private static bool BeHttpUrl(string? value)

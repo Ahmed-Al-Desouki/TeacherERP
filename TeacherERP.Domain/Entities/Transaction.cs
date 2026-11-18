@@ -22,14 +22,14 @@ namespace TeacherERP.Domain.Entities
         public TransactionStatus Status { get; private set; }
 
         /// <summary>رابط صورة الإيصال المرفوعة في حالات الدفع الإلكتروني الخارجي (InstaPay)</summary>
-        public string ReceiptImageUrl { get; private set; }
+        public string? ReceiptImageUrl { get; private set; }
 
         /// <summary>يربط المعاملة المالية بحصة محددة (مهم جداً للطلاب الذين يدفعون بالحصة)</summary>
         public Guid? RelatedSessionId { get; private set; }
 
         private Transaction() { }
 
-        public static Transaction CreatePayment(Guid tenantId, Guid studentId, Guid adminId, decimal amount, PaymentType type, Guid? sessionId = null, string receiptUrl = null)
+        public static Transaction CreatePayment(Guid tenantId, Guid studentId, Guid adminId, decimal amount, PaymentType type, Guid? sessionId = null, string? receiptUrl = null)
         {
             return new Transaction
             {

@@ -3,7 +3,7 @@
 namespace TeacherERP.Application.Interfaces
 {
     // عضوية المستخدم في سنتر مع بيانات السنتر اللازمة للعرض والتحقق
-    public record TenantMembershipInfo(Guid TenantId, string TenantName, TenantRole Role, MembershipStatus MemberStatus, TenantStatus TenantStatus, string? Subject);
+    public record TenantMembershipInfo(Guid TenantId, string TenantName, TenantRole Role, MembershipStatus MemberStatus, TenantStatus TenantStatus, string? Subject, bool HasFinancialDelegation);
 
     public interface ITenantRepository
     {

@@ -92,6 +92,7 @@ namespace TeacherERP.Application.Features.Groups.UpdateGroup
                 return Result<GroupDto>.Failure(ScheduleErrors.RoomConflictConfirmationRequired, distinctRoomConflicts);
 
             group.UpdateDetails(request.Name, request.Grade, request.CenterId, request.Room, request.Capacity, request.WhatsAppGroupLink);
+            group.UpdatePricing(request.PerSessionPrice, request.MonthlyPrice);
             group.SetActive(request.IsActive);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

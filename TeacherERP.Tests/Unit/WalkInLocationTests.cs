@@ -23,18 +23,22 @@ public class WalkInLocationRecorderTests
     private readonly INotificationService _notifications = Substitute.For<INotificationService>();
     private readonly IUserRepository _users = Substitute.For<IUserRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly IFinancialLedgerService _financialLedger = Substitute.For<IFinancialLedgerService>();
 
     private readonly RunningSessionInfo _running = new(
         Guid.NewGuid(), Guid.NewGuid(), "Math A", Now.AddMinutes(-5), Now.AddMinutes(55), null, null, 100);
 
     private AttendanceRecorder CreateRecorder()
-        => new(_attendance, _enrollment, _enrollmentService, _notifications, _users, _unitOfWork, new FixedTimeProvider(Now));
+        => new(_attendance, _enrollment, _enrollmentService, _notifications, _users, _unitOfWork,
+            new FixedTimeProvider(Now), _financialLedger);
 
     public WalkInLocationRecorderTests()
     {
         _attendance
             .GetRunningSessionsAsync(TenantId, Arg.Any<DateTime>(), Arg.Any<int>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(new List<RunningSessionInfo> { _running });
+        _financialLedger.RecordPresentAttendanceAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
+            Arg.Any<Guid?>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
     }
 
     private static AttendanceRequest Request(ScanMethod method, bool registerImmediately, Guid? recordedBy = null)
@@ -133,6 +137,7 @@ public class WalkInApprovalTests
     private readonly IGroupSessionRepository _sessions = Substitute.For<IGroupSessionRepository>();
     private readonly IAttendanceRepository _attendance = Substitute.For<IAttendanceRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly IFinancialLedgerService _financialLedger = Substitute.For<IFinancialLedgerService>();
 
     private AttendanceRecord? _recorded;
 
@@ -146,10 +151,12 @@ public class WalkInApprovalTests
         _attendance
             .When(a => a.AddRecord(Arg.Any<AttendanceRecord>()))
             .Do(call => _recorded = call.Arg<AttendanceRecord>());
+        _financialLedger.RecordPresentAttendanceAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Guid>(),
+            Arg.Any<Guid?>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
     }
 
     private ApproveRequestCommandHandler CreateHandler()
-        => new(_currentUser, _tenant, _repository, _enrollmentService, _sessions, _attendance, _unitOfWork);
+        => new(_currentUser, _tenant, _repository, _enrollmentService, _sessions, _attendance, _financialLedger, _unitOfWork);
 
     private Session ExistingSession()
     {

@@ -14,5 +14,7 @@ namespace TeacherERP.Application.Features.Groups.CreateGroup
         int? Capacity,
         string? WhatsAppGroupLink,
         List<GroupSlotInput> Slots,
-        bool ConfirmRoomConflicts = false) : IRequest<Result<GroupDto>>, IGroupSchedule;
+        bool ConfirmRoomConflicts = false,
+        decimal? PerSessionPrice = null,
+        decimal? MonthlyPrice = null) : IRequest<Result<GroupDto>>, IGroupSchedule, IGroupPricing;
 }

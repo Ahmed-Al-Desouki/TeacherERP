@@ -1,0 +1,22 @@
+using TeacherERP.Domain.Entities;
+
+namespace TeacherERP.Application.Interfaces
+{
+    public sealed record FinancialSessionInfo(Guid TenantId, Guid StudentId, Guid GroupId, Guid SessionId,
+        string GroupName, string TenantTimeZoneId, DateTime SessionStartUtc, decimal? PerSessionPrice, decimal? MonthlyPrice);
+    public sealed record FinancialTransactionInfo(Guid Id, decimal Amount, PaymentType Type, TransactionStatus Status,
+        DateTime CreatedAt, Guid? RelatedSessionId);
+
+    public interface IFinancialLedgerRepository
+    {
+        Task<FinancialSessionInfo?> GetSessionInfoAsync(Guid tenantId, Guid studentId, Guid sessionId, CancellationToken cancellationToken);
+        Task<bool> HasPresentAttendanceAsync(Guid tenantId, Guid studentId, Guid sessionId, CancellationToken cancellationToken);
+        Task<List<FinancialObligation>> GetOutstandingObligationsAsync(Guid tenantId, Guid studentId, CancellationToken cancellationToken);
+        Task<FinancialObligation?> GetObligationAsync(Guid tenantId, Guid studentId, Guid sessionId, CancellationToken cancellationToken);
+        Task<bool> HasMonthlySubscriptionAsync(Guid tenantId, Guid studentId, Guid groupId, int year, int month, CancellationToken cancellationToken);
+        Task<List<FinancialTransactionInfo>> GetRecentPaymentsAsync(Guid tenantId, Guid studentId, CancellationToken cancellationToken);
+        void AddObligation(FinancialObligation obligation);
+        void AddSubscription(MonthlySubscription subscription);
+        void AddPayment(Transaction transaction);
+    }
+}

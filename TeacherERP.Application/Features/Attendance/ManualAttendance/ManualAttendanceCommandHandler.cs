@@ -154,7 +154,7 @@ namespace TeacherERP.Application.Features.Attendance.ManualAttendance
             if (existing is { Status: AttendanceStatus.Present })
             {
                 return Result<AttendanceResultDto>.Success(
-                    new AttendanceResultDto(AttendanceOutcome.AlreadyRecorded, session.Id, group.Name, existing.Status));
+                    new AttendanceResultDto(AttendanceOutcome.AlreadyRecorded, session.Id, group.Name, existing.Status, request.StudentId));
             }
 
             if (existing is not null && existing.Status != AttendanceStatus.Absent)
@@ -180,6 +180,7 @@ namespace TeacherERP.Application.Features.Attendance.ManualAttendance
 
                 // نحفظ أولاً، لتحسب إعادة الحساب بعدها الحضور الجديد
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+                await _recorder.RecordFinancialAttendanceAsync(tenantId, request.StudentId, session.Id, null, cancellationToken);
 
                 var previous = member.ConsecutiveAbsences;
                 var suspendedByAbsence = member.Status == MembershipStatus.Suspended
@@ -202,7 +203,7 @@ namespace TeacherERP.Application.Features.Attendance.ManualAttendance
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return Result<AttendanceResultDto>.Success(
-                    new AttendanceResultDto(AttendanceOutcome.Corrected, session.Id, group.Name, AttendanceStatus.Present));
+                    new AttendanceResultDto(AttendanceOutcome.Corrected, session.Id, group.Name, AttendanceStatus.Present, request.StudentId));
             }, IsolationLevel.ReadCommitted, cancellationToken);
         }
     }

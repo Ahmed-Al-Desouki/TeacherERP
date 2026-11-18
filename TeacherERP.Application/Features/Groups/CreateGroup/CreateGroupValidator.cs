@@ -31,6 +31,7 @@ namespace TeacherERP.Application.Features.Groups.CreateGroup
                 .When(x => !string.IsNullOrWhiteSpace(x.WhatsAppGroupLink));
 
             Include(new GroupSlotsRules<CreateGroupCommand>());
+            Include(new GroupPricingRules<CreateGroupCommand>());
         }
 
         private static bool BeHttpUrl(string? value)

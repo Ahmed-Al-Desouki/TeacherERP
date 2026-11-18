@@ -53,6 +53,8 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<SessionAttachment> SessionAttachments { get; set; }
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<FinancialObligation> FinancialObligations { get; set; }
+        public DbSet<MonthlySubscription> MonthlySubscriptions { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<TeacherAccessRequest> TeacherAccessRequests { get; set; }
 
@@ -233,6 +235,8 @@ namespace TeacherERP.Infrastructure.Data
                     "[EducationStage] = 'Primary' AND [GradeNumber] BETWEEN 1 AND 6) OR " +
                     "([EducationStage] IN ('Preparatory', 'Secondary') AND [GradeNumber] BETWEEN 1 AND 3)))"));
                 entity.Property(g => g.Room).HasMaxLength(50);
+                entity.Property(g => g.PerSessionPrice).HasPrecision(18, 2);
+                entity.Property(g => g.MonthlyPrice).HasPrecision(18, 2);
                 entity.Property(g => g.WhatsAppGroupLink).HasMaxLength(500);
 
                 entity.HasOne<Center>()
@@ -463,11 +467,37 @@ namespace TeacherERP.Infrastructure.Data
                 .Property(t => t.Amount)
                 .HasColumnType("decimal(18,2)");
 
+            builder.Entity<Transaction>().Property(t => t.ReceiptImageUrl).IsRequired(false);
+
+            builder.Entity<Transaction>().HasIndex(t => new { t.TenantId, t.StudentId, t.CreatedAt });
+
             builder.Entity<Transaction>()
                 .HasOne<Session>()
                 .WithMany() // المعاملة مرتبطة بجلسة، ولكن الجلسة لا تحتاج لقائمة بجميع معاملاتها
                 .HasForeignKey(t => t.RelatedSessionId)
                 .OnDelete(DeleteBehavior.SetNull); // إذا حذفت الجلسة، يبقى السجل المالي
+
+            builder.Entity<FinancialObligation>(entity =>
+            {
+                entity.Ignore(x => x.OutstandingAmount);
+                entity.Ignore(x => x.IsSettled);
+                entity.Property(x => x.GroupName).HasMaxLength(150).IsRequired();
+                entity.Property(x => x.SessionStartUtc).HasColumnType("datetime2");
+                entity.Property(x => x.Amount).HasPrecision(18, 2);
+                entity.Property(x => x.PaidAmount).HasPrecision(18, 2);
+                entity.HasIndex(x => new { x.TenantId, x.StudentId, x.SessionId }).IsUnique();
+                entity.HasIndex(x => new { x.TenantId, x.StudentId, x.CreatedAt });
+                entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<MonthlySubscription>(entity =>
+            {
+                entity.Property(x => x.Amount).HasPrecision(18, 2);
+                entity.HasIndex(x => new { x.TenantId, x.StudentId, x.GroupId, x.Year, x.Month }).IsUnique();
+                entity.HasIndex(x => x.PaymentTransactionId).IsUnique();
+                entity.HasOne<Transaction>().WithMany().HasForeignKey(x => x.PaymentTransactionId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            });
 
             // فلتر عزل السناتر على كل كيان يطبّق ITenantOwned (تلقائي، فلا يُنسى كيان جديد)
             ApplyTenantQueryFilters(builder);

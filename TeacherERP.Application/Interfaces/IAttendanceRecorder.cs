@@ -7,7 +7,7 @@ namespace TeacherERP.Application.Interfaces
     // Corrected: تصحيح غياب (أو إدخال متأخر) لحصة انتهت، بواسطة موظف
     public enum AttendanceOutcome { Recorded, PendingCompensation, PendingApproval, AlreadyRecorded, Corrected }
 
-    public record AttendanceResultDto(AttendanceOutcome Outcome, Guid? SessionId, string? GroupName, AttendanceStatus? Status);
+    public record AttendanceResultDto(AttendanceOutcome Outcome, Guid? SessionId, string? GroupName, AttendanceStatus? Status, Guid? StudentId = null);
 
     // طلب تسجيل حضور بعد التحقق من الكود والصلاحيات (مسؤولية المستدعي)
     // AutoApproveCompensation: تعويض الطالب من مجموعة تانية يُعتمد فوراً (حاضر) بدل ما يستنى موافقة الموظف
@@ -29,5 +29,6 @@ namespace TeacherERP.Application.Interfaces
     public interface IAttendanceRecorder
     {
         Task<Result<AttendanceResultDto>> RecordAsync(AttendanceRequest request, CancellationToken cancellationToken);
+        Task RecordFinancialAttendanceAsync(Guid tenantId, Guid studentId, Guid sessionId, Guid? compensatesSessionId, CancellationToken cancellationToken);
     }
 }

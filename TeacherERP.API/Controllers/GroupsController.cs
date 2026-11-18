@@ -39,7 +39,8 @@ namespace TeacherERP.API.Controllers
         {
             var command = new UpdateGroupCommand(
                 id, request.Name, request.Grade, request.CenterId, request.Room,
-                request.Capacity, request.WhatsAppGroupLink, request.IsActive, request.ConfirmRoomConflicts);
+                request.Capacity, request.WhatsAppGroupLink, request.IsActive, request.ConfirmRoomConflicts,
+                request.PerSessionPrice, request.MonthlyPrice);
 
             var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result);

@@ -378,39 +378,99 @@ namespace TeacherERP.Infrastructure.Migrations
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.CenterInvitation", b =>
                 {
-                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
-                    b.Property<DateTime>("CreatedAt").HasColumnType("datetime2");
-                    b.Property<Guid>("CreatedByUserId").HasColumnType("uniqueidentifier");
-                    b.Property<Guid>("CenterId").HasColumnType("uniqueidentifier");
-                    b.Property<DateTime?>("AcceptedAtUtc").HasColumnType("datetime2");
-                    b.Property<Guid?>("AcceptedByTenantId").HasColumnType("uniqueidentifier");
-                    b.Property<DateTime>("ExpiresAtUtc").HasColumnType("datetime2");
-                    b.Property<string>("Status").IsRequired().HasMaxLength(16).HasColumnType("nvarchar(16)");
-                    b.Property<string>("TokenHash").IsRequired().HasMaxLength(64).HasColumnType("nvarchar(64)");
-                    b.Property<DateTime?>("UpdatedAt").HasColumnType("datetime2");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("AcceptedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("AcceptedByTenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
-                    b.HasIndex("CenterId", "Status", "CreatedAt");
+
                     b.HasIndex("ExpiresAtUtc");
-                    b.HasIndex("TokenHash").IsUnique();
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("CenterId", "Status", "CreatedAt");
+
                     b.ToTable("CenterInvitations");
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.CenterJoinRequest", b =>
                 {
-                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
-                    b.Property<DateTime>("CreatedAt").HasColumnType("datetime2");
-                    b.Property<Guid>("CenterId").HasColumnType("uniqueidentifier");
-                    b.Property<string>("DecisionNote").HasMaxLength(300).HasColumnType("nvarchar(300)");
-                    b.Property<DateTime>("LastNotifiedAtUtc").HasColumnType("datetime2");
-                    b.Property<DateTime?>("ReviewedAtUtc").HasColumnType("datetime2");
-                    b.Property<Guid?>("ReviewedByUserId").HasColumnType("uniqueidentifier");
-                    b.Property<string>("Status").IsRequired().HasMaxLength(16).HasColumnType("nvarchar(16)");
-                    b.Property<Guid>("TenantId").HasColumnType("uniqueidentifier");
-                    b.Property<DateTime?>("UpdatedAt").HasColumnType("datetime2");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CenterId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("LastNotifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
-                    b.HasIndex("CenterId", "Status", "CreatedAt");
+
+                    b.HasIndex("CenterId", "TenantId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 'Pending'");
+
                     b.HasIndex("TenantId", "Status");
-                    b.HasIndex("CenterId", "TenantId").IsUnique().HasFilter("[Status] = 'Pending'");
+
+                    b.HasIndex("CenterId", "Status", "CreatedAt");
+
                     b.ToTable("CenterJoinRequests");
                 });
 
@@ -525,6 +585,56 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.ToTable("EnrollmentRequests");
                 });
 
+            modelBuilder.Entity("TeacherERP.Domain.Entities.FinancialObligation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("GroupName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<decimal>("PaidAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("SessionStartUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "StudentId", "CreatedAt");
+
+                    b.HasIndex("TenantId", "StudentId", "SessionId")
+                        .IsUnique();
+
+                    b.ToTable("FinancialObligations");
+                });
+
             modelBuilder.Entity("TeacherERP.Domain.Entities.Group", b =>
                 {
                     b.Property<Guid>("Id")
@@ -540,9 +650,6 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("GradeNumber")
-                        .HasColumnType("int");
-
                     b.Property<string>("EducationStage")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
@@ -552,13 +659,24 @@ namespace TeacherERP.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("GradeNumber")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<decimal?>("MonthlyPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<decimal?>("PerSessionPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Room")
                         .HasMaxLength(50)
@@ -581,7 +699,10 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.HasIndex("TenantId", "Name")
                         .IsUnique();
 
-                    b.ToTable("Groups", t => t.HasCheckConstraint("CK_Groups_SchoolGrade", "([EducationStage] IS NULL AND [GradeNumber] IS NULL) OR ([EducationStage] IS NOT NULL AND [GradeNumber] IS NOT NULL AND (([EducationStage] = 'Primary' AND [GradeNumber] BETWEEN 1 AND 6) OR ([EducationStage] IN ('Preparatory', 'Secondary') AND [GradeNumber] BETWEEN 1 AND 3)))"));
+                    b.ToTable("Groups", t =>
+                        {
+                            t.HasCheckConstraint("CK_Groups_SchoolGrade", "([EducationStage] IS NULL AND [GradeNumber] IS NULL) OR ([EducationStage] IS NOT NULL AND [GradeNumber] IS NOT NULL AND (([EducationStage] = 'Primary' AND [GradeNumber] BETWEEN 1 AND 6) OR ([EducationStage] IN ('Preparatory', 'Secondary') AND [GradeNumber] BETWEEN 1 AND 3)))");
+                        });
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.GroupAdminRequest", b =>
@@ -792,6 +913,51 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.HasIndex("UserId", "DeviceId");
 
                     b.ToTable("LoginSessions");
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.MonthlySubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("PaymentTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentTransactionId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "StudentId", "GroupId", "Year", "Month")
+                        .IsUnique();
+
+                    b.ToTable("MonthlySubscriptions");
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.Notification", b =>
@@ -1194,7 +1360,6 @@ namespace TeacherERP.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ReceiptImageUrl")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid?>("RelatedSessionId")
@@ -1223,7 +1388,7 @@ namespace TeacherERP.Infrastructure.Migrations
 
                     b.HasIndex("StudentId");
 
-                    b.HasIndex("TenantId");
+                    b.HasIndex("TenantId", "StudentId", "CreatedAt");
 
                     b.ToTable("Transactions");
                 });
@@ -1367,16 +1532,26 @@ namespace TeacherERP.Infrastructure.Migrations
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.CenterInvitation", b =>
                 {
-                    b.HasOne("TeacherERP.Domain.Entities.Center", null).WithMany().HasForeignKey("CenterId")
-                        .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("TeacherERP.Domain.Entities.Center", null)
+                        .WithMany()
+                        .HasForeignKey("CenterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.CenterJoinRequest", b =>
                 {
-                    b.HasOne("TeacherERP.Domain.Entities.Center", null).WithMany().HasForeignKey("CenterId")
-                        .OnDelete(DeleteBehavior.Restrict).IsRequired();
-                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null).WithMany().HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    b.HasOne("TeacherERP.Domain.Entities.Center", null)
+                        .WithMany()
+                        .HasForeignKey("CenterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.CenterTeacher", b =>
@@ -1424,6 +1599,15 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Navigation("Group");
 
                     b.Navigation("Student");
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.FinancialObligation", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.Group", b =>
@@ -1522,6 +1706,21 @@ namespace TeacherERP.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.MonthlySubscription", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("PaymentTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.Notification", b =>

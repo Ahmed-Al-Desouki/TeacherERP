@@ -117,6 +117,13 @@ namespace TeacherERP.API.Security
                 return TenantErrors.InsufficientRole;
             }
 
+            if (requirement.RequiresFinancialDelegation
+                && membership.Role == TenantRole.Assistant
+                && !membership.HasFinancialDelegation)
+            {
+                return TenantErrors.InsufficientRole;
+            }
+
             _currentTenant.Set(new TenantContext(membership.TenantId, membership.Role, membership.MemberStatus));
             return null;
         }

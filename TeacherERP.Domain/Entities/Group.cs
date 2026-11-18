@@ -30,6 +30,12 @@ namespace TeacherERP.Domain.Entities
         /// <summary>السعة القصوى للمجموعة (اختيارية)</summary>
         public int? Capacity { get; private set; }
 
+        /// <summary>سعر الحصة الواحدة، فارغ إذا لم يُحدَّد بعد</summary>
+        public decimal? PerSessionPrice { get; private set; }
+
+        /// <summary>سعر الاشتراك الشهري، فارغ إذا لم يُحدَّد بعد</summary>
+        public decimal? MonthlyPrice { get; private set; }
+
         /// <summary>رابط الانضمام لمجموعة الواتساب ليستخدم في الـ Deep Linking (اختياري)</summary>
         public string? WhatsAppGroupLink { get; private set; }
 
@@ -50,8 +56,11 @@ namespace TeacherERP.Domain.Entities
             Guid centerId,
             string? room,
             int? capacity,
-            string? whatsappLink)
+            string? whatsappLink,
+            decimal? perSessionPrice = null,
+            decimal? monthlyPrice = null)
         {
+            ValidatePricing(perSessionPrice, monthlyPrice);
             return new Group
             {
                 TenantId = tenantId,
@@ -62,6 +71,8 @@ namespace TeacherERP.Domain.Entities
                 CenterId = centerId,
                 Room = Clean(room),
                 Capacity = capacity,
+                PerSessionPrice = perSessionPrice,
+                MonthlyPrice = monthlyPrice,
                 WhatsAppGroupLink = Clean(whatsappLink),
                 IsActive = true,
                 Slots = new List<GroupScheduleSlot>(),
@@ -77,8 +88,11 @@ namespace TeacherERP.Domain.Entities
             Guid centerId,
             string? room,
             int? capacity,
-            string? whatsappLink)
+            string? whatsappLink,
+            decimal? perSessionPrice = null,
+            decimal? monthlyPrice = null)
         {
+            ValidatePricing(perSessionPrice, monthlyPrice);
             return new Group
             {
                 TenantId = tenantId,
@@ -89,6 +103,8 @@ namespace TeacherERP.Domain.Entities
                 CenterId = centerId,
                 Room = Clean(room),
                 Capacity = capacity,
+                PerSessionPrice = perSessionPrice,
+                MonthlyPrice = monthlyPrice,
                 WhatsAppGroupLink = Clean(whatsappLink),
                 IsActive = true,
                 Slots = new List<GroupScheduleSlot>(),
@@ -138,11 +154,39 @@ namespace TeacherERP.Domain.Entities
             MarkAsUpdated();
         }
 
+        /// <summary>تغيير الأسعار الحالية دون المساس بالمعاملات المسجلة سابقاً</summary>
+        public void UpdatePricing(decimal? perSessionPrice, decimal? monthlyPrice)
+        {
+            ValidatePricing(perSessionPrice, monthlyPrice);
+
+            if (PerSessionPrice == perSessionPrice && MonthlyPrice == monthlyPrice)
+            {
+                return;
+            }
+
+            PerSessionPrice = perSessionPrice;
+            MonthlyPrice = monthlyPrice;
+            MarkAsUpdated();
+        }
+
         /// <summary>أرشفة المجموعة (لا تولّد حصصاً جديدة) أو إعادتها</summary>
         public void SetActive(bool isActive)
         {
             IsActive = isActive;
             MarkAsUpdated();
+        }
+
+        private static void ValidatePricing(decimal? perSessionPrice, decimal? monthlyPrice)
+        {
+            if (perSessionPrice is < 0m)
+            {
+                throw new ArgumentOutOfRangeException(nameof(perSessionPrice), "The per-session price cannot be negative.");
+            }
+
+            if (monthlyPrice is < 0m)
+            {
+                throw new ArgumentOutOfRangeException(nameof(monthlyPrice), "The monthly price cannot be negative.");
+            }
         }
 
         private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

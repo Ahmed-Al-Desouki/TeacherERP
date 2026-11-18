@@ -15,6 +15,7 @@ namespace TeacherERP.Application.Features.Enrollment.ApproveRequest
         private readonly IEnrollmentService _enrollmentService;
         private readonly IGroupSessionRepository _sessionRepository;
         private readonly IAttendanceRepository _attendanceRepository;
+        private readonly IFinancialLedgerService _financialLedger;
         private readonly IUnitOfWork _unitOfWork;
 
         public ApproveRequestCommandHandler(
@@ -24,6 +25,7 @@ namespace TeacherERP.Application.Features.Enrollment.ApproveRequest
             IEnrollmentService enrollmentService,
             IGroupSessionRepository sessionRepository,
             IAttendanceRepository attendanceRepository,
+            IFinancialLedgerService financialLedger,
             IUnitOfWork unitOfWork)
         {
             _currentUser = currentUser;
@@ -32,6 +34,7 @@ namespace TeacherERP.Application.Features.Enrollment.ApproveRequest
             _enrollmentService = enrollmentService;
             _sessionRepository = sessionRepository;
             _attendanceRepository = attendanceRepository;
+            _financialLedger = financialLedger;
             _unitOfWork = unitOfWork;
         }
 
@@ -100,6 +103,8 @@ namespace TeacherERP.Application.Features.Enrollment.ApproveRequest
             _attendanceRepository.AddRecord(AttendanceRecord.RecordPresence(
                 tenantId, sessionId, studentId, method,
                 enrollmentRequest.SourceLatitude, enrollmentRequest.SourceLongitude, recordedBy));
+
+            await _financialLedger.RecordPresentAttendanceAsync(tenantId, studentId, sessionId, null, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }

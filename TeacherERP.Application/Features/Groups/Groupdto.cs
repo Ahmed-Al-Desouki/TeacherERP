@@ -13,6 +13,8 @@ namespace TeacherERP.Application.Features.Groups
         Guid CenterId,
         string? Room,
         int? Capacity,
+        decimal? PerSessionPrice,
+        decimal? MonthlyPrice,
         string? WhatsAppGroupLink,
         bool IsActive,
         List<GroupSlotDto> Slots)
@@ -26,6 +28,8 @@ namespace TeacherERP.Application.Features.Groups
                 group.CenterId,
                 group.Room,
                 group.Capacity,
+                group.PerSessionPrice,
+                group.MonthlyPrice,
                 group.WhatsAppGroupLink,
                 group.IsActive,
                 group.Slots

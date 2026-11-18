@@ -119,6 +119,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(AuthPolicies.TenantOwner, policy =>
         policy.RequireAuthenticatedUser().AddRequirements(new TenantRequirement(TenantRole.Owner)));
 
+    options.AddPolicy(AuthPolicies.TenantFinance, policy =>
+        policy.RequireAuthenticatedUser().AddRequirements(new TenantRequirement(true, TenantRole.Owner, TenantRole.Assistant)));
+
     // مدير النظام: من دور الـ Identity نفسه (بلا سنتر حالي)، لأنه لا ينتمي لأي مساحة مدرس
     options.AddPolicy(AuthPolicies.AdministratorOnly, policy =>
         policy.RequireAuthenticatedUser().RequireRole(RoleNames.Administrator));

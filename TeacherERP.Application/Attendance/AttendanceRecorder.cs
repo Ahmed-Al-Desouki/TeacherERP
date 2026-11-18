@@ -16,6 +16,7 @@ namespace TeacherERP.Application.Attendance
         private readonly IUserRepository _userRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
+        private readonly IFinancialLedgerService _financialLedger;
 
         public AttendanceRecorder(
             IAttendanceRepository attendanceRepository,
@@ -24,7 +25,8 @@ namespace TeacherERP.Application.Attendance
             INotificationService notificationService,
             IUserRepository userRepository,
             IUnitOfWork unitOfWork,
-            TimeProvider timeProvider)
+            TimeProvider timeProvider,
+            IFinancialLedgerService financialLedger)
         {
             _attendanceRepository = attendanceRepository;
             _enrollmentRepository = enrollmentRepository;
@@ -33,7 +35,12 @@ namespace TeacherERP.Application.Attendance
             _userRepository = userRepository;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
+            _financialLedger = financialLedger;
         }
+
+        public Task RecordFinancialAttendanceAsync(Guid tenantId, Guid studentId, Guid sessionId,
+            Guid? compensatesSessionId, CancellationToken cancellationToken) =>
+            _financialLedger.RecordPresentAttendanceAsync(tenantId, studentId, sessionId, compensatesSessionId, cancellationToken);
 
         public async Task<Result<AttendanceResultDto>> RecordAsync(AttendanceRequest request, CancellationToken cancellationToken)
         {
@@ -114,7 +121,7 @@ namespace TeacherERP.Application.Attendance
             if (existing is not null)
             {
                 return Result<AttendanceResultDto>.Success(
-                    new AttendanceResultDto(AttendanceOutcome.AlreadyRecorded, session.SessionId, session.GroupName, existing.Status));
+                    new AttendanceResultDto(AttendanceOutcome.AlreadyRecorded, session.SessionId, session.GroupName, existing.Status, request.StudentId));
             }
 
             var student = await _userRepository.GetByIdAsync(request.StudentId, cancellationToken);
@@ -142,7 +149,7 @@ namespace TeacherERP.Application.Attendance
                     }
 
                     return Result<AttendanceResultDto>.Success(
-                        new AttendanceResultDto(AttendanceOutcome.PendingApproval, session.SessionId, session.GroupName, null));
+                        new AttendanceResultDto(AttendanceOutcome.PendingApproval, session.SessionId, session.GroupName, null, request.StudentId));
                 }
 
                 var joinRequest = EnrollmentRequest.Create(request.TenantId, request.StudentId, session.GroupId, EnrollmentRequestType.Join);
@@ -179,6 +186,9 @@ namespace TeacherERP.Application.Attendance
             _attendanceRepository.AddRecord(record);
 
             if (status == AttendanceStatus.Present)
+                await RecordFinancialAttendanceAsync(request.TenantId, request.StudentId, session.SessionId, compensates, cancellationToken);
+
+            if (status == AttendanceStatus.Present)
             {
                 // الحضور يصفّر عداد الغياب المتتالي عند هذا المدرس
                 var tracked = await _enrollmentRepository.GetMemberAsync(request.TenantId, request.StudentId, cancellationToken);
@@ -197,7 +207,7 @@ namespace TeacherERP.Application.Attendance
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var outcome = status == AttendanceStatus.Present ? AttendanceOutcome.Recorded : AttendanceOutcome.PendingCompensation;
-            return Result<AttendanceResultDto>.Success(new AttendanceResultDto(outcome, session.SessionId, session.GroupName, status));
+            return Result<AttendanceResultDto>.Success(new AttendanceResultDto(outcome, session.SessionId, session.GroupName, status, request.StudentId));
         }
     }
 }

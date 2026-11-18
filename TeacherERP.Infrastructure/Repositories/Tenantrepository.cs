@@ -22,7 +22,7 @@ namespace TeacherERP.Infrastructure.Repositories
                 .IgnoreQueryFilters()
                 .AsNoTracking()
                 .Where(m => m.UserId == userId && m.TenantId == tenantId)
-                .Select(m => new TenantMembershipInfo(m.TenantId, m.Tenant.Name, m.Role, m.Status, m.Tenant.Status, m.Tenant.Subject))
+                .Select(m => new TenantMembershipInfo(m.TenantId, m.Tenant.Name, m.Role, m.Status, m.Tenant.Status, m.Tenant.Subject, m.HasFinancialDelegation))
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
@@ -48,7 +48,7 @@ namespace TeacherERP.Infrastructure.Repositories
                 .Where(m => m.UserId == userId)
                 .OrderBy(m => m.Tenant.Name)
                 .ThenBy(m => m.TenantId)
-                .Select(m => new TenantMembershipInfo(m.TenantId, m.Tenant.Name, m.Role, m.Status, m.Tenant.Status, m.Tenant.Subject))
+                .Select(m => new TenantMembershipInfo(m.TenantId, m.Tenant.Name, m.Role, m.Status, m.Tenant.Status, m.Tenant.Subject, m.HasFinancialDelegation))
                 .ToListAsync(cancellationToken);
         }
 

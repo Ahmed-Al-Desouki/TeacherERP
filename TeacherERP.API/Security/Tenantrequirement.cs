@@ -9,10 +9,15 @@ namespace TeacherERP.API.Security
         public const string HeaderName = "X-Teacher-Id";
 
         public IReadOnlyCollection<TenantRole> AllowedRoles { get; }
+        public bool RequiresFinancialDelegation { get; }
 
         public TenantRequirement(params TenantRole[] allowedRoles)
+            : this(false, allowedRoles) { }
+
+        public TenantRequirement(bool requiresFinancialDelegation, params TenantRole[] allowedRoles)
         {
             AllowedRoles = allowedRoles;
+            RequiresFinancialDelegation = requiresFinancialDelegation;
         }
 
         public bool Allows(TenantRole role) => AllowedRoles.Count == 0 || AllowedRoles.Contains(role);
