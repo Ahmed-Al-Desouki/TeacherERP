@@ -138,6 +138,9 @@ namespace TeacherERP.Tests.Unit
             Assert.Equal(0m, result.Value!.RemainingDebt);
             Assert.Equal(20m, member.CurrentBalance);
             Assert.True(today.IsSettled);
+            repository.Received(1).AddPlatformCommission(Arg.Is<PlatformCommission>(x =>
+                x.Type == PlatformCommissionType.PerSession && x.Amount == 1m
+                && x.SessionId == SessionId && x.SourceTransactionId != Guid.Empty));
         }
 
         [Fact]
@@ -162,6 +165,9 @@ namespace TeacherERP.Tests.Unit
             Assert.Equal(0m, today.OutstandingAmount);
             Assert.Equal(50m, member.CurrentBalance);
             repository.Received(1).AddSubscription(Arg.Is<MonthlySubscription>(x => x.Amount == 500m && x.Month == 11));
+            repository.Received(1).AddPlatformCommission(Arg.Is<PlatformCommission>(x =>
+                x.Type == PlatformCommissionType.MonthlySubscription && x.Amount == 5m
+                && x.SubscriptionYear == 2026 && x.SubscriptionMonth == 11));
         }
 
         private static (FinancialLedgerService Service, IFinancialLedgerRepository Repository,

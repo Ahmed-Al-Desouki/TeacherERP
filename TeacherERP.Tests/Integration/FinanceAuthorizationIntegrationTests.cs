@@ -149,10 +149,15 @@ public sealed class FinanceAuthorizationIntegrationTests : IClassFixture<CustomW
             Obligation = await db.FinancialObligations.IgnoreQueryFilters().SingleAsync(x => x.SessionId == sessionId),
             Audit = await db.AuditLogs.IgnoreQueryFilters().SingleAsync(x =>
                 x.TenantId == teacher.TenantId && x.Action == AuditAction.CashPaymentCollected),
+            Commission = await db.PlatformCommissions.IgnoreQueryFilters().SingleAsync(x =>
+                x.TenantId == teacher.TenantId && x.StudentId == studentId
+                && x.Type == PlatformCommissionType.MonthlySubscription),
             Balance = await db.TenantMembers.IgnoreQueryFilters().Where(x => x.TenantId == teacher.TenantId && x.UserId == studentId)
                 .Select(x => x.CurrentBalance).SingleAsync()
         });
         Assert.Equal(500m, persisted.Subscription.Amount);
+        Assert.Equal(5m, persisted.Commission.Amount);
+        Assert.Equal(PaymentType.MonthlySubscription, persisted.Transaction.Type);
         Assert.Equal(550m, persisted.Transaction.Amount);
         Assert.Equal(TransactionStatus.Successful, persisted.Transaction.Status);
         Assert.True(persisted.Obligation.IsSettled);

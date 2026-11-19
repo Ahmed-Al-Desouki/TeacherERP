@@ -199,6 +199,9 @@ public sealed class PaymobPaymentIntegrationTests : IClassFixture<CustomWebAppli
             .Where(x => x.Id == scenario.ObligationId).Select(x => x.PaidAmount).SingleAsync()));
         Assert.Equal(1, await _factory.QueryAsync(db => db.PaymentEvents.IgnoreQueryFilters()
             .CountAsync(x => x.TransactionId == paymentId && x.ProviderEventId == "810002")));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .CountAsync(x => x.TenantId == scenario.Teacher.TenantId && x.StudentId == scenario.StudentId
+                && x.SessionId == scenario.SessionId && x.Amount == 1m)));
         Assert.Equal(1, await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters()
             .CountAsync(x => x.TenantId == scenario.Teacher.TenantId
                 && x.Action == AuditAction.PaymobPaymentSucceeded)));

@@ -59,6 +59,8 @@ namespace TeacherERP.Application
             services.AddScoped<IFinancialLedgerService, FinancialLedgerService>();
             services.AddScoped<ITeacherPaymentService, TeacherPaymentService>();
             services.AddScoped<IPaymobPaymentService, PaymobPaymentService>();
+            services.AddScoped<IPlatformCommissionService, PlatformCommissionService>();
+            services.AddScoped<IPlatformCommissionSettingsService, PlatformCommissionSettingsService>();
 
             return services;
         }

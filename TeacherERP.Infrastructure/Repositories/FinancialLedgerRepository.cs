@@ -108,6 +108,74 @@ namespace TeacherERP.Infrastructure.Repositories
 
         public void AddPaymentEvent(PaymentEvent paymentEvent) => _context.PaymentEvents.Add(paymentEvent);
 
+        public Task<bool> HasSessionCommissionAsync(Guid tenantId, Guid studentId, Guid sessionId,
+            CancellationToken cancellationToken) =>
+            _context.PlatformCommissions.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenantId
+                && x.StudentId == studentId && x.SessionId == sessionId
+                && x.Type == PlatformCommissionType.PerSession, cancellationToken);
+
+        public void AddPlatformCommission(PlatformCommission commission) =>
+            _context.PlatformCommissions.Add(commission);
+
+        public Task<PagedResult<PlatformCommissionItem>> GetPlatformCommissionsPageAsync(int year, int month,
+            bool unsettledOnly, PageRequest page, CancellationToken cancellationToken)
+        {
+            var fromUtc = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var toUtc = fromUtc.AddMonths(1);
+            var query = from commission in _context.PlatformCommissions.IgnoreQueryFilters().AsNoTracking()
+                        join tenant in _context.Tenants.IgnoreQueryFilters().AsNoTracking()
+                            on commission.TenantId equals tenant.Id
+                        join teacher in _context.Users.IgnoreQueryFilters().AsNoTracking()
+                            on tenant.OwnerId equals teacher.Id
+                        join student in _context.Users.IgnoreQueryFilters().AsNoTracking()
+                            on commission.StudentId equals student.Id
+                        where commission.CreatedAt >= fromUtc && commission.CreatedAt < toUtc
+                            && (!unsettledOnly || commission.SettledAtUtc == null)
+                        orderby tenant.Name, commission.CreatedAt, commission.Id
+                        select new PlatformCommissionItem(commission.Id, commission.TenantId, tenant.Name,
+                            teacher.Id, teacher.FullName, student.Id, student.FullName,
+                            commission.SourceTransactionId, commission.SessionId, commission.Type,
+                            commission.Amount, commission.CreatedAt, commission.SettledAtUtc,
+                            commission.SettlementReference);
+            return query.ToPagedAsync(page, cancellationToken);
+        }
+
+        public Task<List<PlatformCommissionSummary>> GetPlatformCommissionSummariesAsync(int year, int month,
+            CancellationToken cancellationToken)
+        {
+            var fromUtc = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var toUtc = fromUtc.AddMonths(1);
+            var query = from commission in _context.PlatformCommissions.IgnoreQueryFilters().AsNoTracking()
+                        join tenant in _context.Tenants.IgnoreQueryFilters().AsNoTracking()
+                            on commission.TenantId equals tenant.Id
+                        join teacher in _context.Users.IgnoreQueryFilters().AsNoTracking()
+                            on tenant.OwnerId equals teacher.Id
+                        where commission.CreatedAt >= fromUtc && commission.CreatedAt < toUtc
+                        group commission by new { TenantId = tenant.Id, TenantName = tenant.Name,
+                            TeacherId = teacher.Id, TeacherName = teacher.FullName } into grouped
+                        orderby grouped.Key.TenantName
+                        select new PlatformCommissionSummary(grouped.Key.TenantId, grouped.Key.TenantName,
+                            grouped.Key.TeacherId, grouped.Key.TeacherName, grouped.Count(), grouped.Sum(x => x.Amount),
+                            grouped.Count(x => x.SettledAtUtc != null),
+                            grouped.Sum(x => x.SettledAtUtc != null ? x.Amount : 0m),
+                            grouped.Count(x => x.SettledAtUtc == null),
+                            grouped.Sum(x => x.SettledAtUtc == null ? x.Amount : 0m));
+            return query.ToListAsync(cancellationToken);
+        }
+
+        public Task<List<PlatformCommission>> GetUnsettledPlatformCommissionsAsync(Guid tenantId,
+            DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken) =>
+            _context.PlatformCommissions.IgnoreQueryFilters().Where(x => x.TenantId == tenantId
+                && x.SettledAtUtc == null && x.CreatedAt >= fromUtc && x.CreatedAt < toUtc)
+                .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(cancellationToken);
+
+        public Task<PlatformCommissionSettings?> GetPlatformCommissionSettingsAsync(CancellationToken cancellationToken) =>
+            _context.PlatformCommissionSettings.FirstOrDefaultAsync(
+                x => x.Id == PlatformCommissionSettings.GlobalSettingsId, cancellationToken);
+
+        public void AddPlatformCommissionSettings(PlatformCommissionSettings settings) =>
+            _context.PlatformCommissionSettings.Add(settings);
+
         public Task<Transaction?> GetTransactionTrackedAsync(Guid tenantId, Guid transactionId, CancellationToken cancellationToken) =>
             _context.Transactions.IgnoreQueryFilters().FirstOrDefaultAsync(x =>
                 x.Id == transactionId && x.TenantId == tenantId, cancellationToken);

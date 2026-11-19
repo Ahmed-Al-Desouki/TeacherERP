@@ -54,6 +54,8 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<PaymentEvent> PaymentEvents { get; set; }
+        public DbSet<PlatformCommission> PlatformCommissions { get; set; }
+        public DbSet<PlatformCommissionSettings> PlatformCommissionSettings { get; set; }
         public DbSet<FinancialObligation> FinancialObligations { get; set; }
         public DbSet<MonthlySubscription> MonthlySubscriptions { get; set; }
         public DbSet<TeacherPaymentSettings> TeacherPaymentSettings { get; set; }
@@ -252,6 +254,29 @@ namespace TeacherERP.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Restrict);
                 entity.HasIndex(e => new { e.Provider, e.ProviderEventId }).IsUnique();
                 entity.HasIndex(e => new { e.TenantId, e.TransactionId, e.CreatedAt });
+            });
+
+            builder.Entity<PlatformCommission>(entity =>
+            {
+                entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(32).IsRequired();
+                entity.Property(x => x.Amount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.SettlementReference).HasMaxLength(128);
+                entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<Group>().WithMany().HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<Transaction>().WithMany().HasForeignKey(x => x.SourceTransactionId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(x => new { x.TenantId, x.StudentId, x.SessionId, x.Type })
+                    .IsUnique().HasFilter("[SessionId] IS NOT NULL");
+                entity.HasIndex(x => new { x.TenantId, x.StudentId, x.GroupId, x.SubscriptionYear, x.SubscriptionMonth, x.Type })
+                    .IsUnique().HasFilter("[SubscriptionYear] IS NOT NULL AND [SubscriptionMonth] IS NOT NULL");
+                entity.HasIndex(x => new { x.TenantId, x.CreatedAt, x.SettledAtUtc });
+            });
+
+            builder.Entity<PlatformCommissionSettings>(entity =>
+            {
+                entity.Property(x => x.PerSessionAmount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.MonthlySubscriptionAmount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.HasKey(x => x.Id);
             });
 
             builder.Entity<TeacherPaymentSettings>(entity =>

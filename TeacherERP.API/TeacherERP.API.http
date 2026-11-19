@@ -631,3 +631,37 @@ Content-Type: application/json
 {
   "granted": true
 }
+
+### C6: مدير النظام يعرض عمولات شهرية غير مسددة
+GET {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions?year=2026&month=11&unsettledOnly=true&page=1&pageSize=20
+Authorization: Bearer {{adminToken}}
+
+### C6: مدير النظام يعرض إعدادات العمولة الحالية (الافتراضي 1 و5 جنيه)
+GET {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions/settings
+Authorization: Bearer {{adminToken}}
+
+### C6: تعديل العمولة؛ التغيير يسري على الاستحقاقات الجديدة فقط
+PUT {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions/settings
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "perSessionAmount": 1.00,
+  "monthlySubscriptionAmount": 5.00
+}
+
+### C6: ملخص إجمالي العمولات والمسدّد والمتبقي لكل مدرس خلال الشهر
+GET {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions/summary?year=2026&month=11
+Authorization: Bearer {{adminToken}}
+
+### C6: مدير النظام يؤكد استلام تسوية عمولات مدرس للشهر
+POST {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions/settle-month
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "tenantId": "{{tenantId}}",
+  "year": 2026,
+  "month": 11,
+  "settlementReference": "INSTAPAY-TRANSFER-REFERENCE"
+}

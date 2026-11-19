@@ -21,6 +21,13 @@ public sealed class TeacherPaymentsIntegrationTests : IClassFixture<CustomWebApp
         await _factory.SeedAsync(async db =>
         {
             var teacher = await TestData.CreateTeacherAsync(db);
+            var commissionSettings = await db.PlatformCommissionSettings.IgnoreQueryFilters()
+                .SingleOrDefaultAsync(x => x.Id == PlatformCommissionSettings.GlobalSettingsId);
+            if (commissionSettings is null)
+                db.PlatformCommissionSettings.Add(PlatformCommissionSettings.CreateDefault());
+            else
+                commissionSettings.Update(PlatformCommissionSettings.DefaultPerSessionAmount,
+                    PlatformCommissionSettings.DefaultMonthlySubscriptionAmount, teacher.OwnerId, DateTime.UtcNow);
             var group = await db.Groups.IgnoreQueryFilters().SingleAsync(x => x.Id == teacher.GroupId);
             group.UpdatePricing(perSessionPrice, monthlyPrice);
             var studentId = await TestData.AddStudentAsync(db, teacher.TenantId, teacher.GroupId);
@@ -108,6 +115,8 @@ public sealed class TeacherPaymentsIntegrationTests : IClassFixture<CustomWebApp
         Assert.Equal(initialUploads + 2, _factory.FileStorage.UploadCount);
         Assert.Equal(0m, await _factory.QueryAsync(db => db.FinancialObligations.IgnoreQueryFilters()
             .Where(x => x.Id == s.ObligationId).Select(x => x.PaidAmount).SingleAsync()));
+        Assert.Empty(await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .Where(x => x.TenantId == s.Teacher.TenantId).ToListAsync()));
         Assert.Equal(TransactionStatus.PendingApproval, await _factory.QueryAsync(db => db.Transactions.IgnoreQueryFilters()
             .Where(x => x.TenantId == s.Teacher.TenantId && x.StudentId == s.StudentId)
             .Select(x => x.Status).SingleAsync()));
@@ -162,6 +171,89 @@ public sealed class TeacherPaymentsIntegrationTests : IClassFixture<CustomWebApp
         Assert.True(await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters().AnyAsync(x =>
             x.TenantId == s.Teacher.TenantId && x.ActorUserId == s.Teacher.OwnerId
             && x.TargetUserId == s.StudentId && x.Action == AuditAction.InstaPayPaymentApproved)));
+        Assert.Empty(await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .Where(x => x.TenantId == s.Teacher.TenantId).ToListAsync()));
+    }
+
+    [Fact]
+    public async Task FullInstaPaySessionPayment_CreatesOneCommission_AndAdministratorCanSettleTheMonth()
+    {
+        var s = await SeedAsync(debt: 100m);
+        var submitted = await Student(s).PostAsync("/api/StudentPayments/receipts",
+            ReceiptForm(s, PaymentType.PerSession, 100m));
+        var transactionId = await ReceiptIdAsync(submitted);
+        Assert.Empty(await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .Where(x => x.TenantId == s.Teacher.TenantId).ToListAsync()));
+
+        var approved = await Owner(s).PostAsync($"/api/Finance/instapay-receipts/{transactionId}/approve", null);
+        Assert.Equal(HttpStatusCode.OK, approved.StatusCode);
+        Assert.Equal(1, await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .CountAsync(x => x.TenantId == s.Teacher.TenantId && x.StudentId == s.StudentId
+                && x.SessionId == s.SessionId && x.Amount == 1m && x.SettledAtUtc == null)));
+
+        var admin = _factory.CreateClientFor(Guid.NewGuid(), role: "Administrator");
+        var now = DateTime.UtcNow;
+        var page = await admin.GetAsync($"/api/administration/platform-commissions?year={now.Year}&month={now.Month}&unsettledOnly=true");
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        var summaryResponse = await admin.GetAsync($"/api/administration/platform-commissions/summary?year={now.Year}&month={now.Month}");
+        Assert.Equal(HttpStatusCode.OK, summaryResponse.StatusCode);
+        var summary = await summaryResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var teacherSummary = summary.EnumerateArray().Single(x =>
+            x.GetProperty("tenantId").GetGuid() == s.Teacher.TenantId);
+        Assert.Equal(1m, teacherSummary.GetProperty("outstandingAmount").GetDecimal());
+        Assert.Equal(1, teacherSummary.GetProperty("outstandingCount").GetInt32());
+        var settled = await admin.PostAsJsonAsync("/api/administration/platform-commissions/settle-month",
+            new { tenantId = s.Teacher.TenantId, year = now.Year, month = now.Month, settlementReference = "TEST-TRANSFER-001" });
+        Assert.Equal(HttpStatusCode.OK, settled.StatusCode);
+        Assert.True(await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters().AnyAsync(x =>
+            x.TenantId == s.Teacher.TenantId && x.SessionId == s.SessionId && x.SettledAtUtc != null
+            && x.SettlementReference == "TEST-TRANSFER-001")));
+        Assert.True(await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters().AnyAsync(x =>
+            x.TenantId == s.Teacher.TenantId && x.Action == AuditAction.PlatformCommissionSettled)));
+        Assert.Equal(HttpStatusCode.Forbidden, (await Owner(s).GetAsync(
+            $"/api/administration/platform-commissions?year={now.Year}&month={now.Month}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task AdministratorCanChangeCommissionSettings_AndExistingCommissionKeepsItsOriginalAmount()
+    {
+        var s = await SeedAsync(debt: 100m);
+        var admin = _factory.CreateClientFor(Guid.NewGuid(), role: "Administrator");
+        var teacher = Owner(s);
+
+        var defaults = await admin.GetAsync("/api/administration/platform-commissions/settings");
+        Assert.Equal(HttpStatusCode.OK, defaults.StatusCode);
+        var defaultSettings = await defaults.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1m, defaultSettings.GetProperty("perSessionAmount").GetDecimal());
+        Assert.Equal(5m, defaultSettings.GetProperty("monthlySubscriptionAmount").GetDecimal());
+        Assert.Equal(HttpStatusCode.Forbidden, (await teacher.GetAsync(
+            "/api/administration/platform-commissions/settings")).StatusCode);
+
+        var invalid = await admin.PutAsJsonAsync("/api/administration/platform-commissions/settings",
+            new { perSessionAmount = -0.01m, monthlySubscriptionAmount = 7.25m });
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+
+        var updated = await admin.PutAsJsonAsync("/api/administration/platform-commissions/settings",
+            new { perSessionAmount = 2.50m, monthlySubscriptionAmount = 7.25m });
+        Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
+        var updatedSettings = await updated.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(2.50m, updatedSettings.GetProperty("perSessionAmount").GetDecimal());
+        Assert.Equal(7.25m, updatedSettings.GetProperty("monthlySubscriptionAmount").GetDecimal());
+
+        var submitted = await Student(s).PostAsync("/api/StudentPayments/receipts",
+            ReceiptForm(s, PaymentType.PerSession, 100m));
+        var transactionId = await ReceiptIdAsync(submitted);
+        Assert.Equal(HttpStatusCode.OK, (await teacher.PostAsync(
+            $"/api/Finance/instapay-receipts/{transactionId}/approve", null)).StatusCode);
+
+        var changedAgain = await admin.PutAsJsonAsync("/api/administration/platform-commissions/settings",
+            new { perSessionAmount = 3.00m, monthlySubscriptionAmount = 8.00m });
+        Assert.Equal(HttpStatusCode.OK, changedAgain.StatusCode);
+        Assert.Equal(2.50m, await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .Where(x => x.TenantId == s.Teacher.TenantId && x.SessionId == s.SessionId)
+            .Select(x => x.Amount).SingleAsync()));
+        Assert.True(await _factory.QueryAsync(db => db.PlatformCommissionSettings
+            .AnyAsync(x => x.PerSessionAmount == 3m && x.MonthlySubscriptionAmount == 8m)));
     }
 
     [Fact]
@@ -218,5 +310,8 @@ public sealed class TeacherPaymentsIntegrationTests : IClassFixture<CustomWebApp
         Assert.Equal(HttpStatusCode.OK, approved.StatusCode);
         Assert.True(await _factory.QueryAsync(db => db.MonthlySubscriptions.IgnoreQueryFilters()
             .AnyAsync(x => x.TenantId == s.Teacher.TenantId && x.StudentId == s.StudentId)));
+        Assert.Equal(5m, await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .Where(x => x.TenantId == s.Teacher.TenantId && x.Type == PlatformCommissionType.MonthlySubscription)
+            .Select(x => x.Amount).SingleAsync()));
     }
 }

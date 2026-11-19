@@ -1065,6 +1065,107 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.ToTable("PaymentEvents");
                 });
 
+            modelBuilder.Entity("TeacherERP.Domain.Entities.PlatformCommission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("SettledAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("SettledByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SettlementReference")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<Guid>("SourceTransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("StudentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("SubscriptionMonth")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SubscriptionYear")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("SourceTransactionId");
+
+                    b.HasIndex("StudentId");
+
+                    b.HasIndex("TenantId", "CreatedAt", "SettledAtUtc");
+
+                    b.HasIndex("TenantId", "StudentId", "SessionId", "Type")
+                        .IsUnique()
+                        .HasFilter("[SessionId] IS NOT NULL");
+
+                    b.HasIndex("TenantId", "StudentId", "GroupId", "SubscriptionYear", "SubscriptionMonth", "Type")
+                        .IsUnique()
+                        .HasFilter("[SubscriptionYear] IS NOT NULL AND [SubscriptionMonth] IS NOT NULL");
+
+                    b.ToTable("PlatformCommissions");
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.PlatformCommissionSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("MonthlySubscriptionAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PerSessionAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PlatformCommissionSettings");
+                });
+
             modelBuilder.Entity("TeacherERP.Domain.Entities.Session", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1901,6 +2002,33 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.HasOne("TeacherERP.Domain.Entities.Transaction", null)
                         .WithMany()
                         .HasForeignKey("TransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.PlatformCommission", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.Group", null)
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeacherERP.Domain.Entities.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("SourceTransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeacherERP.Domain.Entities.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("StudentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

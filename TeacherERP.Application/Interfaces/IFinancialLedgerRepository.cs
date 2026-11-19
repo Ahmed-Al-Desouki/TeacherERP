@@ -9,6 +9,13 @@ namespace TeacherERP.Application.Interfaces
         DateTime CreatedAt, Guid? RelatedSessionId);
     public sealed record PendingExternalPaymentItem(Guid Id, Guid StudentId, string StudentName, decimal Amount,
         PaymentType Type, DateTime CreatedAt, Guid SessionId, string ReceiptImageUrl);
+    public sealed record PlatformCommissionItem(Guid Id, Guid TenantId, string TenantName, Guid TeacherId,
+        string TeacherName, Guid StudentId, string StudentName, Guid SourceTransactionId, Guid? SessionId,
+        PlatformCommissionType Type, decimal Amount, DateTime CreatedAt, DateTime? SettledAtUtc,
+        string? SettlementReference);
+    public sealed record PlatformCommissionSummary(Guid TenantId, string TenantName, Guid TeacherId,
+        string TeacherName, int EntryCount, decimal TotalAmount, int SettledCount,
+        decimal SettledAmount, int OutstandingCount, decimal OutstandingAmount);
 
     public interface IFinancialLedgerRepository
     {
@@ -38,5 +45,16 @@ namespace TeacherERP.Application.Interfaces
         Task<bool> HasOpenExternalPaymentAsync(Guid tenantId, Guid studentId, PaymentType type,
             Guid contextSessionId, CancellationToken cancellationToken);
         void AddPaymentEvent(PaymentEvent paymentEvent);
+        Task<bool> HasSessionCommissionAsync(Guid tenantId, Guid studentId, Guid sessionId,
+            CancellationToken cancellationToken);
+        void AddPlatformCommission(PlatformCommission commission);
+        Task<PagedResult<PlatformCommissionItem>> GetPlatformCommissionsPageAsync(int year, int month,
+            bool unsettledOnly, PageRequest page, CancellationToken cancellationToken);
+        Task<List<PlatformCommissionSummary>> GetPlatformCommissionSummariesAsync(int year, int month,
+            CancellationToken cancellationToken);
+        Task<List<PlatformCommission>> GetUnsettledPlatformCommissionsAsync(Guid tenantId,
+            DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken);
+        Task<PlatformCommissionSettings?> GetPlatformCommissionSettingsAsync(CancellationToken cancellationToken);
+        void AddPlatformCommissionSettings(PlatformCommissionSettings settings);
     }
 }

@@ -114,6 +114,9 @@ namespace TeacherERP.Application.Finance
             var remainingDebt = debts.Sum(x => x.OutstandingAmount);
             var paymentType = request.PaymentType;
             var cashAmount = request.Amount;
+            var commissionableSessions = new List<Guid>();
+            var commissionSettings = await _repository.GetPlatformCommissionSettingsAsync(cancellationToken)
+                ?? PlatformCommissionSettings.CreateDefault();
 
             // Validate every branch before mutating tracked balances or debts. This is especially
             // important when this method participates in a larger webhook transaction that also
@@ -164,12 +167,16 @@ namespace TeacherERP.Application.Finance
 
             if (paymentType == PaymentType.DebtSettlement)
             {
+                var unpaidSessionIds = debts.Where(x => x.OutstandingAmount > 0).Select(x => x.SessionId).ToHashSet();
                 ApplyCashToDebts(debts, request.Amount);
+                commissionableSessions.AddRange(debts.Where(x => x.IsSettled && unpaidSessionIds.Contains(x.SessionId))
+                    .Select(x => x.SessionId));
                 member.AddBalance(request.Amount);
             }
             else if (paymentType == PaymentType.PerSession)
             {
-                currentDebt.ApplyPayment(request.Amount);
+                currentDebt!.ApplyPayment(request.Amount);
+                if (currentDebt.IsSettled) commissionableSessions.Add(currentDebt.SessionId);
                 member.AddBalance(request.Amount);
             }
             else if (paymentType == PaymentType.MonthlySubscription)
@@ -197,6 +204,10 @@ namespace TeacherERP.Application.Finance
                 transactionId = payment.Id;
                 _repository.AddSubscription(MonthlySubscription.Create(tenantId, request.StudentId, info.GroupId,
                     period.Year, period.Month, monthlyPrice, payment.Id));
+                if (commissionSettings.MonthlySubscriptionAmount > 0)
+                    _repository.AddPlatformCommission(PlatformCommission.ForMonthlySubscription(
+                        tenantId, request.StudentId, info.GroupId, payment.Id, period.Year, period.Month,
+                        commissionSettings.MonthlySubscriptionAmount));
                 remainingDebt = previousDebts.Sum(x => x.OutstandingAmount);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 return Result<CashPaymentResult>.Success(new CashPaymentResult(transactionId,
@@ -218,6 +229,14 @@ namespace TeacherERP.Application.Finance
             {
                 CompleteExternalPayment(externalPayment, processorId);
                 transactionId = externalPayment.Id;
+            }
+            foreach (var sessionId in commissionableSessions.Distinct())
+            {
+                if (commissionSettings.PerSessionAmount > 0
+                    && !await _repository.HasSessionCommissionAsync(tenantId, request.StudentId, sessionId, cancellationToken))
+                    _repository.AddPlatformCommission(PlatformCommission.ForSession(
+                        tenantId, request.StudentId, debts.First(x => x.SessionId == sessionId).GroupId,
+                        transactionId, sessionId, commissionSettings.PerSessionAmount));
             }
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
