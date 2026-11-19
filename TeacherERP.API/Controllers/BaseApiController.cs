@@ -25,6 +25,18 @@ namespace TeacherERP.API.Controllers
                 });
             }
 
+            if (result.Error.Code is "Finance.IdempotencyKeyReused" or "Finance.PaymobPaymentAlreadyPending")
+                return Conflict(new { errorCode = result.Error.Code, errorMessage = result.Error.Message });
+
+            if (result.Error.Code is "Finance.PaymobShopifyIntegrationNotSupported"
+                or "Finance.PaymobPaymentMethodUnsupported"
+                or "Finance.PaymobBillingProfileIncomplete")
+                return BadRequest(new { errorCode = result.Error.Code, errorMessage = result.Error.Message });
+
+            if (result.Error.Code.StartsWith("Finance.Paymob", StringComparison.Ordinal))
+                return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                    new { errorCode = result.Error.Code, errorMessage = result.Error.Message });
+
             return BadRequest(new { errorCode = result.Error.Code, errorMessage = result.Error.Message });
         }
     }

@@ -58,6 +58,7 @@ namespace TeacherERP.Application
             services.AddScoped<ICenterJoinRequestNotifier, CenterJoinRequestNotifier>();
             services.AddScoped<IFinancialLedgerService, FinancialLedgerService>();
             services.AddScoped<ITeacherPaymentService, TeacherPaymentService>();
+            services.AddScoped<IPaymobPaymentService, PaymobPaymentService>();
 
             return services;
         }

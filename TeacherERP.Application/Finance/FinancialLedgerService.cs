@@ -115,6 +115,42 @@ namespace TeacherERP.Application.Finance
             var paymentType = request.PaymentType;
             var cashAmount = request.Amount;
 
+            // Validate every branch before mutating tracked balances or debts. This is especially
+            // important when this method participates in a larger webhook transaction that also
+            // persists an immutable provider event.
+            var previousOutstanding = previousDebts.Sum(x => x.OutstandingAmount);
+            var walletAfterPreviousDebts = Math.Max(0m, member.CurrentBalance) - previousOutstanding;
+            walletAfterPreviousDebts = Math.Max(0m, walletAfterPreviousDebts);
+            if (paymentType == PaymentType.DebtSettlement)
+            {
+                if (!debts.Any(x => x.OutstandingAmount > 0))
+                    return Result<CashPaymentResult>.Failure(FinanceErrors.NoOutstandingDebt);
+            }
+            else if (paymentType == PaymentType.PerSession)
+            {
+                if (walletAfterPreviousDebts == 0m && previousOutstanding > Math.Max(0m, member.CurrentBalance))
+                    return Result<CashPaymentResult>.Failure(FinanceErrors.PreviousDebtMustBeSettled);
+                if (currentDebt is null || currentDebt.IsSettled)
+                    return Result<CashPaymentResult>.Failure(FinanceErrors.SessionChargeNotFound);
+            }
+            else if (paymentType == PaymentType.MonthlySubscription)
+            {
+                if (walletAfterPreviousDebts == 0m && previousOutstanding > Math.Max(0m, member.CurrentBalance))
+                    return Result<CashPaymentResult>.Failure(FinanceErrors.PreviousDebtMustBeSettled);
+                if (info.MonthlyPrice is not { } configuredMonthlyPrice)
+                    return Result<CashPaymentResult>.Failure(FinanceErrors.MonthlyPriceNotConfigured);
+                if (request.Amount + walletAfterPreviousDebts < configuredMonthlyPrice)
+                    return Result<CashPaymentResult>.Failure(FinanceErrors.InsufficientPayment);
+                var currentPeriod = GetCalendarMonth(info);
+                if (await _repository.HasMonthlySubscriptionAsync(tenantId, request.StudentId, info.GroupId,
+                        currentPeriod.Year, currentPeriod.Month, cancellationToken))
+                    return Result<CashPaymentResult>.Failure(FinanceErrors.SubscriptionAlreadyExists);
+            }
+            else
+            {
+                return Result<CashPaymentResult>.Failure(FinanceErrors.UnsupportedPaymentType);
+            }
+
             // المحفظة تُستخدم أولاً لتغطية أقدم المديونيات قبل تحصيل رسوم جديدة.
             var availableCredit = Math.Max(0m, member.CurrentBalance);
             var initialCredit = availableCredit;
@@ -128,34 +164,20 @@ namespace TeacherERP.Application.Finance
 
             if (paymentType == PaymentType.DebtSettlement)
             {
-                if (!debts.Any(x => x.OutstandingAmount > 0))
-                    return Result<CashPaymentResult>.Failure(FinanceErrors.NoOutstandingDebt);
                 ApplyCashToDebts(debts, request.Amount);
                 member.AddBalance(request.Amount);
             }
             else if (paymentType == PaymentType.PerSession)
             {
-                if (previousDebts.Any(x => x.OutstandingAmount > 0))
-                    return Result<CashPaymentResult>.Failure(FinanceErrors.PreviousDebtMustBeSettled);
-                if (currentDebt is null || currentDebt.IsSettled)
-                    return Result<CashPaymentResult>.Failure(FinanceErrors.SessionChargeNotFound);
                 currentDebt.ApplyPayment(request.Amount);
                 member.AddBalance(request.Amount);
             }
             else if (paymentType == PaymentType.MonthlySubscription)
             {
-                if (previousDebts.Any(x => x.OutstandingAmount > 0))
-                    return Result<CashPaymentResult>.Failure(FinanceErrors.PreviousDebtMustBeSettled);
-                if (info.MonthlyPrice is not { } monthlyPrice)
-                    return Result<CashPaymentResult>.Failure(FinanceErrors.MonthlyPriceNotConfigured);
+                var monthlyPrice = info.MonthlyPrice!.Value;
                 var walletCredit = Math.Max(0m, member.CurrentBalance);
                 var walletContribution = Math.Min(walletCredit, monthlyPrice);
-                if (request.Amount + walletContribution < monthlyPrice)
-                    return Result<CashPaymentResult>.Failure(FinanceErrors.InsufficientPayment);
                 var period = GetCalendarMonth(info);
-                if (await _repository.HasMonthlySubscriptionAsync(tenantId, request.StudentId, info.GroupId,
-                        period.Year, period.Month, cancellationToken))
-                    return Result<CashPaymentResult>.Failure(FinanceErrors.SubscriptionAlreadyExists);
 
                 // قيمة الباقة تُسجّل في الاشتراك؛ الزيادة النقدية وحدها تصبح رصيداً للمستقبل.
                 if (walletContribution > 0) member.DeductBalance(walletContribution);
@@ -171,7 +193,7 @@ namespace TeacherERP.Application.Finance
                 if (externalPayment is null)
                     _repository.AddPayment(payment);
                 else
-                    payment.ApproveExternalPayment(processorId);
+                    CompleteExternalPayment(payment, processorId);
                 transactionId = payment.Id;
                 _repository.AddSubscription(MonthlySubscription.Create(tenantId, request.StudentId, info.GroupId,
                     period.Year, period.Month, monthlyPrice, payment.Id));
@@ -194,7 +216,7 @@ namespace TeacherERP.Application.Finance
             }
             else
             {
-                externalPayment.ApproveExternalPayment(processorId);
+                CompleteExternalPayment(externalPayment, processorId);
                 transactionId = externalPayment.Id;
             }
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -249,6 +271,37 @@ namespace TeacherERP.Application.Finance
             }, IsolationLevel.Serializable, cancellationToken);
         }
 
+        public Task<Result<CashPaymentResult>> ApplyPaymobPaymentAsync(
+            Guid tenantId, Guid transactionId, CancellationToken cancellationToken)
+        {
+            return _unitOfWork.ExecuteInTransactionAsync(async () =>
+            {
+                var payment = await _repository.GetTransactionTrackedAsync(tenantId, transactionId, cancellationToken);
+                if (payment is null || payment.Provider != PaymentProvider.Paymob
+                    || payment.Status != TransactionStatus.PaymobPending
+                    || payment.PaymentContextSessionId is not { } sessionId)
+                    return Result<CashPaymentResult>.Failure(FinanceErrors.PaymobPaymentNotPending);
+
+                var result = await CollectCashCoreAsync(tenantId, Guid.Empty,
+                    new CashPaymentRequest(payment.StudentId, sessionId, payment.Type, payment.Amount),
+                    cancellationToken, payment);
+                if (result.IsFailure) return result;
+
+                _auditRepository.Add(AuditLog.Create(tenantId, null, AuditAction.PaymobPaymentSucceeded,
+                    payment.StudentId, $"Paymob payment transaction {payment.Id} succeeded."));
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return result;
+            }, IsolationLevel.Serializable, cancellationToken);
+        }
+
+        private static void CompleteExternalPayment(Transaction payment, Guid processorId)
+        {
+            if (payment.Provider == PaymentProvider.Paymob)
+                payment.MarkPaymobSucceeded();
+            else
+                payment.ApproveExternalPayment(processorId);
+        }
+
         private static void ApplyCashToDebts(IEnumerable<FinancialObligation> debts, decimal amount)
         {
             var remaining = amount;
@@ -300,5 +353,6 @@ namespace TeacherERP.Application.Finance
         public static readonly Error ExternalPaymentNotFound = new("Finance.ExternalPaymentNotFound", "The payment request was not found.");
         public static readonly Error ExternalPaymentNotPending = new("Finance.ExternalPaymentNotPending", "The payment request is no longer pending.");
         public static readonly Error StudentOnly = new("Finance.StudentOnly", "This operation is available to the student only.");
+        public static readonly Error PaymobPaymentNotPending = new("Finance.PaymobPaymentNotPending", "The Paymob payment is not pending.");
     }
 }

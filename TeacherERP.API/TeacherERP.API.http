@@ -588,6 +588,26 @@ Content-Type: image/png
 < ./instapay-qr.png
 --InstaPaySettingsBoundary--
 
+### C5: الطالب ينشئ نية دفع Paymob (يتطلب أن يكون إشعار HTTPS العام مضبوطاً بعد النشر)
+POST {{TeacherERP.API_HostAddress}}/api/StudentPayments/paymob/intents
+Authorization: Bearer {{studentToken}}
+Idempotency-Key: {{$guid}}
+Content-Type: application/json
+
+{
+  "sessionId": "{{sessionId}}",
+  "type": "PerSession",
+  "amount": 75.00,
+  "integration": "VpcOnlineNonShopify"
+}
+
+### C5: عنوان الـWebhook الذي سيُضبط في Paymob أو يُرسل داخل notification_url
+# POST https://{{publicApiHost}}/api/paymob/webhooks/transaction?hmac={{paymobHmac}}
+# Body: Paymob Transaction Processed Callback JSON (استخدم عينة من Paymob، ولا تعتمد على redirect لتأكيد الدفع)
+
+### C5: عنوان الرجوع العام الذي يُضبط كـ Redirect URL في تكامل Paymob
+GET https://{{publicApiHost}}/api/paymob/return
+
 ### C3: المدرس يعرض إيصالات الدفع المعلقة
 GET {{TeacherERP.API_HostAddress}}/api/Finance/instapay-receipts/pending?page=1&pageSize=20
 Authorization: Bearer {{teacherToken}}

@@ -28,5 +28,15 @@ namespace TeacherERP.Application.Interfaces
         Task<Transaction?> GetTransactionTrackedAsync(Guid tenantId, Guid transactionId, CancellationToken cancellationToken);
         Task<PagedResult<PendingExternalPaymentItem>> GetPendingExternalPaymentsPageAsync(
             Guid tenantId, PageRequest page, CancellationToken cancellationToken);
+
+        Task<Transaction?> GetPaymobPaymentByIdempotencyAsync(Guid tenantId, Guid studentId,
+            string idempotencyKey, CancellationToken cancellationToken);
+        Task<Transaction?> GetPaymobPaymentForCallbackAsync(string? specialReference,
+            string? providerOrderId, CancellationToken cancellationToken);
+        Task<bool> HasPaymentEventAsync(PaymentProvider provider, string providerEventId,
+            CancellationToken cancellationToken);
+        Task<bool> HasOpenExternalPaymentAsync(Guid tenantId, Guid studentId, PaymentType type,
+            Guid contextSessionId, CancellationToken cancellationToken);
+        void AddPaymentEvent(PaymentEvent paymentEvent);
     }
 }

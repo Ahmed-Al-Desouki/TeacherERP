@@ -62,7 +62,51 @@ namespace TeacherERP.Infrastructure.Repositories
 
         public Task<bool> HasPendingExternalPaymentAsync(Guid tenantId, Guid studentId, PaymentType type, Guid contextSessionId, CancellationToken cancellationToken) =>
             _context.Transactions.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenantId && x.StudentId == studentId
-                && x.Type == type && x.PaymentContextSessionId == contextSessionId && x.Status == TransactionStatus.PendingApproval, cancellationToken);
+                && x.Type == type && x.PaymentContextSessionId == contextSessionId
+                && x.Status == TransactionStatus.PendingApproval, cancellationToken);
+
+        public Task<bool> HasOpenExternalPaymentAsync(Guid tenantId, Guid studentId, PaymentType type,
+            Guid contextSessionId, CancellationToken cancellationToken) =>
+            _context.Transactions.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenantId && x.StudentId == studentId
+                && x.Type == type && x.PaymentContextSessionId == contextSessionId
+                && (x.Status == TransactionStatus.PendingApproval
+                    || x.Status == TransactionStatus.PaymobPending
+                    || x.Status == TransactionStatus.PaymobAdjustmentReview), cancellationToken);
+
+        public Task<Transaction?> GetPaymobPaymentByIdempotencyAsync(Guid tenantId, Guid studentId,
+            string idempotencyKey, CancellationToken cancellationToken) =>
+            _context.Transactions.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.TenantId == tenantId
+                && x.StudentId == studentId && x.Provider == PaymentProvider.Paymob
+                && x.IdempotencyKey == idempotencyKey, cancellationToken);
+
+        public Task<Transaction?> GetPaymobPaymentForCallbackAsync(string? specialReference,
+            string? providerOrderId, CancellationToken cancellationToken)
+        {
+            if (!string.IsNullOrWhiteSpace(specialReference)
+                && Guid.TryParse(specialReference, out var transactionId))
+                return FindByReferenceOrOrderAsync(transactionId, providerOrderId, cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(providerOrderId)) return Task.FromResult<Transaction?>(null);
+            return _context.Transactions.IgnoreQueryFilters().FirstOrDefaultAsync(x =>
+                x.Provider == PaymentProvider.Paymob && x.ProviderOrderId == providerOrderId, cancellationToken);
+        }
+
+        private async Task<Transaction?> FindByReferenceOrOrderAsync(Guid transactionId, string? providerOrderId,
+            CancellationToken cancellationToken)
+        {
+            var byId = await _context.Transactions.IgnoreQueryFilters().FirstOrDefaultAsync(x =>
+                x.Id == transactionId && x.Provider == PaymentProvider.Paymob, cancellationToken);
+            if (byId is not null || string.IsNullOrWhiteSpace(providerOrderId)) return byId;
+            return await _context.Transactions.IgnoreQueryFilters().FirstOrDefaultAsync(x =>
+                x.Provider == PaymentProvider.Paymob && x.ProviderOrderId == providerOrderId, cancellationToken);
+        }
+
+        public Task<bool> HasPaymentEventAsync(PaymentProvider provider, string providerEventId,
+            CancellationToken cancellationToken) =>
+            _context.PaymentEvents.IgnoreQueryFilters().AnyAsync(x => x.Provider == provider
+                && x.ProviderEventId == providerEventId, cancellationToken);
+
+        public void AddPaymentEvent(PaymentEvent paymentEvent) => _context.PaymentEvents.Add(paymentEvent);
 
         public Task<Transaction?> GetTransactionTrackedAsync(Guid tenantId, Guid transactionId, CancellationToken cancellationToken) =>
             _context.Transactions.IgnoreQueryFilters().FirstOrDefaultAsync(x =>

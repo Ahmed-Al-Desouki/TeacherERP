@@ -31,5 +31,7 @@ namespace TeacherERP.Application.Interfaces
             CancellationToken cancellationToken);
         Task<Result<bool>> RejectExternalPaymentAsync(Guid tenantId, Guid reviewerId, Guid transactionId,
             CancellationToken cancellationToken);
+        Task<Result<CashPaymentResult>> ApplyPaymobPaymentAsync(Guid tenantId, Guid transactionId,
+            CancellationToken cancellationToken);
     }
 }

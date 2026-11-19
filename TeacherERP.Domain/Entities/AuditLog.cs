@@ -59,6 +59,9 @@ namespace TeacherERP.Domain.Entities
         InstaPayPaymentRejected,
         FinancialDelegationGranted,
         FinancialDelegationRevoked,
-        CashPaymentCollected
+        CashPaymentCollected,
+        PaymobPaymentSucceeded,
+        PaymobPaymentFailed,
+        PaymobAdjustmentNeedsReview
     }
 }

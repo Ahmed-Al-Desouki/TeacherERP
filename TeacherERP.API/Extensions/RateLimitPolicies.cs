@@ -29,5 +29,8 @@ namespace TeacherERP.API.Extensions
         public const string TeacherRequestReview = "teacher-request-review";
 
         public const string CenterMembershipWrite = "center-membership-write";
+
+        /// <summary>إنشاء محاولة دفع من الطالب؛ يمنع إنشاء نوايا دفع بكثافة.</summary>
+        public const string PaymentInitiation = "payment-initiation";
     }
 }

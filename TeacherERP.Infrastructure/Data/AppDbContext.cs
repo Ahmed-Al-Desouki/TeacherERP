@@ -53,6 +53,7 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<SessionAttachment> SessionAttachments { get; set; }
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<PaymentEvent> PaymentEvents { get; set; }
         public DbSet<FinancialObligation> FinancialObligations { get; set; }
         public DbSet<MonthlySubscription> MonthlySubscriptions { get; set; }
         public DbSet<TeacherPaymentSettings> TeacherPaymentSettings { get; set; }
@@ -223,9 +224,34 @@ namespace TeacherERP.Infrastructure.Data
                 entity.HasOne<Tenant>().WithMany().HasForeignKey(t => t.TenantId).OnDelete(DeleteBehavior.Restrict);
                 entity.Property(t => t.ReceiptImageUrl).HasMaxLength(2048);
                 entity.Property(t => t.ReceiptImagePublicId).HasMaxLength(512);
+                entity.Property(t => t.Provider).HasConversion<string>().HasMaxLength(32);
+                entity.Property(t => t.IdempotencyKey).HasMaxLength(128);
+                entity.Property(t => t.RequestFingerprint).HasMaxLength(64);
+                entity.Property(t => t.ProviderIntentionId).HasMaxLength(128);
+                entity.Property(t => t.ProviderOrderId).HasMaxLength(64);
+                entity.Property(t => t.ProviderClientSecret).HasMaxLength(2048);
+                entity.Property(t => t.ProviderFailureCode).HasMaxLength(64);
                 entity.HasIndex(t => new { t.TenantId, t.StudentId, t.Type, t.PaymentContextSessionId })
                     .IsUnique()
-                    .HasFilter("[Status] = 0");
+                    .HasFilter("[Status] IN (0, 4, 5)");
+                entity.HasIndex(t => new { t.TenantId, t.StudentId, t.IdempotencyKey })
+                    .IsUnique().HasFilter("[IdempotencyKey] IS NOT NULL");
+                entity.HasIndex(t => new { t.Provider, t.ProviderOrderId });
+            });
+
+            builder.Entity<PaymentEvent>(entity =>
+            {
+                entity.Property(e => e.Provider).HasConversion<string>().HasMaxLength(32).IsRequired();
+                entity.Property(e => e.ProviderEventId).HasMaxLength(128).IsRequired();
+                entity.Property(e => e.EventType).HasMaxLength(64).IsRequired();
+                entity.Property(e => e.ProviderOrderId).HasMaxLength(64);
+                entity.Property(e => e.PayloadSha256).HasMaxLength(64);
+                entity.HasOne<Transaction>().WithMany().HasForeignKey(e => e.TransactionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<Tenant>().WithMany().HasForeignKey(e => e.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(e => new { e.Provider, e.ProviderEventId }).IsUnique();
+                entity.HasIndex(e => new { e.TenantId, e.TransactionId, e.CreatedAt });
             });
 
             builder.Entity<TeacherPaymentSettings>(entity =>
@@ -550,13 +576,23 @@ namespace TeacherERP.Infrastructure.Data
         public override int SaveChanges(bool acceptAllChangesOnSuccess)
         {
             EnsureTenantIsolation();
+            EnsurePaymentEventsAreAppendOnly();
             return base.SaveChanges(acceptAllChangesOnSuccess);
         }
 
         public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
         {
             EnsureTenantIsolation();
+            EnsurePaymentEventsAreAppendOnly();
             return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+
+        private void EnsurePaymentEventsAreAppendOnly()
+        {
+            var changedEvent = ChangeTracker.Entries<PaymentEvent>()
+                .FirstOrDefault(entry => entry.State is EntityState.Modified or EntityState.Deleted);
+            if (changedEvent is not null)
+                throw new InvalidOperationException("Payment events are append-only and cannot be changed or deleted.");
         }
 
         private void EnsureTenantIsolation()

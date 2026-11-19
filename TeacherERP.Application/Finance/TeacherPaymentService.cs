@@ -114,7 +114,7 @@ public sealed class TeacherPaymentService : ITeacherPaymentService
         var options = optionsResult.Value!;
         var validation = ValidateSubmission(options, type, amount);
         if (validation is not null) return Result<Guid>.Failure(validation);
-        if (await _repository.HasPendingExternalPaymentAsync(tenantId, studentId, type, sessionId, cancellationToken))
+        if (await _repository.HasOpenExternalPaymentAsync(tenantId, studentId, type, sessionId, cancellationToken))
             return Result<Guid>.Failure(FinanceErrors.PaymentAlreadyPending);
 
         var uploaded = await UploadImageAsync(file, fileName,
@@ -126,7 +126,7 @@ public sealed class TeacherPaymentService : ITeacherPaymentService
         {
             var result = await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
-                if (await _repository.HasPendingExternalPaymentAsync(tenantId, studentId, type, sessionId, cancellationToken))
+                if (await _repository.HasOpenExternalPaymentAsync(tenantId, studentId, type, sessionId, cancellationToken))
                     return Result<Guid>.Failure(FinanceErrors.PaymentAlreadyPending);
 
                 var transaction = Transaction.CreateExternalPayment(tenantId, studentId, amount, type, sessionId,

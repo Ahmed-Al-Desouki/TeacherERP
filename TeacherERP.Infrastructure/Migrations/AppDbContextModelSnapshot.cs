@@ -1003,6 +1003,68 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("TeacherERP.Domain.Entities.PaymentEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CurrentStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("PayloadSha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int?>("PreviousStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ProviderEventId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("ProviderOccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProviderOrderId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransactionId");
+
+                    b.HasIndex("Provider", "ProviderEventId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId", "TransactionId", "CreatedAt");
+
+                    b.ToTable("PaymentEvents");
+                });
+
             modelBuilder.Entity("TeacherERP.Domain.Entities.Session", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1394,11 +1456,41 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("IdempotencyKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.Property<Guid?>("PaymentContextSessionId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("ProcessedByAdminId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ProviderClientSecret")
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("ProviderFailureCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int?>("ProviderIntegrationId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProviderIntentionId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ProviderOrderId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("ProviderRequestStartedAtUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("ReceiptImagePublicId")
                         .HasMaxLength(512)
@@ -1410,6 +1502,10 @@ namespace TeacherERP.Infrastructure.Migrations
 
                     b.Property<Guid?>("RelatedSessionId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RequestFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -1434,11 +1530,17 @@ namespace TeacherERP.Infrastructure.Migrations
 
                     b.HasIndex("StudentId");
 
+                    b.HasIndex("Provider", "ProviderOrderId");
+
                     b.HasIndex("TenantId", "StudentId", "CreatedAt");
+
+                    b.HasIndex("TenantId", "StudentId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("[IdempotencyKey] IS NOT NULL");
 
                     b.HasIndex("TenantId", "StudentId", "Type", "PaymentContextSessionId")
                         .IsUnique()
-                        .HasFilter("[Status] = 0");
+                        .HasFilter("[Status] IN (0, 4, 5)");
 
                     b.ToTable("Transactions");
                 });
@@ -1784,6 +1886,21 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.PaymentEvent", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeacherERP.Domain.Entities.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("TransactionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

@@ -6,6 +6,7 @@ using TeacherERP.API.Extensions;
 using TeacherERP.API.Security;
 using TeacherERP.Application.Features.Finance.GetMyPaymentOptions;
 using TeacherERP.Application.Features.Finance.SubmitInstaPayReceipt;
+using TeacherERP.Application.Features.Finance.CreatePaymobIntent;
 using TeacherERP.Application.Finance;
 using TeacherERP.Application.SessionContent;
 
@@ -40,7 +41,25 @@ public sealed class StudentPaymentsController : BaseApiController
         if (result.IsFailure) return ToResponse(result);
         return ToResponse(result, new { Message = "The receipt was submitted for teacher review.", TransactionId = result.Value });
     }
+
+    [HttpPost("paymob/intents")]
+    [EnableRateLimiting(RateLimitPolicies.PaymentInitiation)]
+    public async Task<IActionResult> CreatePaymobIntent(
+        [FromBody] CreatePaymobIntentBody body,
+        [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        var result = await _mediator.Send(new CreatePaymobIntentCommand(
+            body.SessionId, body.Type, body.Amount, body.Integration, idempotencyKey ?? string.Empty), cancellationToken);
+        if (result.IsSuccess && result.Value!.IsProcessing) return Accepted(result.Value);
+        return ToResponse(result);
+    }
 }
+
+public sealed record CreatePaymobIntentBody(Guid SessionId,
+    TeacherERP.Domain.Entities.PaymentType Type,
+    decimal Amount,
+    TeacherERP.Application.Interfaces.PaymobIntegrationKey Integration);
 
 public sealed class SubmitInstaPayReceiptForm
 {

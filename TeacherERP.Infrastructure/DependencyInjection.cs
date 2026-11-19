@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using TeacherERP.Application.Interfaces;
+using TeacherERP.Application.Finance;
 using TeacherERP.Infrastructure.Data;
 using TeacherERP.Infrastructure.Repositories;
 using TeacherERP.Infrastructure.Services;
@@ -58,6 +59,13 @@ namespace TeacherERP.Infrastructure
             var cloudinarySettings = new CloudinarySettings();
             configuration.GetSection("CloudinarySettings").Bind(cloudinarySettings);
             services.AddSingleton(Options.Create(cloudinarySettings));
+
+            var paymobSettings = new PaymobSettings();
+            configuration.GetSection("Paymob").Bind(paymobSettings);
+            services.AddSingleton(Options.Create(paymobSettings));
+            services.AddHttpClient<IPaymobGateway, PaymobGateway>(client =>
+                client.Timeout = TimeSpan.FromSeconds(20));
+            services.AddSingleton<IPaymobCallbackVerifier, PaymobCallbackVerifier>();
 
             // 4. تفعيل الـ In-Memory Cache للـ OTP
             services.AddMemoryCache();
