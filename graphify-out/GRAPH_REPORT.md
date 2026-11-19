@@ -1,4 +1,4 @@
-# Graph Report - TeacherERP  (2026-11-18)
+# Graph Report - TeacherERP  (2026-11-19)
 
 ## Corpus Check
 - cluster-only mode — file stats not available

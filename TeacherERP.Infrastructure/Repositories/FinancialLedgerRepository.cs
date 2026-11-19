@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TeacherERP.Application.Interfaces;
+using TeacherERP.Application.Common;
+using TeacherERP.Infrastructure.Extensions;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Infrastructure.Data;
 
@@ -51,5 +53,37 @@ namespace TeacherERP.Infrastructure.Repositories
         public void AddObligation(FinancialObligation obligation) => _context.FinancialObligations.Add(obligation);
         public void AddSubscription(MonthlySubscription subscription) => _context.MonthlySubscriptions.Add(subscription);
         public void AddPayment(Transaction transaction) => _context.Transactions.Add(transaction);
+
+        public Task<TeacherPaymentSettings?> GetTeacherPaymentSettingsAsync(Guid tenantId, CancellationToken cancellationToken) =>
+            _context.TeacherPaymentSettings.IgnoreQueryFilters()
+                .FirstOrDefaultAsync(x => x.TenantId == tenantId, cancellationToken);
+
+        public void AddTeacherPaymentSettings(TeacherPaymentSettings settings) => _context.TeacherPaymentSettings.Add(settings);
+
+        public Task<bool> HasPendingExternalPaymentAsync(Guid tenantId, Guid studentId, PaymentType type, Guid contextSessionId, CancellationToken cancellationToken) =>
+            _context.Transactions.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenantId && x.StudentId == studentId
+                && x.Type == type && x.PaymentContextSessionId == contextSessionId && x.Status == TransactionStatus.PendingApproval, cancellationToken);
+
+        public Task<Transaction?> GetTransactionTrackedAsync(Guid tenantId, Guid transactionId, CancellationToken cancellationToken) =>
+            _context.Transactions.IgnoreQueryFilters().FirstOrDefaultAsync(x =>
+                x.Id == transactionId && x.TenantId == tenantId, cancellationToken);
+
+        public Task<PagedResult<PendingExternalPaymentItem>> GetPendingExternalPaymentsPageAsync(
+            Guid tenantId, PageRequest page, CancellationToken cancellationToken)
+        {
+            var query = from transaction in _context.Transactions.IgnoreQueryFilters().AsNoTracking()
+                        join student in _context.Users.IgnoreQueryFilters().AsNoTracking()
+                            on transaction.StudentId equals student.Id
+                        where transaction.TenantId == tenantId
+                            && transaction.Status == TransactionStatus.PendingApproval
+                            && transaction.ReceiptImageUrl != null
+                            && transaction.PaymentContextSessionId != null
+                        orderby transaction.CreatedAt, transaction.Id
+                        select new PendingExternalPaymentItem(transaction.Id, transaction.StudentId, student.FullName,
+                            transaction.Amount, transaction.Type, transaction.CreatedAt, transaction.PaymentContextSessionId!.Value,
+                            transaction.ReceiptImageUrl!);
+
+            return query.ToPagedAsync(page, cancellationToken);
+        }
     }
 }

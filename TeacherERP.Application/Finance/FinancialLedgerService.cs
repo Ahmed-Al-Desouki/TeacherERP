@@ -10,12 +10,14 @@ namespace TeacherERP.Application.Finance
         private readonly IFinancialLedgerRepository _repository;
         private readonly IEnrollmentRepository _enrollmentRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IAuditRepository _auditRepository;
 
-        public FinancialLedgerService(IFinancialLedgerRepository repository, IEnrollmentRepository enrollmentRepository, IUnitOfWork unitOfWork)
+        public FinancialLedgerService(IFinancialLedgerRepository repository, IEnrollmentRepository enrollmentRepository, IUnitOfWork unitOfWork, IAuditRepository auditRepository)
         {
             _repository = repository;
             _enrollmentRepository = enrollmentRepository;
             _unitOfWork = unitOfWork;
+            _auditRepository = auditRepository;
         }
 
         public async Task<Result<FinancialPaymentOptions>> GetOptionsAsync(Guid tenantId, Guid studentId, Guid sessionId, CancellationToken cancellationToken)
@@ -75,13 +77,23 @@ namespace TeacherERP.Application.Finance
         public Task<Result<CashPaymentResult>> CollectCashAsync(Guid tenantId, Guid processorId,
             CashPaymentRequest request, CancellationToken cancellationToken)
         {
-            return _unitOfWork.ExecuteInTransactionAsync(
-                () => CollectCashCoreAsync(tenantId, processorId, request, cancellationToken),
+            return _unitOfWork.ExecuteInTransactionAsync(async () =>
+            {
+                var result = await CollectCashCoreAsync(tenantId, processorId, request, cancellationToken);
+                if (result.IsFailure) return result;
+
+                var payment = result.Value!;
+                _auditRepository.Add(AuditLog.Create(tenantId, processorId, AuditAction.CashPaymentCollected,
+                    request.StudentId,
+                    $"Cash payment transaction {payment.TransactionId}; type={request.PaymentType}; amount={request.Amount}."));
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return result;
+            },
                 IsolationLevel.Serializable, cancellationToken);
         }
 
         private async Task<Result<CashPaymentResult>> CollectCashCoreAsync(Guid tenantId, Guid processorId,
-            CashPaymentRequest request, CancellationToken cancellationToken)
+            CashPaymentRequest request, CancellationToken cancellationToken, Transaction? externalPayment = null)
         {
             if (request.Amount < 0 || (request.Amount == 0 && request.PaymentType != PaymentType.MonthlySubscription)
                 || decimal.Round(request.Amount, 2) != request.Amount)
@@ -154,10 +166,13 @@ namespace TeacherERP.Application.Finance
                     // إلغاء استحقاق حصة اليوم لأن الاشتراك الشهري يشملها.
                     member.AddBalance(info.PerSessionPrice ?? 0m);
                 }
-                var payment = Transaction.CreatePayment(tenantId, request.StudentId, processorId,
+                var payment = externalPayment ?? Transaction.CreatePayment(tenantId, request.StudentId, processorId,
                     request.Amount, PaymentType.MonthlySubscription, request.SessionId);
+                if (externalPayment is null)
+                    _repository.AddPayment(payment);
+                else
+                    payment.ApproveExternalPayment(processorId);
                 transactionId = payment.Id;
-                _repository.AddPayment(payment);
                 _repository.AddSubscription(MonthlySubscription.Create(tenantId, request.StudentId, info.GroupId,
                     period.Year, period.Month, monthlyPrice, payment.Id));
                 remainingDebt = previousDebts.Sum(x => x.OutstandingAmount);
@@ -170,16 +185,68 @@ namespace TeacherERP.Application.Finance
                 return Result<CashPaymentResult>.Failure(FinanceErrors.UnsupportedPaymentType);
             }
 
-            var successfulPayment = Transaction.CreatePayment(tenantId, request.StudentId, processorId,
-                cashAmount, paymentType, paymentType == PaymentType.PerSession ? request.SessionId : null);
-            transactionId = successfulPayment.Id;
-            _repository.AddPayment(successfulPayment);
+            if (externalPayment is null)
+            {
+                var successfulPayment = Transaction.CreatePayment(tenantId, request.StudentId, processorId,
+                    cashAmount, paymentType, paymentType == PaymentType.PerSession ? request.SessionId : null);
+                transactionId = successfulPayment.Id;
+                _repository.AddPayment(successfulPayment);
+            }
+            else
+            {
+                externalPayment.ApproveExternalPayment(processorId);
+                transactionId = externalPayment.Id;
+            }
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var outstanding = await _repository.GetOutstandingObligationsAsync(tenantId, request.StudentId, cancellationToken);
             remainingDebt = outstanding.Sum(x => x.OutstandingAmount);
             return Result<CashPaymentResult>.Success(new CashPaymentResult(transactionId, paymentType,
                 cashAmount, remainingDebt, false));
+        }
+
+        public Task<Result<CashPaymentResult>> ApproveExternalPaymentAsync(
+            Guid tenantId, Guid reviewerId, Guid transactionId, CancellationToken cancellationToken)
+        {
+            return _unitOfWork.ExecuteInTransactionAsync(async () =>
+            {
+                var payment = await _repository.GetTransactionTrackedAsync(tenantId, transactionId, cancellationToken);
+                if (payment is null || payment.ReceiptImageUrl is null)
+                    return Result<CashPaymentResult>.Failure(FinanceErrors.ExternalPaymentNotFound);
+                if (payment.Status != TransactionStatus.PendingApproval)
+                    return Result<CashPaymentResult>.Failure(FinanceErrors.ExternalPaymentNotPending);
+                if (payment.PaymentContextSessionId is not { } sessionId)
+                    return Result<CashPaymentResult>.Failure(FinanceErrors.ExternalPaymentNotPending);
+
+                var result = await CollectCashCoreAsync(tenantId, reviewerId,
+                    new CashPaymentRequest(payment.StudentId, sessionId, payment.Type, payment.Amount),
+                    cancellationToken, payment);
+                if (result.IsFailure) return result;
+
+                _auditRepository.Add(AuditLog.Create(tenantId, reviewerId, AuditAction.InstaPayPaymentApproved,
+                    payment.StudentId, $"InstaPay transaction {payment.Id} approved: {payment.Amount} {payment.Type}."));
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return result;
+            }, IsolationLevel.Serializable, cancellationToken);
+        }
+
+        public Task<Result<bool>> RejectExternalPaymentAsync(
+            Guid tenantId, Guid reviewerId, Guid transactionId, CancellationToken cancellationToken)
+        {
+            return _unitOfWork.ExecuteInTransactionAsync(async () =>
+            {
+                var payment = await _repository.GetTransactionTrackedAsync(tenantId, transactionId, cancellationToken);
+                if (payment is null || payment.ReceiptImageUrl is null)
+                    return Result<bool>.Failure(FinanceErrors.ExternalPaymentNotFound);
+                if (payment.Status != TransactionStatus.PendingApproval)
+                    return Result<bool>.Failure(FinanceErrors.ExternalPaymentNotPending);
+
+                payment.RejectExternalPayment(reviewerId);
+                _auditRepository.Add(AuditLog.Create(tenantId, reviewerId, AuditAction.InstaPayPaymentRejected,
+                    payment.StudentId, $"InstaPay transaction {payment.Id} rejected: {payment.Amount} {payment.Type}."));
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return Result<bool>.Success(true);
+            }, IsolationLevel.Serializable, cancellationToken);
         }
 
         private static void ApplyCashToDebts(IEnumerable<FinancialObligation> debts, decimal amount)
@@ -223,5 +290,15 @@ namespace TeacherERP.Application.Finance
         public static readonly Error InsufficientPayment = new("Finance.InsufficientPayment", "The payment is less than the monthly subscription price.");
         public static readonly Error SubscriptionAlreadyExists = new("Finance.SubscriptionAlreadyExists", "The student already has a subscription for this group and calendar month.");
         public static readonly Error UnsupportedPaymentType = new("Finance.UnsupportedPaymentType", "This payment type is not supported by the cash payment endpoint.");
+        public static readonly Error PaymentSettingsRequired = new("Finance.PaymentSettingsRequired", "The teacher has not configured InstaPay yet.");
+        public static readonly Error InvalidPaymentLink = new("Finance.InvalidPaymentLink", "A valid HTTPS InstaPay link is required.");
+        public static readonly Error PaymentReceiptRequired = new("Finance.PaymentReceiptRequired", "A receipt image is required.");
+        public static readonly Error PaymentReceiptInvalid = new("Finance.PaymentReceiptInvalid", "A payment receipt image is required.");
+        public static readonly Error PaymentImageInvalid = new("Finance.PaymentImageInvalid", "The payment image must be a valid JPEG, PNG, or WebP image under 10 MB.");
+        public static readonly Error PaymentQrRequired = new("Finance.PaymentQrRequired", "A QR image is required when setting up InstaPay for the first time.");
+        public static readonly Error PaymentAlreadyPending = new("Finance.PaymentAlreadyPending", "A payment receipt is already waiting for review for this session and payment type.");
+        public static readonly Error ExternalPaymentNotFound = new("Finance.ExternalPaymentNotFound", "The payment request was not found.");
+        public static readonly Error ExternalPaymentNotPending = new("Finance.ExternalPaymentNotPending", "The payment request is no longer pending.");
+        public static readonly Error StudentOnly = new("Finance.StudentOnly", "This operation is available to the student only.");
     }
 }

@@ -1,4 +1,5 @@
 using TeacherERP.Domain.Entities;
+using TeacherERP.Application.Common;
 
 namespace TeacherERP.Application.Interfaces
 {
@@ -6,6 +7,8 @@ namespace TeacherERP.Application.Interfaces
         string GroupName, string TenantTimeZoneId, DateTime SessionStartUtc, decimal? PerSessionPrice, decimal? MonthlyPrice);
     public sealed record FinancialTransactionInfo(Guid Id, decimal Amount, PaymentType Type, TransactionStatus Status,
         DateTime CreatedAt, Guid? RelatedSessionId);
+    public sealed record PendingExternalPaymentItem(Guid Id, Guid StudentId, string StudentName, decimal Amount,
+        PaymentType Type, DateTime CreatedAt, Guid SessionId, string ReceiptImageUrl);
 
     public interface IFinancialLedgerRepository
     {
@@ -18,5 +21,12 @@ namespace TeacherERP.Application.Interfaces
         void AddObligation(FinancialObligation obligation);
         void AddSubscription(MonthlySubscription subscription);
         void AddPayment(Transaction transaction);
+
+        Task<TeacherPaymentSettings?> GetTeacherPaymentSettingsAsync(Guid tenantId, CancellationToken cancellationToken);
+        void AddTeacherPaymentSettings(TeacherPaymentSettings settings);
+        Task<bool> HasPendingExternalPaymentAsync(Guid tenantId, Guid studentId, PaymentType type, Guid contextSessionId, CancellationToken cancellationToken);
+        Task<Transaction?> GetTransactionTrackedAsync(Guid tenantId, Guid transactionId, CancellationToken cancellationToken);
+        Task<PagedResult<PendingExternalPaymentItem>> GetPendingExternalPaymentsPageAsync(
+            Guid tenantId, PageRequest page, CancellationToken cancellationToken);
     }
 }

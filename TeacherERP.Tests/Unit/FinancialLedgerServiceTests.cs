@@ -170,10 +170,11 @@ namespace TeacherERP.Tests.Unit
             var repository = Substitute.For<IFinancialLedgerRepository>();
             var enrollment = Substitute.For<IEnrollmentRepository>();
             var unitOfWork = Substitute.For<IUnitOfWork>();
+            var audit = Substitute.For<IAuditRepository>();
             unitOfWork.ExecuteInTransactionAsync(Arg.Any<Func<Task<Result<CashPaymentResult>>>>(),
                     Arg.Any<IsolationLevel>(), Arg.Any<CancellationToken>())
                 .Returns(call => call.Arg<Func<Task<Result<CashPaymentResult>>>>()());
-            return (new FinancialLedgerService(repository, enrollment, unitOfWork), repository, enrollment, unitOfWork);
+            return (new FinancialLedgerService(repository, enrollment, unitOfWork, audit), repository, enrollment, unitOfWork);
         }
 
         private static FinancialSessionInfo SessionInfo(decimal? perSession, decimal? monthly = null) =>

@@ -5,9 +5,12 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
 using TeacherERP.API.Security;
 using TeacherERP.Infrastructure.Data;
+using TeacherERP.Application.Interfaces;
+using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Tests.Integration;
 
@@ -15,6 +18,7 @@ namespace TeacherERP.Tests.Integration;
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection;
+    public TestFileStorage FileStorage { get; } = new();
 
     public CustomWebApplicationFactory()
     {
@@ -53,6 +57,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             }
 
             services.AddDbContext<AppDbContext>(options => options.UseSqlite(_connection));
+
+            services.RemoveAll<IFileStorage>();
+            services.AddSingleton<IFileStorage>(FileStorage);
 
             // Hangfire غير مشغّل في بيئة Testing، فنوفّر بدائل صامتة لمن يحقنها
             services.AddSingleton(Substitute.For<IBackgroundJobClient>());
@@ -109,5 +116,26 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         {
             _connection.Dispose();
         }
+    }
+}
+
+
+public sealed class TestFileStorage : IFileStorage
+{
+    private int _sequence;
+    public int UploadCount { get; private set; }
+    public List<string> DeletedPublicIds { get; } = new();
+
+    public Task<Result<StoredFile>> UploadAsync(Stream content, string fileName, string folder, CancellationToken cancellationToken)
+    {
+        UploadCount++;
+        var id = $"test/{folder}/{Interlocked.Increment(ref _sequence)}";
+        return Task.FromResult(Result<StoredFile>.Success(new StoredFile($"https://storage.test/{id}", id)));
+    }
+
+    public Task<Result<bool>> DeleteAsync(string publicId, CancellationToken cancellationToken)
+    {
+        DeletedPublicIds.Add(publicId);
+        return Task.FromResult(Result<bool>.Success(true));
     }
 }

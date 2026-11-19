@@ -1206,6 +1206,44 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.ToTable("TeacherAccessRequests");
                 });
 
+            modelBuilder.Entity("TeacherERP.Domain.Entities.TeacherPaymentSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InstaPayLink")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("QrImagePublicId")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("QrImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("TeacherPaymentSettings");
+                });
+
             modelBuilder.Entity("TeacherERP.Domain.Entities.Tenant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1356,11 +1394,19 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("PaymentContextSessionId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("ProcessedByAdminId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ReceiptImagePublicId")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
                     b.Property<string>("ReceiptImageUrl")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
 
                     b.Property<Guid?>("RelatedSessionId")
                         .HasColumnType("uniqueidentifier");
@@ -1389,6 +1435,10 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.HasIndex("StudentId");
 
                     b.HasIndex("TenantId", "StudentId", "CreatedAt");
+
+                    b.HasIndex("TenantId", "StudentId", "Type", "PaymentContextSessionId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 0");
 
                     b.ToTable("Transactions");
                 });
@@ -1775,6 +1825,15 @@ namespace TeacherERP.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.TeacherPaymentSettings", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithOne()
+                        .HasForeignKey("TeacherERP.Domain.Entities.TeacherPaymentSettings", "TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.Tenant", b =>

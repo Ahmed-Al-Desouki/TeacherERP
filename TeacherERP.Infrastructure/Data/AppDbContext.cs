@@ -55,6 +55,7 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<FinancialObligation> FinancialObligations { get; set; }
         public DbSet<MonthlySubscription> MonthlySubscriptions { get; set; }
+        public DbSet<TeacherPaymentSettings> TeacherPaymentSettings { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<TeacherAccessRequest> TeacherAccessRequests { get; set; }
 
@@ -217,8 +218,24 @@ namespace TeacherERP.Infrastructure.Data
             builder.Entity<AttendanceRecord>()
                 .HasOne<Tenant>().WithMany().HasForeignKey(a => a.TenantId).OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<Transaction>()
-                .HasOne<Tenant>().WithMany().HasForeignKey(t => t.TenantId).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<Transaction>(entity =>
+            {
+                entity.HasOne<Tenant>().WithMany().HasForeignKey(t => t.TenantId).OnDelete(DeleteBehavior.Restrict);
+                entity.Property(t => t.ReceiptImageUrl).HasMaxLength(2048);
+                entity.Property(t => t.ReceiptImagePublicId).HasMaxLength(512);
+                entity.HasIndex(t => new { t.TenantId, t.StudentId, t.Type, t.PaymentContextSessionId })
+                    .IsUnique()
+                    .HasFilter("[Status] = 0");
+            });
+
+            builder.Entity<TeacherPaymentSettings>(entity =>
+            {
+                entity.Property(s => s.InstaPayLink).HasMaxLength(2048).IsRequired();
+                entity.Property(s => s.QrImageUrl).HasMaxLength(2048).IsRequired();
+                entity.Property(s => s.QrImagePublicId).HasMaxLength(512).IsRequired();
+                entity.HasOne<Tenant>().WithOne().HasForeignKey<TeacherPaymentSettings>(s => s.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
 
             // 5.1 المجموعة: تنعقد في سنتر، واسمها فريد داخل المدرس الواحد
             builder.Entity<Group>(entity =>

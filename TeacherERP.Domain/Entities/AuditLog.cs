@@ -53,6 +53,12 @@ namespace TeacherERP.Domain.Entities
         TeacherAdmitted,
         TeacherRequestRejected,
         CompensationApproved,
-        CompensationRejected
+        CompensationRejected,
+        InstaPaySettingsUpdated,
+        InstaPayPaymentApproved,
+        InstaPayPaymentRejected,
+        FinancialDelegationGranted,
+        FinancialDelegationRevoked,
+        CashPaymentCollected
     }
 }

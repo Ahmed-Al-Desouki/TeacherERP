@@ -535,3 +535,79 @@ Content-Type: application/json
   "paymentType": "MonthlySubscription",
   "amount": 500.00
 }
+
+### C3: الطالب يعرض خيارات الدفع وإعدادات InstaPay للسنتر
+GET {{TeacherERP.API_HostAddress}}/api/StudentPayments/sessions/{{sessionId}}/payment-options
+Authorization: Bearer {{studentToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C3: الطالب يرفع إيصال InstaPay (PaymentType: PerSession, MonthlySubscription, DebtSettlement)
+POST {{TeacherERP.API_HostAddress}}/api/StudentPayments/receipts
+Authorization: Bearer {{studentToken}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: multipart/form-data; boundary=InstaPayReceiptBoundary
+
+--InstaPayReceiptBoundary
+Content-Disposition: form-data; name="sessionId"
+
+{{sessionId}}
+--InstaPayReceiptBoundary
+Content-Disposition: form-data; name="type"
+
+PerSession
+--InstaPayReceiptBoundary
+Content-Disposition: form-data; name="amount"
+
+75.00
+--InstaPayReceiptBoundary
+Content-Disposition: form-data; name="receipt"; filename="receipt.png"
+Content-Type: image/png
+
+< ./receipt.png
+--InstaPayReceiptBoundary--
+
+### C3: المدرس يقرأ إعدادات InstaPay
+GET {{TeacherERP.API_HostAddress}}/api/Finance/instapay-settings
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C3: المدرس يحفظ رابط InstaPay ويرفع صورة QR (الصورة اختيارية بعد الإعداد الأول)
+PUT {{TeacherERP.API_HostAddress}}/api/Finance/instapay-settings
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: multipart/form-data; boundary=InstaPaySettingsBoundary
+
+--InstaPaySettingsBoundary
+Content-Disposition: form-data; name="instaPayLink"
+
+https://example.com/instapay-link
+--InstaPaySettingsBoundary
+Content-Disposition: form-data; name="qrImage"; filename="instapay-qr.png"
+Content-Type: image/png
+
+< ./instapay-qr.png
+--InstaPaySettingsBoundary--
+
+### C3: المدرس يعرض إيصالات الدفع المعلقة
+GET {{TeacherERP.API_HostAddress}}/api/Finance/instapay-receipts/pending?page=1&pageSize=20
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C3: المدرس يقبل أو يرفض الإيصال بعد مراجعته يدوياً
+POST {{TeacherERP.API_HostAddress}}/api/Finance/instapay-receipts/{{transactionId}}/approve
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
+POST {{TeacherERP.API_HostAddress}}/api/Finance/instapay-receipts/{{transactionId}}/reject
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C4: المدرس يمنح المساعد تفويضاً مالياً (القيمة false تسحب التفويض)
+PUT {{TeacherERP.API_HostAddress}}/api/Team/{{assistantId}}/financial-delegation
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "granted": true
+}

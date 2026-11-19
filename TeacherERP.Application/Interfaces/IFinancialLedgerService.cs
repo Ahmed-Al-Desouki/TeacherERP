@@ -1,4 +1,5 @@
 using TeacherERP.Domain.Shared;
+using TeacherERP.Application.Common;
 using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
@@ -16,6 +17,8 @@ namespace TeacherERP.Application.Interfaces
     public sealed record CashPaymentRequest(Guid StudentId, Guid SessionId, PaymentType PaymentType, decimal Amount);
     public sealed record CashPaymentResult(Guid TransactionId, PaymentType PaymentType, decimal Amount,
         decimal RemainingDebt, bool MonthlyCoverageCreated);
+    public sealed record TeacherPaymentSettingsDto(string InstaPayLink, string QrImageUrl);
+    public sealed record StudentPaymentDetails(FinancialPaymentOptions FinancialOptions, TeacherPaymentSettingsDto? InstaPay);
 
     public interface IFinancialLedgerService
     {
@@ -23,6 +26,10 @@ namespace TeacherERP.Application.Interfaces
         Task RecordPresentAttendanceAsync(Guid tenantId, Guid studentId, Guid sessionId, Guid? compensatesSessionId,
             CancellationToken cancellationToken);
         Task<Result<CashPaymentResult>> CollectCashAsync(Guid tenantId, Guid processorId, CashPaymentRequest request,
+            CancellationToken cancellationToken);
+        Task<Result<CashPaymentResult>> ApproveExternalPaymentAsync(Guid tenantId, Guid reviewerId, Guid transactionId,
+            CancellationToken cancellationToken);
+        Task<Result<bool>> RejectExternalPaymentAsync(Guid tenantId, Guid reviewerId, Guid transactionId,
             CancellationToken cancellationToken);
     }
 }
