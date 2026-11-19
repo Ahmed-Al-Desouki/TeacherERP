@@ -14,7 +14,8 @@ namespace TeacherERP.Application.Interfaces
         decimal TotalOutstanding, decimal AccountBalance, decimal WalletCredit, IReadOnlyList<FinancialTransactionItem> RecentPayments,
         bool HasMonthlySubscription, int SubscriptionYear, int SubscriptionMonth);
 
-    public sealed record CashPaymentRequest(Guid StudentId, Guid SessionId, PaymentType PaymentType, decimal Amount);
+    public sealed record CashPaymentRequest(Guid StudentId, Guid SessionId, PaymentType PaymentType,
+        decimal Amount, PaymentProvider Method = PaymentProvider.Cash);
     public sealed record CashPaymentResult(Guid TransactionId, PaymentType PaymentType, decimal Amount,
         decimal RemainingDebt, bool MonthlyCoverageCreated);
     public sealed record TeacherPaymentSettingsDto(string InstaPayLink, string QrImageUrl);

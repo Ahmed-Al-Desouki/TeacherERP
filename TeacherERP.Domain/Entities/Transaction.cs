@@ -33,7 +33,7 @@ namespace TeacherERP.Domain.Entities
         /// <summary>يربط المعاملة المالية بحصة محددة (مهم جداً للطلاب الذين يدفعون بالحصة)</summary>
         public Guid? RelatedSessionId { get; private set; }
 
-        /// <summary>مزوّد الدفع الخارجي، إن وجِد.</summary>
+        /// <summary>طريقة الدفع أو مزود الدفع. المعاملات القديمة قد تتركه فارغاً.</summary>
         public PaymentProvider? Provider { get; private set; }
 
         /// <summary>مفتاح إعادة الطلب القادم من العميل؛ لا يُستخدم كسرّ.</summary>
@@ -49,7 +49,9 @@ namespace TeacherERP.Domain.Entities
 
         private Transaction() { }
 
-        public static Transaction CreatePayment(Guid tenantId, Guid studentId, Guid adminId, decimal amount, PaymentType type, Guid? sessionId = null, string? receiptUrl = null)
+        public static Transaction CreatePayment(Guid tenantId, Guid studentId, Guid adminId, decimal amount,
+            PaymentType type, Guid? sessionId = null, string? receiptUrl = null,
+            PaymentProvider paymentMethod = PaymentProvider.Cash)
         {
             return new Transaction
             {
@@ -61,7 +63,8 @@ namespace TeacherERP.Domain.Entities
                 // إذا كان هناك إيصال، تكون الحالة معلقة حتى يوافق السوبر أدمن، وإلا تكون ناجحة فوراً
                 Status = receiptUrl == null ? TransactionStatus.Successful : TransactionStatus.PendingApproval,
                 RelatedSessionId = sessionId,
-                ReceiptImageUrl = receiptUrl
+                ReceiptImageUrl = receiptUrl,
+                Provider = paymentMethod
             };
         }
 
@@ -79,7 +82,8 @@ namespace TeacherERP.Domain.Entities
                 RelatedSessionId = type is PaymentType.PerSession or PaymentType.MonthlySubscription ? contextSessionId : null,
                 PaymentContextSessionId = contextSessionId,
                 ReceiptImageUrl = receiptUrl,
-                ReceiptImagePublicId = receiptPublicId
+                ReceiptImagePublicId = receiptPublicId,
+                Provider = PaymentProvider.InstaPay
             };
         }
 
@@ -191,5 +195,5 @@ namespace TeacherERP.Domain.Entities
     /// <summary>نوع الدفع (دفع بحصة، باشتراك شهري، أو سداد مديونية قديمة)</summary>
     public enum PaymentType { PerSession, MonthlySubscription, DebtSettlement }
     public enum TransactionStatus { PendingApproval, Successful, Failed, Voided, PaymobPending, PaymobAdjustmentReview }
-    public enum PaymentProvider { Paymob }
+    public enum PaymentProvider { Paymob, Cash, InstaPay, Other }
 }

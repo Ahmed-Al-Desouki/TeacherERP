@@ -12,6 +12,8 @@ public sealed class PlatformCommission : BaseEntity, ITenantOwned
     public decimal Amount { get; private set; }
     public int? SubscriptionYear { get; private set; }
     public int? SubscriptionMonth { get; private set; }
+    public DateTime? CollectionRequestedAtUtc { get; private set; }
+    public Guid? CollectionRequestedByUserId { get; private set; }
     public DateTime? SettledAtUtc { get; private set; }
     public Guid? SettledByUserId { get; private set; }
     public string? SettlementReference { get; private set; }
@@ -53,6 +55,17 @@ public sealed class PlatformCommission : BaseEntity, ITenantOwned
         SettledByUserId = administratorId;
         SettledAtUtc = DateTime.SpecifyKind(settledAtUtc, DateTimeKind.Utc);
         SettlementReference = reference.Trim();
+        MarkAsUpdated();
+        return true;
+    }
+
+    public bool RequestCollection(Guid administratorId, DateTime requestedAtUtc)
+    {
+        if (IsSettled || CollectionRequestedAtUtc.HasValue) return false;
+        if (administratorId == Guid.Empty)
+            throw new ArgumentException("An administrator is required.", nameof(administratorId));
+        CollectionRequestedByUserId = administratorId;
+        CollectionRequestedAtUtc = DateTime.SpecifyKind(requestedAtUtc, DateTimeKind.Utc);
         MarkAsUpdated();
         return true;
     }

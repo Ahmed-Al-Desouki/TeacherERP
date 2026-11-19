@@ -60,9 +60,11 @@ namespace TeacherERP.Domain.Entities
         FinancialDelegationGranted,
         FinancialDelegationRevoked,
         CashPaymentCollected,
+        OtherPaymentRecorded,
         PaymobPaymentSucceeded,
         PaymobPaymentFailed,
         PaymobAdjustmentNeedsReview,
-        PlatformCommissionSettled
+        PlatformCommissionSettled,
+        PlatformCommissionCollectionRequested
     }
 }

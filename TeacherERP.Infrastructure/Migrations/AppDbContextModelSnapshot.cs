@@ -1074,6 +1074,12 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime?>("CollectionRequestedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CollectionRequestedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 

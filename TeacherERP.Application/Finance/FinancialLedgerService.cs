@@ -83,9 +83,11 @@ namespace TeacherERP.Application.Finance
                 if (result.IsFailure) return result;
 
                 var payment = result.Value!;
-                _auditRepository.Add(AuditLog.Create(tenantId, processorId, AuditAction.CashPaymentCollected,
+                var auditAction = request.Method == PaymentProvider.Other
+                    ? AuditAction.OtherPaymentRecorded : AuditAction.CashPaymentCollected;
+                _auditRepository.Add(AuditLog.Create(tenantId, processorId, auditAction,
                     request.StudentId,
-                    $"Cash payment transaction {payment.TransactionId}; type={request.PaymentType}; amount={request.Amount}."));
+                    $"{request.Method} payment transaction {payment.TransactionId}; type={request.PaymentType}; amount={request.Amount}."));
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 return result;
             },
@@ -98,6 +100,8 @@ namespace TeacherERP.Application.Finance
             if (request.Amount < 0 || (request.Amount == 0 && request.PaymentType != PaymentType.MonthlySubscription)
                 || decimal.Round(request.Amount, 2) != request.Amount)
                 return Result<CashPaymentResult>.Failure(FinanceErrors.InvalidAmount);
+            if (externalPayment is null && request.Method is not (PaymentProvider.Cash or PaymentProvider.Other))
+                return Result<CashPaymentResult>.Failure(FinanceErrors.UnsupportedPaymentType);
 
             var info = await _repository.GetSessionInfoAsync(tenantId, request.StudentId, request.SessionId, cancellationToken);
             if (info is null || info.TenantId != tenantId
@@ -196,7 +200,7 @@ namespace TeacherERP.Application.Finance
                     member.AddBalance(info.PerSessionPrice ?? 0m);
                 }
                 var payment = externalPayment ?? Transaction.CreatePayment(tenantId, request.StudentId, processorId,
-                    request.Amount, PaymentType.MonthlySubscription, request.SessionId);
+                    request.Amount, PaymentType.MonthlySubscription, request.SessionId, paymentMethod: request.Method);
                 if (externalPayment is null)
                     _repository.AddPayment(payment);
                 else
@@ -221,7 +225,8 @@ namespace TeacherERP.Application.Finance
             if (externalPayment is null)
             {
                 var successfulPayment = Transaction.CreatePayment(tenantId, request.StudentId, processorId,
-                    cashAmount, paymentType, paymentType == PaymentType.PerSession ? request.SessionId : null);
+                    cashAmount, paymentType, paymentType == PaymentType.PerSession ? request.SessionId : null,
+                    paymentMethod: request.Method);
                 transactionId = successfulPayment.Id;
                 _repository.AddPayment(successfulPayment);
             }

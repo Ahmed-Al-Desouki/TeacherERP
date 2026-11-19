@@ -61,6 +61,7 @@ namespace TeacherERP.Application
             services.AddScoped<IPaymobPaymentService, PaymobPaymentService>();
             services.AddScoped<IPlatformCommissionService, PlatformCommissionService>();
             services.AddScoped<IPlatformCommissionSettingsService, PlatformCommissionSettingsService>();
+            services.AddScoped<IMonthlyCollectionReportService, MonthlyCollectionReportService>();
 
             return services;
         }

@@ -12,10 +12,27 @@ namespace TeacherERP.Application.Interfaces
     public sealed record PlatformCommissionItem(Guid Id, Guid TenantId, string TenantName, Guid TeacherId,
         string TeacherName, Guid StudentId, string StudentName, Guid SourceTransactionId, Guid? SessionId,
         PlatformCommissionType Type, decimal Amount, DateTime CreatedAt, DateTime? SettledAtUtc,
-        string? SettlementReference);
+        string? SettlementReference, DateTime? CollectionRequestedAtUtc);
     public sealed record PlatformCommissionSummary(Guid TenantId, string TenantName, Guid TeacherId,
         string TeacherName, int EntryCount, decimal TotalAmount, int SettledCount,
         decimal SettledAmount, int OutstandingCount, decimal OutstandingAmount);
+    public sealed record MonthlyPaymentMethodSummary(string Method, PaymentType Type,
+        int SuccessfulCount, decimal SuccessfulAmount, int PendingCount, decimal PendingAmount,
+        int ReviewCount, decimal ReviewAmount, int FailedCount, decimal FailedAmount);
+    public sealed record MonthlyCollectionTotals(int SuccessfulCount, decimal SuccessfulAmount,
+        int PendingCount, decimal PendingAmount, int ReviewCount, decimal ReviewAmount,
+        int FailedCount, decimal FailedAmount, int OutstandingDebtCount, decimal OutstandingDebtAmount);
+    public sealed record MonthlyCollectionItem(Guid TransactionId, Guid TenantId, string TenantName,
+        Guid TeacherId, string TeacherName, Guid StudentId, string StudentName, PaymentType Type,
+        string Method, TransactionStatus Status, decimal Amount, DateTime CreatedAt,
+        DateTime? UpdatedAt, DateTime OccurredAtUtc, Guid? RelatedSessionId);
+    public sealed record MonthlyOutstandingDebtItem(Guid TenantId, string TenantName, Guid TeacherId,
+        string TeacherName, Guid StudentId, string StudentName, Guid SessionId, string GroupName,
+        DateTime SessionStartUtc, decimal Amount, decimal PaidAmount, decimal OutstandingAmount);
+    public sealed record MonthlyCollectionReport(int Year, int Month, MonthlyCollectionTotals Totals,
+        IReadOnlyList<MonthlyPaymentMethodSummary> ByMethodAndType,
+        PagedResult<MonthlyCollectionItem> Transactions,
+        PagedResult<MonthlyOutstandingDebtItem> OutstandingDebts);
 
     public interface IFinancialLedgerRepository
     {
@@ -49,12 +66,15 @@ namespace TeacherERP.Application.Interfaces
             CancellationToken cancellationToken);
         void AddPlatformCommission(PlatformCommission commission);
         Task<PagedResult<PlatformCommissionItem>> GetPlatformCommissionsPageAsync(int year, int month,
-            bool unsettledOnly, PageRequest page, CancellationToken cancellationToken);
+            bool unsettledOnly, PageRequest page, CancellationToken cancellationToken, Guid? tenantId = null);
         Task<List<PlatformCommissionSummary>> GetPlatformCommissionSummariesAsync(int year, int month,
-            CancellationToken cancellationToken);
+            CancellationToken cancellationToken, Guid? tenantId = null);
         Task<List<PlatformCommission>> GetUnsettledPlatformCommissionsAsync(Guid tenantId,
             DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken);
         Task<PlatformCommissionSettings?> GetPlatformCommissionSettingsAsync(CancellationToken cancellationToken);
         void AddPlatformCommissionSettings(PlatformCommissionSettings settings);
+        Task<MonthlyCollectionReport> GetMonthlyCollectionReportAsync(int year, int month,
+            PageRequest transactionPage, PageRequest debtPage, CancellationToken cancellationToken,
+            Guid? tenantId = null);
     }
 }

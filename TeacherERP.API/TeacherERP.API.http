@@ -654,6 +654,27 @@ Content-Type: application/json
 GET {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions/summary?year=2026&month=11
 Authorization: Bearer {{adminToken}}
 
+### C6: مدير النظام يرسل طلب تحصيل عمولات الشهر للمدرس (إشعار داخل التطبيق)
+POST {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions/request-month
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "tenantId": "{{tenantId}}",
+  "year": 2026,
+  "month": 11
+}
+
+### C6: المدرس يعرض ملخص عمولاته الشهرية داخل مساحته فقط
+GET {{TeacherERP.API_HostAddress}}/api/Finance/platform-commissions/summary?year=2026&month=11
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C6: المدرس يعرض تفاصيل العمولات وحالة طلب التحصيل
+GET {{TeacherERP.API_HostAddress}}/api/Finance/platform-commissions?year=2026&month=11&unsettledOnly=false&page=1&pageSize=20
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
 ### C6: مدير النظام يؤكد استلام تسوية عمولات مدرس للشهر
 POST {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions/settle-month
 Authorization: Bearer {{adminToken}}
@@ -665,3 +686,26 @@ Content-Type: application/json
   "month": 11,
   "settlementReference": "INSTAPAY-TRANSFER-REFERENCE"
 }
+
+### C7: تسجيل دفعة يدوية تمت خارج بوابة الدفع (مثل محفظة أو تحويل آخر)؛ الكاش يستخدم /cash-payments
+POST {{TeacherERP.API_HostAddress}}/api/Finance/manual-payments
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "studentId": "{{studentId}}",
+  "sessionId": "{{sessionId}}",
+  "paymentType": "PerSession",
+  "amount": 75.00,
+  "method": "Other"
+}
+
+### C7: تقرير تحصيل المدرس ومديونيات حضوره للشهر (المعاملات والمديونيات كلٌ في صفحة)
+GET {{TeacherERP.API_HostAddress}}/api/Finance/monthly-collections?year=2026&month=11&page=1&pageSize=20&debtPage=1&debtPageSize=20
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C7: تقرير المدير لكل المدرسين أو فلترة مدرس واحد بـ tenantId
+GET {{TeacherERP.API_HostAddress}}/api/administration/financial-reports/monthly-collections?year=2026&month=11&page=1&pageSize=20&debtPage=1&debtPageSize=20
+Authorization: Bearer {{adminToken}}

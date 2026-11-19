@@ -58,6 +58,7 @@ namespace TeacherERP.Domain.Entities
         StudentAutoSuspended,
         GroupAdminChangeRequested,
         CompensationApproved,
-        CompensationRejected
+        CompensationRejected,
+        PlatformCommissionPaymentRequested
     }
 }

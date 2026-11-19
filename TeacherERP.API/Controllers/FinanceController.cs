@@ -78,6 +78,18 @@ namespace TeacherERP.API.Controllers
         [HttpPost("cash-payments")]
         public async Task<IActionResult> CollectCash([FromBody] CollectCashPaymentCommand command, CancellationToken cancellationToken)
         {
+            if (command.Method != TeacherERP.Domain.Entities.PaymentProvider.Cash)
+                return BadRequest(new { errorCode = "Finance.InvalidPaymentMethod", errorMessage = "Use this endpoint for cash payments." });
+            var result = await _mediator.Send(command, cancellationToken);
+            return ToResponse(result);
+        }
+
+        [HttpPost("manual-payments")]
+        public async Task<IActionResult> RecordOtherManualPayment(
+            [FromBody] CollectCashPaymentCommand command, CancellationToken cancellationToken)
+        {
+            if (command.Method != TeacherERP.Domain.Entities.PaymentProvider.Other)
+                return BadRequest(new { errorCode = "Finance.InvalidPaymentMethod", errorMessage = "Set method to Other for this endpoint." });
             var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result);
         }

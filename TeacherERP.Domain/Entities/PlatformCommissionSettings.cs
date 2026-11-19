@@ -29,7 +29,6 @@ public sealed class PlatformCommissionSettings : BaseEntity
         ValidateAmount(monthlySubscriptionAmount, nameof(monthlySubscriptionAmount));
         if (administratorId == Guid.Empty)
             throw new ArgumentException("An administrator is required.", nameof(administratorId));
-
         if (PerSessionAmount == perSessionAmount && MonthlySubscriptionAmount == monthlySubscriptionAmount)
             return false;
 

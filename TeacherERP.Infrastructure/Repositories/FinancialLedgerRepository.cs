@@ -118,7 +118,7 @@ namespace TeacherERP.Infrastructure.Repositories
             _context.PlatformCommissions.Add(commission);
 
         public Task<PagedResult<PlatformCommissionItem>> GetPlatformCommissionsPageAsync(int year, int month,
-            bool unsettledOnly, PageRequest page, CancellationToken cancellationToken)
+            bool unsettledOnly, PageRequest page, CancellationToken cancellationToken, Guid? tenantId = null)
         {
             var fromUtc = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
             var toUtc = fromUtc.AddMonths(1);
@@ -130,18 +130,19 @@ namespace TeacherERP.Infrastructure.Repositories
                         join student in _context.Users.IgnoreQueryFilters().AsNoTracking()
                             on commission.StudentId equals student.Id
                         where commission.CreatedAt >= fromUtc && commission.CreatedAt < toUtc
+                            && (tenantId == null || commission.TenantId == tenantId.Value)
                             && (!unsettledOnly || commission.SettledAtUtc == null)
                         orderby tenant.Name, commission.CreatedAt, commission.Id
                         select new PlatformCommissionItem(commission.Id, commission.TenantId, tenant.Name,
                             teacher.Id, teacher.FullName, student.Id, student.FullName,
                             commission.SourceTransactionId, commission.SessionId, commission.Type,
                             commission.Amount, commission.CreatedAt, commission.SettledAtUtc,
-                            commission.SettlementReference);
+                            commission.SettlementReference, commission.CollectionRequestedAtUtc);
             return query.ToPagedAsync(page, cancellationToken);
         }
 
         public Task<List<PlatformCommissionSummary>> GetPlatformCommissionSummariesAsync(int year, int month,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, Guid? tenantId = null)
         {
             var fromUtc = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
             var toUtc = fromUtc.AddMonths(1);
@@ -151,6 +152,7 @@ namespace TeacherERP.Infrastructure.Repositories
                         join teacher in _context.Users.IgnoreQueryFilters().AsNoTracking()
                             on tenant.OwnerId equals teacher.Id
                         where commission.CreatedAt >= fromUtc && commission.CreatedAt < toUtc
+                            && (tenantId == null || commission.TenantId == tenantId.Value)
                         group commission by new { TenantId = tenant.Id, TenantName = tenant.Name,
                             TeacherId = teacher.Id, TeacherName = teacher.FullName } into grouped
                         orderby grouped.Key.TenantName
@@ -196,6 +198,115 @@ namespace TeacherERP.Infrastructure.Repositories
                             transaction.ReceiptImageUrl!);
 
             return query.ToPagedAsync(page, cancellationToken);
+        }
+
+        public async Task<MonthlyCollectionReport> GetMonthlyCollectionReportAsync(int year, int month,
+            PageRequest transactionPage, PageRequest debtPage, CancellationToken cancellationToken,
+            Guid? tenantId = null)
+        {
+            var fromUtc = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var toUtc = fromUtc.AddMonths(1);
+            var transactions = _context.Transactions.IgnoreQueryFilters().AsNoTracking()
+                .Where(x => tenantId == null || x.TenantId == tenantId.Value);
+            var occurred = transactions.Select(x => new
+            {
+                Transaction = x,
+                OccurredAtUtc = x.Status == TransactionStatus.Successful
+                    ? (x.Provider == PaymentProvider.Paymob || x.Provider == PaymentProvider.InstaPay
+                        || x.ReceiptImageUrl != null ? x.UpdatedAt ?? x.CreatedAt : x.CreatedAt)
+                    : (x.Status == TransactionStatus.PendingApproval || x.Status == TransactionStatus.PaymobPending
+                        ? x.CreatedAt : x.UpdatedAt ?? x.CreatedAt)
+            });
+            var monthTransactions = occurred.Where(x => x.OccurredAtUtc >= fromUtc && x.OccurredAtUtc < toUtc
+                && (x.Transaction.Status == TransactionStatus.Successful
+                    || x.Transaction.Status == TransactionStatus.PendingApproval
+                    || x.Transaction.Status == TransactionStatus.PaymobPending
+                    || x.Transaction.Status == TransactionStatus.PaymobAdjustmentReview
+                    || x.Transaction.Status == TransactionStatus.Failed
+                    || x.Transaction.Status == TransactionStatus.Voided));
+
+            // Keep the monthly aggregates provider-neutral. SQLite used by integration tests
+            // cannot reliably translate the conditional GroupBy projection used by SQL Server.
+            var methodRows = await monthTransactions.Select(x => new
+            {
+                x.Transaction.Type,
+                x.Transaction.Status,
+                x.Transaction.Amount,
+                x.Transaction.Provider,
+                HasReceipt = x.Transaction.ReceiptImageUrl != null
+            }).ToListAsync(cancellationToken);
+            var byMethod = methodRows.GroupBy(x => new
+                {
+                    Method = x.Provider == PaymentProvider.Paymob ? "Paymob"
+                        : x.Provider == PaymentProvider.Other ? "Other"
+                        : x.Provider == PaymentProvider.InstaPay || x.HasReceipt ? "InstaPay" : "Cash",
+                    x.Type
+                })
+                .Select(group => new MonthlyPaymentMethodSummary(group.Key.Method, group.Key.Type,
+                    group.Count(x => x.Status == TransactionStatus.Successful),
+                    group.Sum(x => x.Status == TransactionStatus.Successful ? x.Amount : 0m),
+                    group.Count(x => x.Status == TransactionStatus.PendingApproval
+                        || x.Status == TransactionStatus.PaymobPending),
+                    group.Sum(x => x.Status == TransactionStatus.PendingApproval
+                        || x.Status == TransactionStatus.PaymobPending ? x.Amount : 0m),
+                    group.Count(x => x.Status == TransactionStatus.PaymobAdjustmentReview),
+                    group.Sum(x => x.Status == TransactionStatus.PaymobAdjustmentReview ? x.Amount : 0m),
+                    group.Count(x => x.Status == TransactionStatus.Failed || x.Status == TransactionStatus.Voided),
+                    group.Sum(x => x.Status == TransactionStatus.Failed || x.Status == TransactionStatus.Voided
+                        ? x.Amount : 0m)))
+                .OrderBy(x => x.Method).ThenBy(x => x.Type).ToList();
+
+            var transactionQuery = from entry in monthTransactions
+                                   join tenant in _context.Tenants.IgnoreQueryFilters().AsNoTracking()
+                                       on entry.Transaction.TenantId equals tenant.Id
+                                   join teacher in _context.Users.IgnoreQueryFilters().AsNoTracking()
+                                       on tenant.OwnerId equals teacher.Id
+                                   join student in _context.Users.IgnoreQueryFilters().AsNoTracking()
+                                       on entry.Transaction.StudentId equals student.Id
+                                   orderby entry.OccurredAtUtc descending, entry.Transaction.Id
+                                   select new MonthlyCollectionItem(entry.Transaction.Id, tenant.Id, tenant.Name,
+                                       teacher.Id, teacher.FullName, student.Id, student.FullName,
+                                       entry.Transaction.Type,
+                                       entry.Transaction.Provider == PaymentProvider.Paymob ? "Paymob"
+                                           : entry.Transaction.Provider == PaymentProvider.Other ? "Other"
+                                           : entry.Transaction.Provider == PaymentProvider.InstaPay
+                                               || entry.Transaction.ReceiptImageUrl != null ? "InstaPay" : "Cash",
+                                       entry.Transaction.Status, entry.Transaction.Amount,
+                                       entry.Transaction.CreatedAt, entry.Transaction.UpdatedAt,
+                                       entry.OccurredAtUtc,
+                                       entry.Transaction.RelatedSessionId);
+            var transactionResult = await transactionQuery.ToPagedAsync(transactionPage, cancellationToken);
+
+            var debtBase = _context.FinancialObligations.IgnoreQueryFilters().AsNoTracking()
+                .Where(x => x.SessionStartUtc >= fromUtc && x.SessionStartUtc < toUtc
+                    && x.PaidAmount < x.Amount
+                    && (tenantId == null || x.TenantId == tenantId.Value));
+            var debtCount = await debtBase.CountAsync(cancellationToken);
+            var debtAmount = await debtBase.Select(x => (decimal?)(x.Amount - x.PaidAmount))
+                .SumAsync(cancellationToken) ?? 0m;
+            var debtQuery = from debt in _context.FinancialObligations.IgnoreQueryFilters().AsNoTracking()
+                            join tenant in _context.Tenants.IgnoreQueryFilters().AsNoTracking()
+                                on debt.TenantId equals tenant.Id
+                            join teacher in _context.Users.IgnoreQueryFilters().AsNoTracking()
+                                on tenant.OwnerId equals teacher.Id
+                            join student in _context.Users.IgnoreQueryFilters().AsNoTracking()
+                                on debt.StudentId equals student.Id
+                            where debt.SessionStartUtc >= fromUtc && debt.SessionStartUtc < toUtc
+                                && debt.PaidAmount < debt.Amount
+                                && (tenantId == null || debt.TenantId == tenantId.Value)
+                            orderby tenant.Name, debt.SessionStartUtc, student.FullName
+                            select new MonthlyOutstandingDebtItem(tenant.Id, tenant.Name, teacher.Id,
+                                teacher.FullName, student.Id, student.FullName, debt.SessionId, debt.GroupName,
+                                debt.SessionStartUtc, debt.Amount, debt.PaidAmount, debt.Amount - debt.PaidAmount);
+            var debtResult = await debtQuery.ToPagedAsync(debtPage, cancellationToken);
+
+            var totals = new MonthlyCollectionTotals(
+                byMethod.Sum(x => x.SuccessfulCount), byMethod.Sum(x => x.SuccessfulAmount),
+                byMethod.Sum(x => x.PendingCount), byMethod.Sum(x => x.PendingAmount),
+                byMethod.Sum(x => x.ReviewCount), byMethod.Sum(x => x.ReviewAmount),
+                byMethod.Sum(x => x.FailedCount), byMethod.Sum(x => x.FailedAmount),
+                debtCount, debtAmount);
+            return new MonthlyCollectionReport(year, month, totals, byMethod, transactionResult, debtResult);
         }
     }
 }

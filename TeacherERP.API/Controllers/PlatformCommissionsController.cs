@@ -25,6 +25,17 @@ public sealed class PlatformCommissionsController : BaseApiController
     public async Task<IActionResult> GetSettings(CancellationToken cancellationToken) =>
         Ok(await _settings.GetAsync(cancellationToken));
 
+    [HttpPost("request-month")]
+    public async Task<IActionResult> RequestMonth([FromBody] RequestPlatformCommissionCollection request,
+        CancellationToken cancellationToken)
+    {
+        var actor = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(actor, out var administratorId)) return Unauthorized();
+        var result = await _commissions.RequestMonthlyCollectionAsync(administratorId,
+            request.TenantId, request.Year, request.Month, cancellationToken);
+        return ToResponse(result);
+    }
+
     [HttpPut("settings")]
     public async Task<IActionResult> UpdateSettings([FromBody] UpdatePlatformCommissionSettingsRequest request,
         CancellationToken cancellationToken)
@@ -76,3 +87,5 @@ public sealed record SettlePlatformCommissionRequest(Guid TenantId, int Year, in
 
 public sealed record UpdatePlatformCommissionSettingsRequest(decimal PerSessionAmount,
     decimal MonthlySubscriptionAmount);
+
+public sealed record RequestPlatformCommissionCollection(Guid TenantId, int Year, int Month);

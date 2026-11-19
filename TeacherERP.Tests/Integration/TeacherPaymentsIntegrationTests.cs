@@ -191,6 +191,18 @@ public sealed class TeacherPaymentsIntegrationTests : IClassFixture<CustomWebApp
             .CountAsync(x => x.TenantId == s.Teacher.TenantId && x.StudentId == s.StudentId
                 && x.SessionId == s.SessionId && x.Amount == 1m && x.SettledAtUtc == null)));
 
+        await _factory.SeedAsync(async db =>
+        {
+            var otherTeacher = await TestData.CreateTeacherAsync(db);
+            var otherStudentId = await TestData.AddStudentAsync(db, otherTeacher.TenantId, otherTeacher.GroupId);
+            var otherPayment = Transaction.CreatePayment(otherTeacher.TenantId, otherStudentId, otherTeacher.OwnerId,
+                75m, PaymentType.PerSession);
+            db.Transactions.Add(otherPayment);
+            db.PlatformCommissions.Add(PlatformCommission.ForSession(otherTeacher.TenantId, otherStudentId,
+                otherTeacher.GroupId, otherPayment.Id, Guid.NewGuid(), 1m));
+            await db.SaveChangesAsync();
+        });
+
         var admin = _factory.CreateClientFor(Guid.NewGuid(), role: "Administrator");
         var now = DateTime.UtcNow;
         var page = await admin.GetAsync($"/api/administration/platform-commissions?year={now.Year}&month={now.Month}&unsettledOnly=true");
@@ -202,6 +214,38 @@ public sealed class TeacherPaymentsIntegrationTests : IClassFixture<CustomWebApp
             x.GetProperty("tenantId").GetGuid() == s.Teacher.TenantId);
         Assert.Equal(1m, teacherSummary.GetProperty("outstandingAmount").GetDecimal());
         Assert.Equal(1, teacherSummary.GetProperty("outstandingCount").GetInt32());
+
+        var teacherSummaryResponse = await Owner(s).GetAsync(
+            $"/api/Finance/platform-commissions/summary?year={now.Year}&month={now.Month}");
+        Assert.Equal(HttpStatusCode.OK, teacherSummaryResponse.StatusCode);
+        var ownSummary = await teacherSummaryResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(s.Teacher.TenantId, ownSummary.GetProperty("tenantId").GetGuid());
+        Assert.Equal(1m, ownSummary.GetProperty("outstandingAmount").GetDecimal());
+        var ownDetailsResponse = await Owner(s).GetAsync(
+            $"/api/Finance/platform-commissions?year={now.Year}&month={now.Month}");
+        var ownDetails = await ownDetailsResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Single(ownDetails.GetProperty("items").EnumerateArray());
+        Assert.Equal(s.Teacher.TenantId,
+            ownDetails.GetProperty("items")[0].GetProperty("tenantId").GetGuid());
+        Assert.Equal(HttpStatusCode.Forbidden, (await Student(s).GetAsync(
+            $"/api/Finance/platform-commissions/summary?year={now.Year}&month={now.Month}")).StatusCode);
+
+        var requested = await admin.PostAsJsonAsync("/api/administration/platform-commissions/request-month",
+            new { tenantId = s.Teacher.TenantId, year = now.Year, month = now.Month });
+        Assert.Equal(HttpStatusCode.OK, requested.StatusCode);
+        Assert.True(await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().AnyAsync(x =>
+            x.RecipientUserId == s.Teacher.OwnerId && x.Type == NotificationType.PlatformCommissionPaymentRequested
+            && x.Message.Contains("1.00 EGP") && x.Message.Contains("payment instructions")
+            && x.Message.Contains("transfer reference"))));
+        var teacherDetails = await Owner(s).GetAsync(
+            $"/api/Finance/platform-commissions?year={now.Year}&month={now.Month}&unsettledOnly=true");
+        var teacherItems = await teacherDetails.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.NotEqual(JsonValueKind.Null,
+            teacherItems.GetProperty("items")[0].GetProperty("collectionRequestedAtUtc").ValueKind);
+        var duplicateRequest = await admin.PostAsJsonAsync("/api/administration/platform-commissions/request-month",
+            new { tenantId = s.Teacher.TenantId, year = now.Year, month = now.Month });
+        Assert.Equal(HttpStatusCode.BadRequest, duplicateRequest.StatusCode);
+
         var settled = await admin.PostAsJsonAsync("/api/administration/platform-commissions/settle-month",
             new { tenantId = s.Teacher.TenantId, year = now.Year, month = now.Month, settlementReference = "TEST-TRANSFER-001" });
         Assert.Equal(HttpStatusCode.OK, settled.StatusCode);
@@ -212,6 +256,113 @@ public sealed class TeacherPaymentsIntegrationTests : IClassFixture<CustomWebApp
             x.TenantId == s.Teacher.TenantId && x.Action == AuditAction.PlatformCommissionSettled)));
         Assert.Equal(HttpStatusCode.Forbidden, (await Owner(s).GetAsync(
             $"/api/administration/platform-commissions?year={now.Year}&month={now.Month}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task MonthlyCollectionsReport_SeparatesPaymentMethodsStatusesAndAttendanceDebt()
+    {
+        var instaPayTeacher = await SeedAsync(debt: 100m, perSessionPrice: 100m);
+        var otherMethodTeacher = await SeedAsync(debt: 75m, perSessionPrice: 75m);
+        var now = DateTime.UtcNow;
+
+        var receipt = await Student(instaPayTeacher).PostAsync("/api/StudentPayments/receipts",
+            ReceiptForm(instaPayTeacher, PaymentType.PerSession, 100m));
+        Assert.Equal(HttpStatusCode.OK, receipt.StatusCode);
+        var receiptId = await ReceiptIdAsync(receipt);
+        var manualPayment = await Owner(otherMethodTeacher).PostAsJsonAsync("/api/Finance/manual-payments",
+            new
+            {
+                studentId = otherMethodTeacher.StudentId,
+                sessionId = otherMethodTeacher.SessionId,
+                paymentType = PaymentType.PerSession,
+                amount = 75m,
+                method = PaymentProvider.Other
+            });
+        Assert.Equal(HttpStatusCode.OK, manualPayment.StatusCode);
+
+        var teacherReportResponse = await Owner(instaPayTeacher).GetAsync(
+            $"/api/Finance/monthly-collections?year={now.Year}&month={now.Month}");
+        Assert.Equal(HttpStatusCode.OK, teacherReportResponse.StatusCode);
+        var teacherReport = await teacherReportResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0m, teacherReport.GetProperty("totals").GetProperty("successfulAmount").GetDecimal());
+        Assert.Equal(100m, teacherReport.GetProperty("totals").GetProperty("pendingAmount").GetDecimal());
+        Assert.Equal(100m, teacherReport.GetProperty("totals").GetProperty("outstandingDebtAmount").GetDecimal());
+        Assert.Equal("InstaPay", teacherReport.GetProperty("transactions").GetProperty("items")[0]
+            .GetProperty("method").GetString());
+        Assert.Equal(HttpStatusCode.Forbidden, (await Student(instaPayTeacher).GetAsync(
+            $"/api/Finance/monthly-collections?year={now.Year}&month={now.Month}")).StatusCode);
+
+        var admin = _factory.CreateClientFor(Guid.NewGuid(), role: "Administrator");
+        var otherTenantReportResponse = await admin.GetAsync(
+            $"/api/administration/financial-reports/monthly-collections?year={now.Year}&month={now.Month}&tenantId={otherMethodTeacher.Teacher.TenantId}");
+        Assert.Equal(HttpStatusCode.OK, otherTenantReportResponse.StatusCode);
+        var otherTenantReport = await otherTenantReportResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(75m, otherTenantReport.GetProperty("totals").GetProperty("successfulAmount").GetDecimal());
+        Assert.Equal(0m, otherTenantReport.GetProperty("totals").GetProperty("pendingAmount").GetDecimal());
+        Assert.Equal(0m, otherTenantReport.GetProperty("totals").GetProperty("outstandingDebtAmount").GetDecimal());
+        Assert.Contains(otherTenantReport.GetProperty("transactions").GetProperty("items").EnumerateArray(),
+            x => x.GetProperty("method").GetString() == "Other"
+                && x.GetProperty("studentId").GetGuid() == otherMethodTeacher.StudentId);
+
+        var instaPayTenantReportResponse = await admin.GetAsync(
+            $"/api/administration/financial-reports/monthly-collections?year={now.Year}&month={now.Month}&tenantId={instaPayTeacher.Teacher.TenantId}");
+        Assert.Equal(HttpStatusCode.OK, instaPayTenantReportResponse.StatusCode);
+        var instaPayTenantReport = await instaPayTenantReportResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0m, instaPayTenantReport.GetProperty("totals").GetProperty("successfulAmount").GetDecimal());
+        Assert.Equal(100m, instaPayTenantReport.GetProperty("totals").GetProperty("pendingAmount").GetDecimal());
+        Assert.Equal(100m, instaPayTenantReport.GetProperty("totals").GetProperty("outstandingDebtAmount").GetDecimal());
+        Assert.Contains(instaPayTenantReport.GetProperty("transactions").GetProperty("items").EnumerateArray(),
+            x => x.GetProperty("method").GetString() == "InstaPay"
+                && x.GetProperty("studentId").GetGuid() == instaPayTeacher.StudentId);
+        Assert.True(await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters().AnyAsync(x =>
+            x.TenantId == otherMethodTeacher.Teacher.TenantId
+            && x.Action == AuditAction.OtherPaymentRecorded)));
+
+        Assert.Equal(HttpStatusCode.OK, (await Owner(instaPayTeacher).PostAsync(
+            $"/api/Finance/instapay-receipts/{receiptId}/approve", null)).StatusCode);
+        var settledReportResponse = await Owner(instaPayTeacher).GetAsync(
+            $"/api/Finance/monthly-collections?year={now.Year}&month={now.Month}");
+        var settledReport = await settledReportResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(100m, settledReport.GetProperty("totals").GetProperty("successfulAmount").GetDecimal());
+        Assert.Equal(0m, settledReport.GetProperty("totals").GetProperty("pendingAmount").GetDecimal());
+        Assert.Equal(0m, settledReport.GetProperty("totals").GetProperty("outstandingDebtAmount").GetDecimal());
+    }
+
+    [Fact]
+    public async Task AbsentStudent_DoesNotCreatePerSessionDebtOrAllowPaymentForThatSession()
+    {
+        Scenario? scenario = null;
+        await _factory.SeedAsync(async db =>
+        {
+            var teacher = await TestData.CreateTeacherAsync(db);
+            var group = await db.Groups.IgnoreQueryFilters().SingleAsync(x => x.Id == teacher.GroupId);
+            group.UpdatePricing(75m, null);
+            var studentId = await TestData.AddStudentAsync(db, teacher.TenantId, teacher.GroupId);
+            var sessionId = await TestData.AddSessionAsync(
+                db, teacher.TenantId, teacher.GroupId, DateTime.UtcNow.AddHours(-2), TimeSpan.FromMinutes(45));
+            db.AttendanceRecords.Add(AttendanceRecord.RecordAbsence(teacher.TenantId, sessionId, studentId));
+            await db.SaveChangesAsync();
+            scenario = new Scenario(teacher, studentId, sessionId, Guid.Empty, null);
+        });
+
+        var absent = scenario!;
+        var payment = await Owner(absent).PostAsJsonAsync("/api/Finance/cash-payments", new
+        {
+            studentId = absent.StudentId,
+            sessionId = absent.SessionId,
+            paymentType = PaymentType.PerSession,
+            amount = 75m
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, payment.StatusCode);
+        Assert.False(await _factory.QueryAsync(db => db.FinancialObligations.IgnoreQueryFilters()
+            .AnyAsync(x => x.TenantId == absent.Teacher.TenantId && x.SessionId == absent.SessionId)));
+
+        var now = DateTime.UtcNow;
+        var report = await Owner(absent).GetAsync(
+            $"/api/Finance/monthly-collections?year={now.Year}&month={now.Month}");
+        Assert.Equal(HttpStatusCode.OK, report.StatusCode);
+        var body = await report.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0, body.GetProperty("totals").GetProperty("outstandingDebtCount").GetInt32());
     }
 
     [Fact]

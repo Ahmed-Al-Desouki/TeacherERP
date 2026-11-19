@@ -205,6 +205,19 @@ public sealed class PaymobPaymentIntegrationTests : IClassFixture<CustomWebAppli
         Assert.Equal(1, await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters()
             .CountAsync(x => x.TenantId == scenario.Teacher.TenantId
                 && x.Action == AuditAction.PaymobPaymentSucceeded)));
+
+        var now = DateTime.UtcNow;
+        var reportResponse = await _factory.CreateClientFor(
+            scenario.Teacher.OwnerId, scenario.Teacher.TenantId).GetAsync(
+            $"/api/Finance/monthly-collections?year={now.Year}&month={now.Month}");
+        Assert.Equal(HttpStatusCode.OK, reportResponse.StatusCode);
+        var report = await reportResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(75m, report.GetProperty("totals").GetProperty("successfulAmount").GetDecimal());
+        Assert.Equal(0m, report.GetProperty("totals").GetProperty("pendingAmount").GetDecimal());
+        Assert.Contains(report.GetProperty("byMethodAndType").EnumerateArray(), item =>
+            item.GetProperty("method").GetString() == "Paymob"
+            && item.GetProperty("type").GetString() == "PerSession"
+            && item.GetProperty("successfulAmount").GetDecimal() == 75m);
     }
 
     [Fact]

@@ -24,7 +24,8 @@ namespace TeacherERP.Application.Features.Finance.CollectCashPayment
             if (_tenant.Current is not { } tenant)
                 return Task.FromResult(Result<CashPaymentResult>.Failure(TenantErrors.Required));
             return _ledger.CollectCashAsync(tenant.TenantId, userId,
-                new CashPaymentRequest(request.StudentId, request.SessionId, request.PaymentType, request.Amount), cancellationToken);
+                new CashPaymentRequest(request.StudentId, request.SessionId, request.PaymentType,
+                    request.Amount, request.Method), cancellationToken);
         }
     }
 }
