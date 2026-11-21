@@ -28,5 +28,8 @@ namespace TeacherERP.Application.Interfaces
 
         Task<PagedResult<SessionAttachmentItem>> GetPageAsync(
             Guid sessionId, SessionAttachmentKind? kind, PageRequest page, CancellationToken cancellationToken);
+
+        Task<List<SessionAttachmentItem>> GetForSessionsAsync(Guid tenantId,
+            IReadOnlyCollection<Guid> sessionIds, CancellationToken cancellationToken);
     }
 }

@@ -49,6 +49,26 @@ namespace TeacherERP.Infrastructure.Repositories
             return recipients.Distinct().ToList();
         }
 
+        public Task<List<Guid>> GetGroupStudentRecipientIdsAsync(
+            Guid tenantId, Guid groupId, CancellationToken cancellationToken)
+        {
+            var activeStudents = _context.TenantMembers
+                .IgnoreQueryFilters()
+                .Where(m => m.TenantId == tenantId
+                    && m.Role == TenantRole.Student
+                    && m.Status == MembershipStatus.Active);
+
+            return _context.GroupEnrollments
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(e => e.TenantId == tenantId
+                    && e.GroupId == groupId
+                    && e.Status == EnrollmentStatus.Active)
+                .Join(activeStudents, e => e.StudentId, member => member.UserId, (_, member) => member.UserId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+        }
+
         public Task<PagedResult<NotificationItem>> GetMinePageAsync(
             Guid userId, bool unreadOnly, PageRequest page, CancellationToken cancellationToken)
         {
@@ -77,6 +97,62 @@ namespace TeacherERP.Infrastructure.Repositories
             return _context.Notifications
                 .Where(n => n.RecipientUserId == userId && !n.IsRead)
                 .ToListAsync(cancellationToken);
+        }
+
+        public async Task<NotificationShareItem?> GetOwnSessionAttachmentShareAsync(
+            Guid notificationId, Guid userId, CancellationToken cancellationToken)
+        {
+            var notification = await _context.Notifications
+                .AsNoTracking()
+                .Where(n => n.Id == notificationId && n.RecipientUserId == userId
+                    && n.RelatedId != null
+                    && (n.Type == NotificationType.HomeworkUploaded
+                        || n.Type == NotificationType.SessionAttachmentUploaded))
+                .Select(n => new { n.TenantId, AttachmentId = n.RelatedId!.Value })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (notification is null)
+            {
+                return null;
+            }
+
+            var attachment = await _context.SessionAttachments
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(a => a.Id == notification.AttachmentId && a.TenantId == notification.TenantId)
+                .Select(a => new { a.Kind, a.SessionId, a.FileName, a.Caption, a.Url })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (attachment is null)
+            {
+                return null;
+            }
+
+            return await (
+                from session in _context.Sessions.IgnoreQueryFilters().AsNoTracking()
+                join targetGroup in _context.Groups.IgnoreQueryFilters().AsNoTracking()
+                    on session.GroupId equals targetGroup.Id
+                where session.Id == attachment.SessionId
+                    && session.TenantId == notification.TenantId
+                    && targetGroup.TenantId == notification.TenantId
+                    && _context.GroupEnrollments.IgnoreQueryFilters().Any(enrollment =>
+                        enrollment.TenantId == notification.TenantId
+                        && enrollment.GroupId == targetGroup.Id
+                        && enrollment.StudentId == userId
+                        && enrollment.Status == EnrollmentStatus.Active)
+                    && _context.TenantMembers.IgnoreQueryFilters().Any(member =>
+                        member.TenantId == notification.TenantId
+                        && member.UserId == userId
+                        && member.Role == TenantRole.Student
+                        && member.Status == MembershipStatus.Active)
+                select new NotificationShareItem(
+                    attachment.Kind,
+                    targetGroup.Name,
+                    attachment.FileName,
+                    attachment.Caption,
+                    attachment.Url,
+                    targetGroup.WhatsAppGroupLink))
+                .FirstOrDefaultAsync(cancellationToken);
         }
     }
 }

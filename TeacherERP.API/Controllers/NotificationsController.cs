@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Notifications.GetMyNotifications;
+using TeacherERP.Application.Features.Notifications.GetWhatsAppShare;
 using TeacherERP.Application.Features.Notifications.MarkAllNotificationsRead;
 using TeacherERP.Application.Features.Notifications.MarkNotificationRead;
 
@@ -29,6 +30,14 @@ namespace TeacherERP.API.Controllers
             CancellationToken cancellationToken = default)
         {
             var result = await _mediator.Send(new GetMyNotificationsQuery(unreadOnly, page, pageSize), cancellationToken);
+            return ToResponse(result);
+        }
+
+        // يُرجع الرسالة الجاهزة ورابط المجموعة لإشعار مملوك للمستخدم الحالي
+        [HttpGet("{id:guid}/whatsapp-share")]
+        public async Task<IActionResult> GetWhatsAppShare(Guid id, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetNotificationWhatsAppShareQuery(id), cancellationToken);
             return ToResponse(result);
         }
 

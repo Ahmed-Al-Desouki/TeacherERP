@@ -8,6 +8,9 @@
         /// <summary>يحدد السنتر الحالي (X-Teacher-Id أو تلقائياً لو عضوية واحدة) ويتأكد من عضوية المستخدم فيه</summary>
         public const string TenantMember = "TenantMember";
 
+        /// <summary>عضوية الطالب في السنتر الحالي فقط</summary>
+        public const string TenantStudent = "TenantStudent";
+
         /// <summary>نفس TenantMember لكن للمدرس (Owner) أو المساعد (Assistant) فقط</summary>
         public const string TenantStaff = "TenantStaff";
 

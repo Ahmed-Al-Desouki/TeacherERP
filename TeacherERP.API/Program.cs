@@ -112,6 +112,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(AuthPolicies.TenantMember, policy =>
         policy.RequireAuthenticatedUser().AddRequirements(new TenantRequirement()));
 
+    options.AddPolicy(AuthPolicies.TenantStudent, policy =>
+        policy.RequireAuthenticatedUser().AddRequirements(new TenantRequirement(TenantRole.Student)));
+
     // نفس التحقق مع قصر الدور داخل السنتر (الدور من العضوية لا من دور الـ Identity)
     options.AddPolicy(AuthPolicies.TenantStaff, policy =>
         policy.RequireAuthenticatedUser().AddRequirements(new TenantRequirement(TenantRole.Owner, TenantRole.Assistant)));

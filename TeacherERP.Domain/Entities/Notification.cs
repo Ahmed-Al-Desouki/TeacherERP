@@ -59,6 +59,8 @@ namespace TeacherERP.Domain.Entities
         GroupAdminChangeRequested,
         CompensationApproved,
         CompensationRejected,
-        PlatformCommissionPaymentRequested
+        PlatformCommissionPaymentRequested,
+        HomeworkUploaded,
+        SessionAttachmentUploaded
     }
 }

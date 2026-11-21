@@ -56,5 +56,32 @@ namespace TeacherERP.Infrastructure.Repositories
 
             return query.ToPagedAsync(page, cancellationToken);
         }
+
+        public Task<List<SessionAttachmentItem>> GetForSessionsAsync(Guid tenantId,
+            IReadOnlyCollection<Guid> sessionIds, CancellationToken cancellationToken)
+        {
+            if (sessionIds.Count == 0) return Task.FromResult(new List<SessionAttachmentItem>());
+
+            var query = from attachment in _context.SessionAttachments.IgnoreQueryFilters().AsNoTracking()
+                        join uploader in _context.Users.IgnoreQueryFilters().AsNoTracking()
+                            on attachment.UploadedByUserId equals uploader.Id into uploaders
+                        from uploader in uploaders.DefaultIfEmpty()
+                        where attachment.TenantId == tenantId && sessionIds.Contains(attachment.SessionId)
+                        orderby attachment.CreatedAt, attachment.Id
+                        select new SessionAttachmentItem(
+                            attachment.Id,
+                            attachment.SessionId,
+                            attachment.Kind,
+                            attachment.Url,
+                            attachment.FileName,
+                            attachment.ContentType,
+                            attachment.SizeBytes,
+                            attachment.Caption,
+                            attachment.UploadedByUserId,
+                            uploader == null ? null : uploader.FullName,
+                            attachment.CreatedAt);
+
+            return query.ToListAsync(cancellationToken);
+        }
     }
 }

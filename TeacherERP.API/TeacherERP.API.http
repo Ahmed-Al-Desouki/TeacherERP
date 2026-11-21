@@ -16,6 +16,8 @@ Accept: application/json
 @studentId = 00000000-0000-0000-0000-000000000000
 @currentSessionStart = 2026-12-01T15:00:00Z
 @requestId = 00000000-0000-0000-0000-000000000000
+@notificationId = 00000000-0000-0000-0000-000000000000
+@studentToken = PASTE_STUDENT_ACCESS_TOKEN
 @centerId = 00000000-0000-0000-0000-000000000000
 @compensationId = FA8907C8-350F-4363-A0B4-3C4D361CA050
 
@@ -709,3 +711,21 @@ X-Teacher-Id: {{teacherId}}
 ### C7: تقرير المدير لكل المدرسين أو فلترة مدرس واحد بـ tenantId
 GET {{TeacherERP.API_HostAddress}}/api/administration/financial-reports/monthly-collections?year=2026&month=11&page=1&pageSize=20&debtPage=1&debtPageSize=20
 Authorization: Bearer {{adminToken}}
+
+### D1: الطالب يعرض Timeline حصصه وموادها في السنتر الحالي (الافتراضي: 30 يوماً للخلف و90 يوماً للأمام)
+GET {{TeacherERP.API_HostAddress}}/api/students/me/timeline?page=1&pageSize=20
+Authorization: Bearer {{studentToken}}
+X-Teacher-Id: {{teacherId}}
+
+### D1: فلترة Timeline بمجموعة ونطاق زمني محدد (الأوقات UTC)
+GET {{TeacherERP.API_HostAddress}}/api/students/me/timeline?from=2026-11-01T00:00:00Z&to=2026-12-01T00:00:00Z&groupId={{groupId}}&page=1&pageSize=20
+
+### D2: إشعاراتي (استخدم توكن الطالب لاستلام إشعارات مجموعاته)
+GET {{TeacherERP.API_HostAddress}}/api/Notifications?page=1&pageSize=20
+Authorization: Bearer {{studentToken}}
+
+### D2: بيانات مشاركة ملف الحصة — ShareText للنسخ، WhatsAppGroupLink لفتح الجروب، وWhatsAppComposeUrl لاختيار محادثة وإرسال النص الجاهز
+GET {{TeacherERP.API_HostAddress}}/api/Notifications/{{notificationId}}/whatsapp-share
+Authorization: Bearer {{studentToken}}
+Authorization: Bearer {{studentToken}}
+X-Teacher-Id: {{teacherId}}

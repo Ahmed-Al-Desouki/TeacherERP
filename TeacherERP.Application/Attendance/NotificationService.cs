@@ -30,5 +30,18 @@ namespace TeacherERP.Application.Attendance
                 _repository.Add(Notification.Create(recipientId, tenantId, type, message, relatedId));
             }
         }
+
+        public async Task NotifyGroupStudentsAsync(
+            Guid tenantId, Guid groupId, NotificationType type,
+            string message, Guid relatedId, CancellationToken cancellationToken)
+        {
+            var recipients = await _repository.GetGroupStudentRecipientIdsAsync(
+                tenantId, groupId, cancellationToken);
+
+            foreach (var recipientId in recipients)
+            {
+                _repository.Add(Notification.Create(recipientId, tenantId, type, message, relatedId));
+            }
+        }
     }
 }

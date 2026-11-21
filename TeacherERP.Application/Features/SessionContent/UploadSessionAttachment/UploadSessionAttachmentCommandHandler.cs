@@ -22,6 +22,7 @@ namespace TeacherERP.Application.Features.SessionContent.UploadSessionAttachment
         private readonly IFileStorage _fileStorage;
         private readonly IAuditRepository _auditRepository;
         private readonly IUserRepository _userRepository;
+        private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly TimeProvider _timeProvider;
@@ -35,6 +36,7 @@ namespace TeacherERP.Application.Features.SessionContent.UploadSessionAttachment
             IFileStorage fileStorage,
             IAuditRepository auditRepository,
             IUserRepository userRepository,
+            INotificationService notificationService,
             IUnitOfWork unitOfWork,
             IBackgroundJobClient backgroundJobClient,
             TimeProvider timeProvider)
@@ -47,6 +49,7 @@ namespace TeacherERP.Application.Features.SessionContent.UploadSessionAttachment
             _fileStorage = fileStorage;
             _auditRepository = auditRepository;
             _userRepository = userRepository;
+            _notificationService = notificationService;
             _unitOfWork = unitOfWork;
             _backgroundJobClient = backgroundJobClient;
             _timeProvider = timeProvider;
@@ -160,6 +163,16 @@ namespace TeacherERP.Application.Features.SessionContent.UploadSessionAttachment
                     _attachmentRepository.Add(attachment);
                     _auditRepository.Add(AuditLog.Create(
                         tenant.TenantId, userId, AuditAction.SessionAttachmentUploaded, null, $"{request.Kind}: {fileName}"));
+
+                    var notificationType = request.Kind == SessionAttachmentKind.Homework
+                        ? NotificationType.HomeworkUploaded
+                        : NotificationType.SessionAttachmentUploaded;
+                    var notificationMessage = request.Kind == SessionAttachmentKind.Homework
+                        ? "New homework was uploaded to your group."
+                        : "New session material was uploaded to your group.";
+                    await _notificationService.NotifyGroupStudentsAsync(
+                        tenant.TenantId, session.GroupId, notificationType,
+                        notificationMessage, attachment.Id, cancellationToken);
 
                     await _unitOfWork.SaveChangesAsync(cancellationToken);
                 }
