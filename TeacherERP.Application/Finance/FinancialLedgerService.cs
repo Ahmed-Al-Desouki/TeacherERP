@@ -318,6 +318,43 @@ namespace TeacherERP.Application.Finance
             }, IsolationLevel.Serializable, cancellationToken);
         }
 
+        public async Task<Result<bool>> ApplyPaymobRefundDebtAsync(Guid tenantId, Guid transactionId,
+            decimal amount, CancellationToken cancellationToken)
+        {
+            if (amount == 0) return Result<bool>.Success(true);
+            if (amount < 0 || decimal.Round(amount, 2) != amount)
+                return Result<bool>.Failure(FinanceErrors.InvalidAmount);
+
+            var payment = await _repository.GetTransactionTrackedAsync(tenantId, transactionId, cancellationToken);
+            if (payment is null || payment.Provider != PaymentProvider.Paymob
+                || payment.Status != TransactionStatus.PaymobAdjustmentReview
+                || payment.PaymentContextSessionId is not { } sessionId)
+                return Result<bool>.Failure(FinanceErrors.PaymobAdjustmentNotReviewable);
+
+            var info = await _repository.GetSessionInfoAsync(tenantId, payment.StudentId, sessionId, cancellationToken);
+            if (info is null || info.TenantId != tenantId)
+                return Result<bool>.Failure(FinanceErrors.StudentOrSessionNotFound);
+
+            var member = await _enrollmentRepository.GetMemberAsync(tenantId, payment.StudentId, cancellationToken);
+            if (member is null)
+                return Result<bool>.Failure(FinanceErrors.StudentOrSessionNotFound);
+
+            var obligation = await _repository.GetObligationAsync(tenantId, payment.StudentId, sessionId,
+                cancellationToken);
+            if (obligation is null)
+                _repository.AddObligation(FinancialObligation.Create(tenantId, payment.StudentId,
+                    info.GroupId, sessionId, info.GroupName, info.SessionStartUtc, amount));
+            else
+                obligation.AddRefundDebt(amount);
+
+            // Reverse the collected amount in the member's net balance when the refund is
+            // approved. The reopened obligation and the negative balance must stay in sync;
+            // otherwise a later payment clears the debt but leaves duplicate wallet credit.
+            member.DeductBalance(amount);
+
+            return Result<bool>.Success(true);
+        }
+
         private static void CompleteExternalPayment(Transaction payment, Guid processorId)
         {
             if (payment.Provider == PaymentProvider.Paymob)
@@ -378,5 +415,6 @@ namespace TeacherERP.Application.Finance
         public static readonly Error ExternalPaymentNotPending = new("Finance.ExternalPaymentNotPending", "The payment request is no longer pending.");
         public static readonly Error StudentOnly = new("Finance.StudentOnly", "This operation is available to the student only.");
         public static readonly Error PaymobPaymentNotPending = new("Finance.PaymobPaymentNotPending", "The Paymob payment is not pending.");
+        public static readonly Error PaymobAdjustmentNotReviewable = new("Finance.PaymobAdjustmentNotReviewable", "The Paymob adjustment is not eligible for financial reconciliation.");
     }
 }

@@ -729,3 +729,31 @@ GET {{TeacherERP.API_HostAddress}}/api/Notifications/{{notificationId}}/whatsapp
 Authorization: Bearer {{studentToken}}
 Authorization: Bearer {{studentToken}}
 X-Teacher-Id: {{teacherId}}
+
+### C8: المدير يراجع الاستردادات/الإلغاءات الموثقة من Paymob قبل تعديل أي رصيد
+GET {{TeacherERP.API_HostAddress}}/api/administration/paymob-adjustments/pending?page=1&pageSize=20
+Authorization: Bearer {{adminToken}}
+
+### C8: اعتماد بعد مراجعة حساب التاجر، مع تحديد الدين والعمولة اللذين يجب تسويتهما
+POST {{TeacherERP.API_HostAddress}}/api/administration/paymob-adjustments/{{paymobAdjustmentReviewId}}/resolve
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "approved": true,
+  "studentDebtAdjustmentAmount": 75.00,
+  "commissionReversalAmount": 1.00,
+  "decisionNote": "تم التحقق من الاسترداد ومراجعة أثره المالي"
+}
+
+### C8: رفض إشعار استرداد غير مؤكد بدون تطبيق أي تعديل مالي
+POST {{TeacherERP.API_HostAddress}}/api/administration/paymob-adjustments/{{paymobAdjustmentReviewId}}/resolve
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "approved": false,
+  "studentDebtAdjustmentAmount": 0,
+  "commissionReversalAmount": 0,
+  "decisionNote": "لم يتم تأكيد الاسترداد في حساب التاجر"
+}

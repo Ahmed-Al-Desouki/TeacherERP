@@ -38,5 +38,13 @@ namespace TeacherERP.Domain.Entities
             MarkAsUpdated();
             return applied;
         }
+
+        public void AddRefundDebt(decimal amount)
+        {
+            if (amount <= 0 || decimal.Round(amount, 2) != amount)
+                throw new ArgumentOutOfRangeException(nameof(amount));
+            Amount += amount;
+            MarkAsUpdated();
+        }
     }
 }

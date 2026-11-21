@@ -42,7 +42,11 @@ namespace TeacherERP.Infrastructure.Repositories
 
         public Task<bool> HasMonthlySubscriptionAsync(Guid tenantId, Guid studentId, Guid groupId, int year, int month, CancellationToken cancellationToken) =>
             _context.MonthlySubscriptions.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenantId
-                && x.StudentId == studentId && x.GroupId == groupId && x.Year == year && x.Month == month, cancellationToken);
+                && x.StudentId == studentId && x.GroupId == groupId && x.Year == year && x.Month == month
+                && _context.Transactions.IgnoreQueryFilters().Any(payment => payment.Id == x.PaymentTransactionId
+                    && (payment.Status == TransactionStatus.Successful
+                        || payment.Status == TransactionStatus.PartiallyRefunded
+                        || payment.Status == TransactionStatus.PaymobAdjustmentReview)), cancellationToken);
 
         public Task<List<FinancialTransactionInfo>> GetRecentPaymentsAsync(Guid tenantId, Guid studentId, CancellationToken cancellationToken) =>
             _context.Transactions.IgnoreQueryFilters().AsNoTracking().Where(x => x.TenantId == tenantId && x.StudentId == studentId)
@@ -106,13 +110,76 @@ namespace TeacherERP.Infrastructure.Repositories
             _context.PaymentEvents.IgnoreQueryFilters().AnyAsync(x => x.Provider == provider
                 && x.ProviderEventId == providerEventId, cancellationToken);
 
+        public void AddPaymobAdjustmentReview(PaymobAdjustmentReview review) =>
+            _context.PaymobAdjustmentReviews.Add(review);
+
+        public Task<PaymobAdjustmentReview?> GetPaymobAdjustmentReviewTrackedAsync(Guid reviewId,
+            CancellationToken cancellationToken) =>
+            _context.PaymobAdjustmentReviews.IgnoreQueryFilters()
+                .FirstOrDefaultAsync(x => x.Id == reviewId, cancellationToken);
+
+        public Task<PagedResult<PaymobAdjustmentReviewItem>> GetPendingPaymobAdjustmentReviewsPageAsync(
+            PageRequest page, CancellationToken cancellationToken)
+        {
+            var query = from review in _context.PaymobAdjustmentReviews.IgnoreQueryFilters().AsNoTracking()
+                        join tenant in _context.Tenants.IgnoreQueryFilters().AsNoTracking()
+                            on review.TenantId equals tenant.Id
+                        join transaction in _context.Transactions.IgnoreQueryFilters().AsNoTracking()
+                            on review.TransactionId equals transaction.Id
+                        join student in _context.Users.IgnoreQueryFilters().AsNoTracking()
+                            on transaction.StudentId equals student.Id
+                        where review.Status == PaymobAdjustmentReviewStatus.Pending
+                        orderby review.CreatedAt, review.Id
+                        select new PaymobAdjustmentReviewItem(review.Id, review.TenantId, tenant.Name,
+                            review.TransactionId, student.Id, student.FullName, transaction.Type,
+                            transaction.Amount, transaction.PaymentContextSessionId,
+                            transaction.ProviderRefundedAmount, review.ProviderEventId,
+                            review.Type, review.ProviderAmount, review.Currency, review.CreatedAt);
+            return query.ToPagedAsync(page, cancellationToken);
+        }
+
+        public async Task<decimal> GetPendingPaymobRefundAmountAsync(Guid transactionId,
+            CancellationToken cancellationToken) =>
+            await _context.PaymobAdjustmentReviews.IgnoreQueryFilters()
+                .Where(x => x.TransactionId == transactionId
+                    && x.Status == PaymobAdjustmentReviewStatus.Pending
+                    && x.Type == PaymobAdjustmentType.Refund)
+                .Select(x => (decimal?)x.ProviderAmount).SumAsync(cancellationToken) ?? 0m;
+
+        public Task<Guid?> GetOldestPendingPaymobAdjustmentReviewIdAsync(Guid transactionId,
+            CancellationToken cancellationToken) =>
+            _context.PaymobAdjustmentReviews.IgnoreQueryFilters()
+                .Where(x => x.TransactionId == transactionId
+                    && x.Status == PaymobAdjustmentReviewStatus.Pending)
+                .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id)
+                .Select(x => (Guid?)x.Id).FirstOrDefaultAsync(cancellationToken);
+
+        public Task<bool> HasOtherPendingPaymobAdjustmentReviewAsync(Guid transactionId, Guid reviewId,
+            CancellationToken cancellationToken) =>
+            _context.PaymobAdjustmentReviews.IgnoreQueryFilters().AnyAsync(x =>
+                x.TransactionId == transactionId && x.Id != reviewId
+                && x.Status == PaymobAdjustmentReviewStatus.Pending, cancellationToken);
+
+        public Task<PlatformCommission?> GetPlatformCommissionByTransactionTrackedAsync(Guid transactionId,
+            CancellationToken cancellationToken) =>
+            _context.PlatformCommissions.IgnoreQueryFilters()
+                .FirstOrDefaultAsync(x => x.SourceTransactionId == transactionId, cancellationToken);
+
         public void AddPaymentEvent(PaymentEvent paymentEvent) => _context.PaymentEvents.Add(paymentEvent);
 
-        public Task<bool> HasSessionCommissionAsync(Guid tenantId, Guid studentId, Guid sessionId,
-            CancellationToken cancellationToken) =>
-            _context.PlatformCommissions.IgnoreQueryFilters().AnyAsync(x => x.TenantId == tenantId
-                && x.StudentId == studentId && x.SessionId == sessionId
-                && x.Type == PlatformCommissionType.PerSession, cancellationToken);
+        public async Task<bool> HasSessionCommissionAsync(Guid tenantId, Guid studentId, Guid sessionId,
+            CancellationToken cancellationToken)
+        {
+            // SQLite cannot reliably translate decimal inequality comparisons. Project only
+            // the commission amounts for this student/session, then ignore fully reversed rows.
+            var amounts = await _context.PlatformCommissions.IgnoreQueryFilters()
+                .Where(x => x.TenantId == tenantId && x.StudentId == studentId
+                    && x.SessionId == sessionId && x.Type == PlatformCommissionType.PerSession)
+                .Select(x => x.Amount)
+                .ToListAsync(cancellationToken);
+
+            return amounts.Any(amount => amount > 0m);
+        }
 
         public void AddPlatformCommission(PlatformCommission commission) =>
             _context.PlatformCommissions.Add(commission);
@@ -138,10 +205,28 @@ namespace TeacherERP.Infrastructure.Repositories
                             commission.SourceTransactionId, commission.SessionId, commission.Type,
                             commission.Amount, commission.CreatedAt, commission.SettledAtUtc,
                             commission.SettlementReference, commission.CollectionRequestedAtUtc);
+
+            if (unsettledOnly && IsSqliteProvider())
+                return GetPositiveUnsettledCommissionsPageAsync(query, page, cancellationToken);
+
+            if (unsettledOnly)
+                query = query.Where(x => x.Amount > 0m);
+
             return query.ToPagedAsync(page, cancellationToken);
         }
 
-        public Task<List<PlatformCommissionSummary>> GetPlatformCommissionSummariesAsync(int year, int month,
+        private static async Task<PagedResult<PlatformCommissionItem>> GetPositiveUnsettledCommissionsPageAsync(
+            IQueryable<PlatformCommissionItem> query, PageRequest page, CancellationToken cancellationToken)
+        {
+            // SQLite decimal comparisons are unreliable; filter after materialization in the test provider.
+            var outstanding = (await query.ToListAsync(cancellationToken))
+                .Where(x => x.Amount > 0m)
+                .ToList();
+            return new PagedResult<PlatformCommissionItem>(outstanding.Skip(page.Skip).Take(page.PageSize).ToList(),
+                page.Page, page.PageSize, outstanding.Count);
+        }
+
+        public async Task<List<PlatformCommissionSummary>> GetPlatformCommissionSummariesAsync(int year, int month,
             CancellationToken cancellationToken, Guid? tenantId = null)
         {
             var fromUtc = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -160,16 +245,56 @@ namespace TeacherERP.Infrastructure.Repositories
                             grouped.Key.TeacherId, grouped.Key.TeacherName, grouped.Count(), grouped.Sum(x => x.Amount),
                             grouped.Count(x => x.SettledAtUtc != null),
                             grouped.Sum(x => x.SettledAtUtc != null ? x.Amount : 0m),
-                            grouped.Count(x => x.SettledAtUtc == null),
-                            grouped.Sum(x => x.SettledAtUtc == null ? x.Amount : 0m));
-            return query.ToListAsync(cancellationToken);
+                            grouped.Count(x => x.SettledAtUtc == null && x.Amount > 0m),
+                            grouped.Sum(x => x.SettledAtUtc == null && x.Amount > 0m ? x.Amount : 0m));
+
+            if (IsSqliteProvider())
+            {
+                var rows = await (from commission in _context.PlatformCommissions.IgnoreQueryFilters().AsNoTracking()
+                                  join tenant in _context.Tenants.IgnoreQueryFilters().AsNoTracking()
+                                      on commission.TenantId equals tenant.Id
+                                  join teacher in _context.Users.IgnoreQueryFilters().AsNoTracking()
+                                      on tenant.OwnerId equals teacher.Id
+                                  where commission.CreatedAt >= fromUtc && commission.CreatedAt < toUtc
+                                      && (tenantId == null || commission.TenantId == tenantId.Value)
+                                  select new { Commission = commission, Tenant = tenant, Teacher = teacher })
+                    .ToListAsync(cancellationToken);
+
+                return rows.GroupBy(x => new
+                    {
+                        TenantId = x.Tenant.Id, TenantName = x.Tenant.Name,
+                        TeacherId = x.Teacher.Id, TeacherName = x.Teacher.FullName
+                    })
+                    .OrderBy(x => x.Key.TenantName)
+                    .Select(group => new PlatformCommissionSummary(group.Key.TenantId, group.Key.TenantName,
+                        group.Key.TeacherId, group.Key.TeacherName, group.Count(), group.Sum(x => x.Commission.Amount),
+                        group.Count(x => x.Commission.SettledAtUtc != null),
+                        group.Where(x => x.Commission.SettledAtUtc != null).Sum(x => x.Commission.Amount),
+                        group.Count(x => x.Commission.SettledAtUtc == null && x.Commission.Amount > 0m),
+                        group.Where(x => x.Commission.SettledAtUtc == null && x.Commission.Amount > 0m)
+                            .Sum(x => x.Commission.Amount)))
+                    .ToList();
+            }
+
+            return await query.ToListAsync(cancellationToken);
         }
 
-        public Task<List<PlatformCommission>> GetUnsettledPlatformCommissionsAsync(Guid tenantId,
-            DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken) =>
-            _context.PlatformCommissions.IgnoreQueryFilters().Where(x => x.TenantId == tenantId
+        public async Task<List<PlatformCommission>> GetUnsettledPlatformCommissionsAsync(Guid tenantId,
+            DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken)
+        {
+            var query = _context.PlatformCommissions.IgnoreQueryFilters().Where(x => x.TenantId == tenantId
                 && x.SettledAtUtc == null && x.CreatedAt >= fromUtc && x.CreatedAt < toUtc)
-                .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(cancellationToken);
+                .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id);
+
+            if (IsSqliteProvider())
+                return (await query.ToListAsync(cancellationToken)).Where(x => x.Amount > 0m).ToList();
+
+            return await query.Where(x => x.Amount > 0m).ToListAsync(cancellationToken);
+        }
+
+        private bool IsSqliteProvider() =>
+            string.Equals(_context.Database.ProviderName, "Microsoft.EntityFrameworkCore.Sqlite",
+                StringComparison.Ordinal);
 
         public Task<PlatformCommissionSettings?> GetPlatformCommissionSettingsAsync(CancellationToken cancellationToken) =>
             _context.PlatformCommissionSettings.FirstOrDefaultAsync(
@@ -223,7 +348,9 @@ namespace TeacherERP.Infrastructure.Repositories
                     || x.Transaction.Status == TransactionStatus.PaymobPending
                     || x.Transaction.Status == TransactionStatus.PaymobAdjustmentReview
                     || x.Transaction.Status == TransactionStatus.Failed
-                    || x.Transaction.Status == TransactionStatus.Voided));
+                    || x.Transaction.Status == TransactionStatus.Voided
+                    || x.Transaction.Status == TransactionStatus.PartiallyRefunded
+                    || x.Transaction.Status == TransactionStatus.Refunded));
 
             // Keep the monthly aggregates provider-neutral. SQLite used by integration tests
             // cannot reliably translate the conditional GroupBy projection used by SQL Server.
@@ -232,6 +359,7 @@ namespace TeacherERP.Infrastructure.Repositories
                 x.Transaction.Type,
                 x.Transaction.Status,
                 x.Transaction.Amount,
+                x.Transaction.ProviderRefundedAmount,
                 x.Transaction.Provider,
                 HasReceipt = x.Transaction.ReceiptImageUrl != null
             }).ToListAsync(cancellationToken);
@@ -243,8 +371,11 @@ namespace TeacherERP.Infrastructure.Repositories
                     x.Type
                 })
                 .Select(group => new MonthlyPaymentMethodSummary(group.Key.Method, group.Key.Type,
-                    group.Count(x => x.Status == TransactionStatus.Successful),
-                    group.Sum(x => x.Status == TransactionStatus.Successful ? x.Amount : 0m),
+                    group.Count(x => x.Status == TransactionStatus.Successful
+                        || x.Status == TransactionStatus.PartiallyRefunded),
+                    group.Sum(x => x.Status == TransactionStatus.Successful
+                        || x.Status == TransactionStatus.PartiallyRefunded
+                            ? x.Amount - x.ProviderRefundedAmount : 0m),
                     group.Count(x => x.Status == TransactionStatus.PendingApproval
                         || x.Status == TransactionStatus.PaymobPending),
                     group.Sum(x => x.Status == TransactionStatus.PendingApproval
@@ -253,7 +384,9 @@ namespace TeacherERP.Infrastructure.Repositories
                     group.Sum(x => x.Status == TransactionStatus.PaymobAdjustmentReview ? x.Amount : 0m),
                     group.Count(x => x.Status == TransactionStatus.Failed || x.Status == TransactionStatus.Voided),
                     group.Sum(x => x.Status == TransactionStatus.Failed || x.Status == TransactionStatus.Voided
-                        ? x.Amount : 0m)))
+                        ? x.Amount : 0m),
+                    group.Count(x => x.ProviderRefundedAmount > 0),
+                    group.Sum(x => x.ProviderRefundedAmount)))
                 .OrderBy(x => x.Method).ThenBy(x => x.Type).ToList();
 
             var transactionQuery = from entry in monthTransactions
@@ -272,6 +405,7 @@ namespace TeacherERP.Infrastructure.Repositories
                                            : entry.Transaction.Provider == PaymentProvider.InstaPay
                                                || entry.Transaction.ReceiptImageUrl != null ? "InstaPay" : "Cash",
                                        entry.Transaction.Status, entry.Transaction.Amount,
+                                       entry.Transaction.ProviderRefundedAmount,
                                        entry.Transaction.CreatedAt, entry.Transaction.UpdatedAt,
                                        entry.OccurredAtUtc,
                                        entry.Transaction.RelatedSessionId);
@@ -305,6 +439,7 @@ namespace TeacherERP.Infrastructure.Repositories
                 byMethod.Sum(x => x.PendingCount), byMethod.Sum(x => x.PendingAmount),
                 byMethod.Sum(x => x.ReviewCount), byMethod.Sum(x => x.ReviewAmount),
                 byMethod.Sum(x => x.FailedCount), byMethod.Sum(x => x.FailedAmount),
+                byMethod.Sum(x => x.RefundedCount), byMethod.Sum(x => x.RefundedAmount),
                 debtCount, debtAmount);
             return new MonthlyCollectionReport(year, month, totals, byMethod, transactionResult, debtResult);
         }

@@ -197,8 +197,10 @@ public sealed class PaymobPaymentIntegrationTests : IClassFixture<CustomWebAppli
             .Where(x => x.Id == paymentId).Select(x => x.Status).SingleAsync()));
         Assert.Equal(75m, await _factory.QueryAsync(db => db.FinancialObligations.IgnoreQueryFilters()
             .Where(x => x.Id == scenario.ObligationId).Select(x => x.PaidAmount).SingleAsync()));
+        Assert.Equal(0, await _factory.QueryAsync(db => db.PaymobAdjustmentReviews.IgnoreQueryFilters()
+            .CountAsync(x => x.TransactionId == paymentId)));
         Assert.Equal(1, await _factory.QueryAsync(db => db.PaymentEvents.IgnoreQueryFilters()
-            .CountAsync(x => x.TransactionId == paymentId && x.ProviderEventId == "810002")));
+            .CountAsync(x => x.TransactionId == paymentId && x.ProviderEventId == "810002:success")));
         Assert.Equal(1, await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
             .CountAsync(x => x.TenantId == scenario.Teacher.TenantId && x.StudentId == scenario.StudentId
                 && x.SessionId == scenario.SessionId && x.Amount == 1m)));
@@ -227,8 +229,8 @@ public sealed class PaymobPaymentIntegrationTests : IClassFixture<CustomWebAppli
         var intent = await CreateIntentAsync(scenario, "order-idempotency-0001", 75m);
         var body = await intent.Content.ReadFromJsonAsync<JsonElement>();
         using var success = Callback(body, scenario, "810003", success: true, pending: false);
-        using var decline = Callback(body, scenario, "810004", success: false, pending: false);
-        using var pending = Callback(body, scenario, "810005", success: false, pending: true);
+        using var decline = Callback(body, scenario, "810003", success: false, pending: false);
+        using var pending = Callback(body, scenario, "810003", success: false, pending: true);
 
         Assert.Equal(HttpStatusCode.OK, (await SendCallbackAsync(success, Sign(success.RootElement.GetProperty("obj")))).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await SendCallbackAsync(decline, Sign(decline.RootElement.GetProperty("obj")))).StatusCode);
@@ -239,6 +241,11 @@ public sealed class PaymobPaymentIntegrationTests : IClassFixture<CustomWebAppli
             .Where(x => x.Id == paymentId).Select(x => x.Status).SingleAsync()));
         Assert.Equal(75m, await _factory.QueryAsync(db => db.FinancialObligations.IgnoreQueryFilters()
             .Where(x => x.Id == scenario.ObligationId).Select(x => x.PaidAmount).SingleAsync()));
+        Assert.Equal(3, await _factory.QueryAsync(db => db.PaymentEvents.IgnoreQueryFilters()
+            .CountAsync(x => x.TransactionId == paymentId
+                && (x.ProviderEventId == "810003:success"
+                    || x.ProviderEventId == "810003:failed"
+                    || x.ProviderEventId == "810003:pending"))));
     }
 
     [Fact]
@@ -270,18 +277,345 @@ public sealed class PaymobPaymentIntegrationTests : IClassFixture<CustomWebAppli
         var intent = await CreateIntentAsync(scenario, "refund-review-key-01", 75m);
         var body = await intent.Content.ReadFromJsonAsync<JsonElement>();
         using var success = Callback(body, scenario, "810008", success: true, pending: false);
-        using var refund = Callback(body, scenario, "810009", success: true, pending: false, isRefunded: true, refundedAmountCents: 7500);
+        using var refund = Callback(body, scenario, "810008", success: true, pending: false, isRefunded: true, refundedAmountCents: 7500);
 
         await SendCallbackAsync(success, Sign(success.RootElement.GetProperty("obj")));
         await SendCallbackAsync(refund, Sign(refund.RootElement.GetProperty("obj")));
+        var duplicateRefund = await SendCallbackAsync(refund, Sign(refund.RootElement.GetProperty("obj")));
+        Assert.Equal(HttpStatusCode.OK, duplicateRefund.StatusCode);
+        var duplicateBody = await duplicateRefund.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(duplicateBody.GetProperty("duplicate").GetBoolean());
 
         var paymentId = body.GetProperty("transactionId").GetGuid();
+        Assert.Equal(0m, await _factory.QueryAsync(db => db.TenantMembers.IgnoreQueryFilters()
+            .Where(x => x.TenantId == scenario.Teacher.TenantId && x.UserId == scenario.StudentId)
+            .Select(x => x.CurrentBalance).SingleAsync()));
         Assert.Equal(TransactionStatus.PaymobAdjustmentReview, await _factory.QueryAsync(db => db.Transactions.IgnoreQueryFilters()
             .Where(x => x.Id == paymentId).Select(x => x.Status).SingleAsync()));
         Assert.Equal(scenario.SessionId, await _factory.QueryAsync(db => db.Transactions.IgnoreQueryFilters()
             .Where(x => x.Id == paymentId).Select(x => x.PaymentContextSessionId!.Value).SingleAsync()));
         Assert.Equal(75m, await _factory.QueryAsync(db => db.FinancialObligations.IgnoreQueryFilters()
             .Where(x => x.Id == scenario.ObligationId).Select(x => x.PaidAmount).SingleAsync()));
+        Assert.Equal(2, await _factory.QueryAsync(db => db.PaymentEvents.IgnoreQueryFilters()
+            .CountAsync(x => x.TransactionId == paymentId
+                && (x.ProviderEventId == "810008:success"
+                    || x.ProviderEventId == "810008:refund:7500"))));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.PaymobAdjustmentReviews.IgnoreQueryFilters()
+            .CountAsync(x => x.TransactionId == paymentId)));
+    }
+
+    [Fact]
+    public async Task AdministratorCanApproveRefundReviewAndApplyExplicitAdjustmentsOnce()
+    {
+        var scenario = await SeedAsync();
+        var intent = await CreateIntentAsync(scenario, "refund-approve-key-01", 75m);
+        var body = await intent.Content.ReadFromJsonAsync<JsonElement>();
+        using var success = Callback(body, scenario, "810020", success: true, pending: false);
+        using var refund = Callback(body, scenario, "810020", success: true, pending: false,
+            isRefunded: true, refundedAmountCents: 7500);
+        await SendCallbackAsync(success, Sign(success.RootElement.GetProperty("obj")));
+        await SendCallbackAsync(refund, Sign(refund.RootElement.GetProperty("obj")));
+
+        var administrator = _factory.CreateClientFor(Guid.NewGuid(), role: "Administrator");
+        var student = _factory.CreateClientFor(scenario.StudentId, scenario.Teacher.TenantId, "Student");
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await student.GetAsync("/api/administration/paymob-adjustments/pending?page=1&pageSize=20")).StatusCode);
+        var pendingResponse = await administrator.GetAsync("/api/administration/paymob-adjustments/pending?page=1&pageSize=20");
+        Assert.Equal(HttpStatusCode.OK, pendingResponse.StatusCode);
+        var pending = await pendingResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var reviewId = pending.GetProperty("items").EnumerateArray()
+            .Single(x => x.GetProperty("providerEventId").GetString() == "810020:refund:7500")
+            .GetProperty("id").GetGuid();
+        var resolveResponse = await administrator.PostAsJsonAsync(
+            $"/api/administration/paymob-adjustments/{reviewId}/resolve",
+            new { approved = true, studentDebtAdjustmentAmount = 75m,
+                commissionReversalAmount = 1m, decisionNote = "Refund verified; reopen session debt." });
+        Assert.Equal(HttpStatusCode.OK, resolveResponse.StatusCode);
+
+        Assert.Equal(75m, await _factory.QueryAsync(db => db.FinancialObligations.IgnoreQueryFilters()
+            .Where(x => x.Id == scenario.ObligationId).Select(x => x.Amount - x.PaidAmount).SingleAsync()));
+        Assert.Equal(-75m, await _factory.QueryAsync(db => db.TenantMembers.IgnoreQueryFilters()
+            .Where(x => x.TenantId == scenario.Teacher.TenantId && x.UserId == scenario.StudentId)
+            .Select(x => x.CurrentBalance).SingleAsync()));
+        Assert.Equal(0m, await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .Where(x => x.SourceTransactionId == body.GetProperty("transactionId").GetGuid())
+            .Select(x => x.Amount).SingleAsync()));
+        Assert.Equal(PaymobAdjustmentReviewStatus.Approved, await _factory.QueryAsync(db =>
+            db.PaymobAdjustmentReviews.IgnoreQueryFilters().Where(x => x.Id == reviewId)
+                .Select(x => x.Status).SingleAsync()));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters()
+            .CountAsync(x => x.TenantId == scenario.Teacher.TenantId
+                && x.Action == AuditAction.PaymobAdjustmentReviewed
+                && x.TargetUserId == scenario.StudentId)));
+
+        var now = DateTime.UtcNow;
+        var reportResponse = await _factory.CreateClientFor(
+            scenario.Teacher.OwnerId, scenario.Teacher.TenantId).GetAsync(
+            $"/api/Finance/monthly-collections?year={now.Year}&month={now.Month}");
+        Assert.Equal(HttpStatusCode.OK, reportResponse.StatusCode);
+        var report = await reportResponse.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(75m, report.GetProperty("totals").GetProperty("refundedAmount").GetDecimal());
+        Assert.Equal(0m, report.GetProperty("totals").GetProperty("successfulAmount").GetDecimal());
+        Assert.Equal(75m, report.GetProperty("totals").GetProperty("outstandingDebtAmount").GetDecimal());
+
+        var duplicateResponse = await administrator.PostAsJsonAsync(
+            $"/api/administration/paymob-adjustments/{reviewId}/resolve",
+            new { approved = true, studentDebtAdjustmentAmount = 75m,
+                commissionReversalAmount = 1m, decisionNote = "Duplicate decision" });
+        Assert.Equal(HttpStatusCode.Conflict, duplicateResponse.StatusCode);
+
+        var resettlementIntent = await CreateIntentAsync(scenario, "refund-resettle-key-01", 75m);
+        Assert.Equal(HttpStatusCode.OK, resettlementIntent.StatusCode);
+        var resettlementBody = await resettlementIntent.Content.ReadFromJsonAsync<JsonElement>();
+        using var resettlement = Callback(resettlementBody, scenario, "810021", success: true, pending: false);
+        var resettlementResponse = await SendCallbackAsync(resettlement,
+            Sign(resettlement.RootElement.GetProperty("obj")));
+        Assert.Equal(HttpStatusCode.OK, resettlementResponse.StatusCode);
+        var resettlementTransactionId = resettlementBody.GetProperty("transactionId").GetGuid();
+        Assert.Equal(1m, await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .Where(x => x.SourceTransactionId == resettlementTransactionId)
+            .Select(x => x.Amount).SingleAsync()));
+        Assert.Equal(2, await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .CountAsync(x => x.TenantId == scenario.Teacher.TenantId
+                && x.StudentId == scenario.StudentId && x.SessionId == scenario.SessionId
+                && x.Type == PlatformCommissionType.PerSession)));
+
+        var summaryResponse = await administrator.GetAsync(
+            $"/api/administration/platform-commissions/summary?year={now.Year}&month={now.Month}");
+        Assert.Equal(HttpStatusCode.OK, summaryResponse.StatusCode);
+        var summaries = await summaryResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var summary = summaries.EnumerateArray().Single(x =>
+            x.GetProperty("tenantId").GetGuid() == scenario.Teacher.TenantId);
+        Assert.Equal(2, summary.GetProperty("entryCount").GetInt32());
+        Assert.Equal(1, summary.GetProperty("outstandingCount").GetInt32());
+        Assert.Equal(1m, summary.GetProperty("outstandingAmount").GetDecimal());
+
+        var unsettledResponse = await administrator.GetAsync(
+            $"/api/administration/platform-commissions?year={now.Year}&month={now.Month}&unsettledOnly=true&page=1&pageSize=20");
+        Assert.Equal(HttpStatusCode.OK, unsettledResponse.StatusCode);
+        var unsettled = await unsettledResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var unsettledItems = unsettled.GetProperty("items").EnumerateArray().ToArray();
+        Assert.Contains(unsettledItems, item =>
+            item.GetProperty("sourceTransactionId").GetGuid() == resettlementTransactionId);
+        Assert.DoesNotContain(unsettledItems, item =>
+            item.GetProperty("sourceTransactionId").GetGuid() == body.GetProperty("transactionId").GetGuid());
+
+        var collectionRequest = await administrator.PostAsJsonAsync(
+            "/api/administration/platform-commissions/request-month",
+            new { tenantId = scenario.Teacher.TenantId, year = now.Year, month = now.Month });
+        Assert.Equal(HttpStatusCode.OK, collectionRequest.StatusCode);
+        var collection = await collectionRequest.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1, collection.GetProperty("commissionCount").GetInt32());
+        Assert.Equal(1m, collection.GetProperty("amount").GetDecimal());
+
+        var settlement = await administrator.PostAsJsonAsync(
+            "/api/administration/platform-commissions/settle-month",
+            new { tenantId = scenario.Teacher.TenantId, year = now.Year, month = now.Month,
+                settlementReference = "C8-REFUND-RESUBMIT" });
+        Assert.Equal(HttpStatusCode.OK, settlement.StatusCode);
+        var settled = await settlement.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1, settled.GetProperty("commissionCount").GetInt32());
+        Assert.Equal(1m, settled.GetProperty("amount").GetDecimal());
+
+        var commissionStates = await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .Where(x => x.TenantId == scenario.Teacher.TenantId
+                && x.StudentId == scenario.StudentId && x.SessionId == scenario.SessionId
+                && x.Type == PlatformCommissionType.PerSession)
+            .Select(x => new { x.Amount, x.CollectionRequestedAtUtc, x.SettledAtUtc })
+            .ToListAsync());
+        Assert.Equal(2, commissionStates.Count);
+        var reversedCommission = Assert.Single(commissionStates, x => x.Amount == 0m);
+        Assert.Null(reversedCommission.CollectionRequestedAtUtc);
+        Assert.Null(reversedCommission.SettledAtUtc);
+        var payableCommission = Assert.Single(commissionStates, x => x.Amount == 1m);
+        Assert.NotNull(payableCommission.CollectionRequestedAtUtc);
+        Assert.NotNull(payableCommission.SettledAtUtc);
+
+        var duplicateResettlementResponse = await SendCallbackAsync(resettlement,
+            Sign(resettlement.RootElement.GetProperty("obj")));
+        Assert.Equal(HttpStatusCode.OK, duplicateResettlementResponse.StatusCode);
+        Assert.Equal(2, await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .CountAsync(x => x.TenantId == scenario.Teacher.TenantId
+                && x.StudentId == scenario.StudentId && x.SessionId == scenario.SessionId
+                && x.Type == PlatformCommissionType.PerSession)));
+        Assert.Equal(0m, await _factory.QueryAsync(db => db.TenantMembers.IgnoreQueryFilters()
+            .Where(x => x.TenantId == scenario.Teacher.TenantId && x.UserId == scenario.StudentId)
+            .Select(x => x.CurrentBalance).SingleAsync()));
+        Assert.Equal(0m, await _factory.QueryAsync(db => db.FinancialObligations.IgnoreQueryFilters()
+            .Where(x => x.Id == scenario.ObligationId).Select(x => x.Amount - x.PaidAmount).SingleAsync()));
+    }
+
+    [Fact]
+    public async Task AdministratorCanRejectRefundReviewWithoutChangingBalances()
+    {
+        var scenario = await SeedAsync();
+        var intent = await CreateIntentAsync(scenario, "refund-reject-key-01", 75m);
+        var body = await intent.Content.ReadFromJsonAsync<JsonElement>();
+        using var success = Callback(body, scenario, "810022", success: true, pending: false);
+        using var refund = Callback(body, scenario, "810022", success: true, pending: false,
+            isRefunded: true, refundedAmountCents: 7500);
+        await SendCallbackAsync(success, Sign(success.RootElement.GetProperty("obj")));
+        await SendCallbackAsync(refund, Sign(refund.RootElement.GetProperty("obj")));
+
+        var administrator = _factory.CreateClientFor(Guid.NewGuid(), role: "Administrator");
+        var pendingResponse = await administrator.GetAsync("/api/administration/paymob-adjustments/pending?page=1&pageSize=20");
+        var pending = await pendingResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var reviewId = pending.GetProperty("items").EnumerateArray()
+            .Single(x => x.GetProperty("providerEventId").GetString() == "810022:refund:7500")
+            .GetProperty("id").GetGuid();
+        var response = await administrator.PostAsJsonAsync(
+            $"/api/administration/paymob-adjustments/{reviewId}/resolve",
+            new { approved = false, studentDebtAdjustmentAmount = 0m,
+                commissionReversalAmount = 0m, decisionNote = "Refund not confirmed in merchant records." });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(0m, await _factory.QueryAsync(db => db.FinancialObligations.IgnoreQueryFilters()
+            .Where(x => x.Id == scenario.ObligationId).Select(x => x.Amount - x.PaidAmount).SingleAsync()));
+        Assert.Equal(0m, await _factory.QueryAsync(db => db.TenantMembers.IgnoreQueryFilters()
+            .Where(x => x.TenantId == scenario.Teacher.TenantId && x.UserId == scenario.StudentId)
+            .Select(x => x.CurrentBalance).SingleAsync()));
+        Assert.Equal(1m, await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .Where(x => x.SourceTransactionId == body.GetProperty("transactionId").GetGuid())
+            .Select(x => x.Amount).SingleAsync()));
+        Assert.Equal(TransactionStatus.Refunded, await _factory.QueryAsync(db => db.Transactions.IgnoreQueryFilters()
+            .Where(x => x.Id == body.GetProperty("transactionId").GetGuid()).Select(x => x.Status).SingleAsync()));
+    }
+
+    [Fact]
+    public async Task PartialRefundUsesPaymobCumulativeTotalAndReportsOnlyTheUnrefundedPayment()
+    {
+        var scenario = await SeedAsync();
+        var intent = await CreateIntentAsync(scenario, "refund-partial-key-01", 75m);
+        var body = await intent.Content.ReadFromJsonAsync<JsonElement>();
+        using var success = Callback(body, scenario, "810024", success: true, pending: false);
+        using var firstRefund = Callback(body, scenario, "810024", success: true, pending: false,
+            isRefunded: false, refundedAmountCents: 3000);
+        await SendCallbackAsync(success, Sign(success.RootElement.GetProperty("obj")));
+        await SendCallbackAsync(firstRefund, Sign(firstRefund.RootElement.GetProperty("obj")));
+
+        var administrator = _factory.CreateClientFor(Guid.NewGuid(), role: "Administrator");
+        var pendingResponse = await administrator.GetAsync("/api/administration/paymob-adjustments/pending?page=1&pageSize=20");
+        var pending = await pendingResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var firstReview = pending.GetProperty("items").EnumerateArray()
+            .Single(x => x.GetProperty("providerEventId").GetString() == "810024:refund:3000");
+        Assert.Equal(30m, firstReview.GetProperty("providerAmount").GetDecimal());
+        var approveFirst = await administrator.PostAsJsonAsync(
+            $"/api/administration/paymob-adjustments/{firstReview.GetProperty("id").GetGuid()}/resolve",
+            new { approved = true, studentDebtAdjustmentAmount = 30m,
+                commissionReversalAmount = 0.40m, decisionNote = "Partial refund confirmed." });
+        Assert.Equal(HttpStatusCode.OK, approveFirst.StatusCode);
+        Assert.Equal(-30m, await _factory.QueryAsync(db => db.TenantMembers.IgnoreQueryFilters()
+            .Where(x => x.TenantId == scenario.Teacher.TenantId && x.UserId == scenario.StudentId)
+            .Select(x => x.CurrentBalance).SingleAsync()));
+
+        var resettlementIntent = await CreateIntentAsync(scenario, "refund-partial-resettle-key-01", 30m);
+        Assert.Equal(HttpStatusCode.OK, resettlementIntent.StatusCode);
+        var resettlementBody = await resettlementIntent.Content.ReadFromJsonAsync<JsonElement>();
+        using var resettlement = Callback(resettlementBody, scenario, "810025", success: true,
+            pending: false, amountCents: 3000);
+        var resettlementResponse = await SendCallbackAsync(resettlement,
+            Sign(resettlement.RootElement.GetProperty("obj")));
+        Assert.Equal(HttpStatusCode.OK, resettlementResponse.StatusCode);
+        Assert.Equal(0.60m, await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .Where(x => x.SourceTransactionId == body.GetProperty("transactionId").GetGuid())
+            .Select(x => x.Amount).SingleAsync()));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.PlatformCommissions.IgnoreQueryFilters()
+            .CountAsync(x => x.TenantId == scenario.Teacher.TenantId
+                && x.StudentId == scenario.StudentId && x.SessionId == scenario.SessionId
+                && x.Type == PlatformCommissionType.PerSession)));
+
+        using var secondRefund = Callback(body, scenario, "810024", success: true, pending: false,
+            isRefunded: false, refundedAmountCents: 5000);
+        await SendCallbackAsync(secondRefund, Sign(secondRefund.RootElement.GetProperty("obj")));
+        var pendingAfterSecond = await administrator.GetAsync(
+            "/api/administration/paymob-adjustments/pending?page=1&pageSize=20");
+        var secondPage = await pendingAfterSecond.Content.ReadFromJsonAsync<JsonElement>();
+        var secondReview = secondPage.GetProperty("items").EnumerateArray()
+            .Single(x => x.GetProperty("providerEventId").GetString() == "810024:refund:5000");
+
+        Assert.Equal(20m, secondReview.GetProperty("providerAmount").GetDecimal());
+        Assert.Equal(0m, await _factory.QueryAsync(db => db.TenantMembers.IgnoreQueryFilters()
+            .Where(x => x.TenantId == scenario.Teacher.TenantId && x.UserId == scenario.StudentId)
+            .Select(x => x.CurrentBalance).SingleAsync()));
+        Assert.Equal(TransactionStatus.PaymobAdjustmentReview, await _factory.QueryAsync(db =>
+            db.Transactions.IgnoreQueryFilters().Where(x => x.Id == body.GetProperty("transactionId").GetGuid())
+                .Select(x => x.Status).SingleAsync()));
+        Assert.Equal(0m, await _factory.QueryAsync(db => db.FinancialObligations.IgnoreQueryFilters()
+            .Where(x => x.Id == scenario.ObligationId).Select(x => x.Amount - x.PaidAmount).SingleAsync()));
+    }
+
+    [Fact]
+    public async Task MultiplePendingRefundReviewsCanBeResolvedInOrder()
+    {
+        var scenario = await SeedAsync();
+        var intent = await CreateIntentAsync(scenario, "refund-queued-key-01", 75m);
+        var body = await intent.Content.ReadFromJsonAsync<JsonElement>();
+        using var success = Callback(body, scenario, "810029", success: true, pending: false);
+        using var firstRefund = Callback(body, scenario, "810029", success: true, pending: false,
+            refundedAmountCents: 3000);
+        using var secondRefund = Callback(body, scenario, "810029", success: true, pending: false,
+            refundedAmountCents: 5000);
+        await SendCallbackAsync(success, Sign(success.RootElement.GetProperty("obj")));
+        await SendCallbackAsync(firstRefund, Sign(firstRefund.RootElement.GetProperty("obj")));
+        await SendCallbackAsync(secondRefund, Sign(secondRefund.RootElement.GetProperty("obj")));
+
+        var administrator = _factory.CreateClientFor(Guid.NewGuid(), role: "Administrator");
+        var firstId = await _factory.QueryAsync(db => db.PaymobAdjustmentReviews.IgnoreQueryFilters()
+            .Where(x => x.ProviderEventId == "810029:refund:3000").Select(x => x.Id).SingleAsync());
+        var secondId = await _factory.QueryAsync(db => db.PaymobAdjustmentReviews.IgnoreQueryFilters()
+            .Where(x => x.ProviderEventId == "810029:refund:5000").Select(x => x.Id).SingleAsync());
+
+        var firstResolution = await administrator.PostAsJsonAsync(
+            $"/api/administration/paymob-adjustments/{firstId}/resolve",
+            new { approved = true, studentDebtAdjustmentAmount = 30m,
+                commissionReversalAmount = 0m, decisionNote = "First partial refund confirmed." });
+        Assert.Equal(HttpStatusCode.OK, firstResolution.StatusCode);
+        Assert.Equal(TransactionStatus.PaymobAdjustmentReview, await _factory.QueryAsync(db =>
+            db.Transactions.IgnoreQueryFilters().Where(x => x.Id == body.GetProperty("transactionId").GetGuid())
+                .Select(x => x.Status).SingleAsync()));
+
+        var secondResolution = await administrator.PostAsJsonAsync(
+            $"/api/administration/paymob-adjustments/{secondId}/resolve",
+            new { approved = true, studentDebtAdjustmentAmount = 20m,
+                commissionReversalAmount = 0m, decisionNote = "Second partial refund confirmed." });
+        Assert.Equal(HttpStatusCode.OK, secondResolution.StatusCode);
+        Assert.Equal(TransactionStatus.PartiallyRefunded, await _factory.QueryAsync(db =>
+            db.Transactions.IgnoreQueryFilters().Where(x => x.Id == body.GetProperty("transactionId").GetGuid())
+                .Select(x => x.Status).SingleAsync()));
+        Assert.Equal(50m, await _factory.QueryAsync(db => db.FinancialObligations.IgnoreQueryFilters()
+            .Where(x => x.Id == scenario.ObligationId).Select(x => x.Amount - x.PaidAmount).SingleAsync()));
+    }
+
+    [Fact]
+    public async Task VerifiedVoidRequiresReviewAndClosesThePaymobPaymentAfterApproval()
+    {
+        var scenario = await SeedAsync();
+        var intent = await CreateIntentAsync(scenario, "void-review-key-01", 75m);
+        var body = await intent.Content.ReadFromJsonAsync<JsonElement>();
+        using var success = Callback(body, scenario, "810027", success: true, pending: false);
+        using var voidEvent = Callback(body, scenario, "810027", success: false, pending: false,
+            isVoided: true);
+        await SendCallbackAsync(success, Sign(success.RootElement.GetProperty("obj")));
+        await SendCallbackAsync(voidEvent, Sign(voidEvent.RootElement.GetProperty("obj")));
+
+        var administrator = _factory.CreateClientFor(Guid.NewGuid(), role: "Administrator");
+        var response = await administrator.GetAsync("/api/administration/paymob-adjustments/pending?page=1&pageSize=20");
+        var pending = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var review = pending.GetProperty("items").EnumerateArray()
+            .Single(x => x.GetProperty("providerEventId").GetString() == "810027:void");
+        Assert.Equal("Void", review.GetProperty("type").GetString());
+        Assert.Equal(75m, review.GetProperty("providerAmount").GetDecimal());
+
+        var approve = await administrator.PostAsJsonAsync(
+            $"/api/administration/paymob-adjustments/{review.GetProperty("id").GetGuid()}/resolve",
+            new { approved = true, studentDebtAdjustmentAmount = 75m,
+                commissionReversalAmount = 1m, decisionNote = "Void verified with the Paymob merchant record." });
+        Assert.Equal(HttpStatusCode.OK, approve.StatusCode);
+        Assert.Equal(TransactionStatus.Voided, await _factory.QueryAsync(db =>
+            db.Transactions.IgnoreQueryFilters().Where(x => x.Id == body.GetProperty("transactionId").GetGuid())
+                .Select(x => x.Status).SingleAsync()));
+        Assert.Equal(75m, await _factory.QueryAsync(db => db.FinancialObligations.IgnoreQueryFilters()
+            .Where(x => x.Id == scenario.ObligationId).Select(x => x.Amount - x.PaidAmount).SingleAsync()));
     }
 
     private Task<HttpResponseMessage> CreateIntentAsync(Scenario scenario, string key, decimal amount,
@@ -309,7 +643,8 @@ public sealed class PaymobPaymentIntegrationTests : IClassFixture<CustomWebAppli
     }
 
     private static JsonDocument Callback(JsonElement intent, Scenario scenario, string providerEventId,
-        bool success, bool pending, bool isRefunded = false, long refundedAmountCents = 0)
+        bool success, bool pending, bool isRefunded = false, long refundedAmountCents = 0,
+        bool isVoided = false, long amountCents = 7500)
     {
         var callback = new
         {
@@ -318,12 +653,12 @@ public sealed class PaymobPaymentIntegrationTests : IClassFixture<CustomWebAppli
             {
                 id = long.Parse(providerEventId, CultureInfo.InvariantCulture),
                 pending,
-                amount_cents = 7500L,
+                amount_cents = amountCents,
                 success,
                 is_auth = false,
                 is_capture = false,
                 is_standalone_payment = true,
-                is_voided = false,
+                is_voided = isVoided,
                 is_refunded = isRefunded,
                 is_3d_secure = true,
                 integration_id = VpcIntegrationId,

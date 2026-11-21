@@ -28,6 +28,20 @@ namespace TeacherERP.API.Controllers
             if (result.Error.Code is "Finance.IdempotencyKeyReused" or "Finance.PaymobPaymentAlreadyPending")
                 return Conflict(new { errorCode = result.Error.Code, errorMessage = result.Error.Message });
 
+            if (result.Error.Code == "Finance.PaymobAdjustmentNotFound")
+                return NotFound(new { errorCode = result.Error.Code, errorMessage = result.Error.Message });
+
+            if (result.Error.Code is "Finance.PaymobAdjustmentAlreadyResolved"
+                or "Finance.PaymobAdjustmentResolveInOrder"
+                or "Finance.PaymobTransactionNotReviewable")
+                return Conflict(new { errorCode = result.Error.Code, errorMessage = result.Error.Message });
+
+            if (result.Error.Code is "Finance.InvalidPaymobAdjustmentDecision"
+                or "Finance.PaymobAdjustmentExceedsRefund"
+                or "Finance.RejectedPaymobAdjustmentHasAmounts"
+                or "Finance.InvalidPaymobCommissionReversal")
+                return BadRequest(new { errorCode = result.Error.Code, errorMessage = result.Error.Message });
+
             if (result.Error.Code is "Finance.PaymobShopifyIntegrationNotSupported"
                 or "Finance.PaymobPaymentMethodUnsupported"
                 or "Finance.PaymobBillingProfileIncomplete")

@@ -54,6 +54,7 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<PaymentEvent> PaymentEvents { get; set; }
+        public DbSet<PaymobAdjustmentReview> PaymobAdjustmentReviews { get; set; }
         public DbSet<PlatformCommission> PlatformCommissions { get; set; }
         public DbSet<PlatformCommissionSettings> PlatformCommissionSettings { get; set; }
         public DbSet<FinancialObligation> FinancialObligations { get; set; }
@@ -233,6 +234,7 @@ namespace TeacherERP.Infrastructure.Data
                 entity.Property(t => t.ProviderOrderId).HasMaxLength(64);
                 entity.Property(t => t.ProviderClientSecret).HasMaxLength(2048);
                 entity.Property(t => t.ProviderFailureCode).HasMaxLength(64);
+                entity.Property(t => t.ProviderRefundedAmount).HasColumnType("decimal(18,2)").IsRequired();
                 entity.HasIndex(t => new { t.TenantId, t.StudentId, t.Type, t.PaymentContextSessionId })
                     .IsUnique()
                     .HasFilter("[Status] IN (0, 4, 5)");
@@ -256,6 +258,25 @@ namespace TeacherERP.Infrastructure.Data
                 entity.HasIndex(e => new { e.TenantId, e.TransactionId, e.CreatedAt });
             });
 
+            builder.Entity<PaymobAdjustmentReview>(entity =>
+            {
+                entity.Property(x => x.ProviderEventId).HasMaxLength(128).IsRequired();
+                entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(16).IsRequired();
+                entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+                entity.Property(x => x.Currency).HasMaxLength(8).IsRequired();
+                entity.Property(x => x.ProviderAmount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.StudentDebtAdjustmentAmount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.CommissionReversalAmount).HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(x => x.DecisionNote).HasMaxLength(300);
+                entity.HasOne<Transaction>().WithMany().HasForeignKey(x => x.TransactionId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(x => x.ProviderEventId).IsUnique();
+                entity.HasIndex(x => new { x.Status, x.CreatedAt, x.Id });
+                entity.HasIndex(x => new { x.TenantId, x.TransactionId });
+            });
+
             builder.Entity<PlatformCommission>(entity =>
             {
                 entity.Property(x => x.Type).HasConversion<string>().HasMaxLength(32).IsRequired();
@@ -265,7 +286,8 @@ namespace TeacherERP.Infrastructure.Data
                 entity.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne<Group>().WithMany().HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne<Transaction>().WithMany().HasForeignKey(x => x.SourceTransactionId).OnDelete(DeleteBehavior.Restrict);
-                entity.HasIndex(x => new { x.TenantId, x.StudentId, x.SessionId, x.Type })
+                entity.HasIndex(x => new
+                    { x.TenantId, x.StudentId, x.SessionId, x.Type, x.SourceTransactionId })
                     .IsUnique().HasFilter("[SessionId] IS NOT NULL");
                 entity.HasIndex(x => new { x.TenantId, x.StudentId, x.GroupId, x.SubscriptionYear, x.SubscriptionMonth, x.Type })
                     .IsUnique().HasFilter("[SubscriptionYear] IS NOT NULL AND [SubscriptionMonth] IS NOT NULL");

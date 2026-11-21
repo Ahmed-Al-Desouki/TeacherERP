@@ -232,7 +232,20 @@ public sealed class PaymobPaymentService : IPaymobPaymentService
             var payment = await _repository.GetPaymobPaymentForCallbackAsync(
                 callback.SpecialReference, callback.OrderId, cancellationToken);
             if (payment is null) return PaymobWebhookOutcome.Ignored;
+            var providerEventKey = GetProviderEventKey(callback);
             if (await _repository.HasPaymentEventAsync(PaymentProvider.Paymob,
+                    providerEventKey, cancellationToken))
+                return PaymobWebhookOutcome.Duplicate;
+
+            // Older deployments stored the Paymob transaction ID as the event ID for
+            // successful callbacks. Preserve their deduplication behavior during rollout.
+            if (IsFinalPaymentSuccess(callback)
+                && (payment.Status is TransactionStatus.Successful
+                    or TransactionStatus.PartiallyRefunded
+                    or TransactionStatus.Refunded
+                    or TransactionStatus.Voided
+                    or TransactionStatus.PaymobAdjustmentReview)
+                && await _repository.HasPaymentEventAsync(PaymentProvider.Paymob,
                     callback.ProviderEventId, cancellationToken))
                 return PaymobWebhookOutcome.Duplicate;
 
@@ -245,11 +258,46 @@ public sealed class PaymobPaymentService : IPaymobPaymentService
                 return PaymobWebhookOutcome.Ignored;
             }
 
+            var isRefundAdjustment = callback.IsRefunded || callback.RefundedAmountCents > 0;
+            var pendingRefundAmount = isRefundAdjustment
+                ? await _repository.GetPendingPaymobRefundAmountAsync(payment.Id, cancellationToken)
+                : 0m;
+            var remainingAmount = Math.Max(0m,
+                payment.Amount - payment.ProviderRefundedAmount - pendingRefundAmount);
+            var reportedRefundTotal = callback.RefundedAmountCents > 0
+                ? callback.RefundedAmountCents / 100m
+                : callback.IsRefunded ? payment.Amount : 0m;
+            var voidNeedsReview = callback.IsVoided
+                && (payment.Status == TransactionStatus.Successful
+                    || payment.Status == TransactionStatus.PartiallyRefunded);
+            var adjustmentAmount = isRefundAdjustment
+                ? Math.Max(0m, reportedRefundTotal - payment.ProviderRefundedAmount - pendingRefundAmount)
+                : voidNeedsReview
+                    ? remainingAmount
+                    : 0m;
+            var requiresManualReview = adjustmentAmount > 0 || voidNeedsReview;
+            if (requiresManualReview)
+            {
+                var adjustmentType = isRefundAdjustment ? PaymobAdjustmentType.Refund : PaymobAdjustmentType.Void;
+                if (adjustmentAmount <= 0
+                    || adjustmentAmount > remainingAmount)
+                {
+                    _logger.LogWarning("Paymob adjustment amount validation mismatch for transaction {TransactionId}.", payment.Id);
+                    return PaymobWebhookOutcome.Ignored;
+                }
+                _repository.AddPaymobAdjustmentReview(PaymobAdjustmentReview.Create(payment.TenantId,
+                    payment.Id, providerEventKey, adjustmentType, adjustmentAmount, callback.Currency));
+            }
+
             var previousStatus = payment.Status;
             var currentStatus = previousStatus;
             var eventType = "provider-attempt-declined";
 
-            if (callback.IsRefunded || callback.RefundedAmountCents > 0)
+            if ((callback.IsRefunded || callback.RefundedAmountCents > 0) && adjustmentAmount <= 0)
+            {
+                eventType = "refund-total-already-reconciled";
+            }
+            else if (callback.IsRefunded || callback.RefundedAmountCents > 0)
             {
                 eventType = "refund-requires-ledger-review";
                 if (payment.MarkPaymobAdjustmentNeedsReview())
@@ -329,12 +377,36 @@ public sealed class PaymobPaymentService : IPaymobPaymentService
             var payloadHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(root.GetRawText())))
                 .ToLowerInvariant();
             _repository.AddPaymentEvent(PaymentEvent.Create(payment.TenantId, payment.Id,
-                PaymentProvider.Paymob, callback.ProviderEventId, eventType,
+                PaymentProvider.Paymob, providerEventKey, eventType,
                 previousStatus, currentStatus, callback.OrderId, callback.CreatedAtUtc, payloadHash));
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return PaymobWebhookOutcome.Accepted;
         }, IsolationLevel.Serializable, cancellationToken);
     }
+
+    private static string GetProviderEventKey(Callback callback)
+    {
+        if (callback.IsRefunded || callback.RefundedAmountCents > 0)
+        {
+            var cumulativeRefundedCents = callback.RefundedAmountCents > 0
+                ? callback.RefundedAmountCents
+                : callback.AmountCents;
+            return $"{callback.ProviderEventId}:refund:{cumulativeRefundedCents}";
+        }
+
+        if (callback.IsVoided) return $"{callback.ProviderEventId}:void";
+        if (callback.Pending) return $"{callback.ProviderEventId}:pending";
+        if (callback.Success && callback.IsAuth && !callback.IsCapture)
+            return $"{callback.ProviderEventId}:authorized";
+        return callback.Success
+            ? $"{callback.ProviderEventId}:success"
+            : $"{callback.ProviderEventId}:failed";
+    }
+
+    private static bool IsFinalPaymentSuccess(Callback callback) =>
+        callback.Success && !callback.Pending && !callback.IsVoided
+        && !callback.IsRefunded && callback.RefundedAmountCents == 0
+        && !(callback.IsAuth && !callback.IsCapture);
 
     private int GetIntegrationId(PaymobIntegrationKey key) => key switch
     {

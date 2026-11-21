@@ -18,6 +18,7 @@ namespace TeacherERP.Domain.Entities
         public Guid? ProcessedByAdminId { get; private set; }
 
         public decimal Amount { get; private set; }
+        public decimal ProviderRefundedAmount { get; private set; }
         public PaymentType Type { get; private set; }
         public TransactionStatus Status { get; private set; }
 
@@ -161,8 +162,36 @@ namespace TeacherERP.Domain.Entities
 
         public bool MarkPaymobAdjustmentNeedsReview()
         {
-            if (Provider != PaymentProvider.Paymob || Status is not (TransactionStatus.Successful or TransactionStatus.PaymobPending)) return false;
+            if (Provider != PaymentProvider.Paymob || Status is not (TransactionStatus.Successful or TransactionStatus.PartiallyRefunded or TransactionStatus.PaymobPending)) return false;
             Status = TransactionStatus.PaymobAdjustmentReview;
+            ProviderClientSecret = null;
+            MarkAsUpdated();
+            return true;
+        }
+
+        public bool ResolvePaymobAdjustment(PaymobAdjustmentType type, decimal refundAmount,
+            bool hasMorePendingAdjustments)
+        {
+            if (Provider != PaymentProvider.Paymob || Status != TransactionStatus.PaymobAdjustmentReview
+                || refundAmount <= 0 || decimal.Round(refundAmount, 2) != refundAmount
+                || (type == PaymobAdjustmentType.Refund && ProviderRefundedAmount + refundAmount > Amount))
+                return false;
+
+            if (type == PaymobAdjustmentType.Void)
+            {
+                ProviderRefundedAmount = Amount;
+                Status = hasMorePendingAdjustments ? TransactionStatus.PaymobAdjustmentReview
+                    : TransactionStatus.Voided;
+            }
+            else
+            {
+                ProviderRefundedAmount += refundAmount;
+                Status = hasMorePendingAdjustments ? TransactionStatus.PaymobAdjustmentReview
+                    : ProviderRefundedAmount == Amount
+                        ? TransactionStatus.Refunded
+                        : TransactionStatus.PartiallyRefunded;
+            }
+
             ProviderClientSecret = null;
             MarkAsUpdated();
             return true;
@@ -194,6 +223,6 @@ namespace TeacherERP.Domain.Entities
 
     /// <summary>نوع الدفع (دفع بحصة، باشتراك شهري، أو سداد مديونية قديمة)</summary>
     public enum PaymentType { PerSession, MonthlySubscription, DebtSettlement }
-    public enum TransactionStatus { PendingApproval, Successful, Failed, Voided, PaymobPending, PaymobAdjustmentReview }
+    public enum TransactionStatus { PendingApproval, Successful, Failed, Voided, PaymobPending, PaymobAdjustmentReview, PartiallyRefunded, Refunded }
     public enum PaymentProvider { Paymob, Cash, InstaPay, Other }
 }

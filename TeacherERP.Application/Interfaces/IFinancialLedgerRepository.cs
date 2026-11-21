@@ -18,13 +18,15 @@ namespace TeacherERP.Application.Interfaces
         decimal SettledAmount, int OutstandingCount, decimal OutstandingAmount);
     public sealed record MonthlyPaymentMethodSummary(string Method, PaymentType Type,
         int SuccessfulCount, decimal SuccessfulAmount, int PendingCount, decimal PendingAmount,
-        int ReviewCount, decimal ReviewAmount, int FailedCount, decimal FailedAmount);
+        int ReviewCount, decimal ReviewAmount, int FailedCount, decimal FailedAmount,
+        int RefundedCount, decimal RefundedAmount);
     public sealed record MonthlyCollectionTotals(int SuccessfulCount, decimal SuccessfulAmount,
         int PendingCount, decimal PendingAmount, int ReviewCount, decimal ReviewAmount,
-        int FailedCount, decimal FailedAmount, int OutstandingDebtCount, decimal OutstandingDebtAmount);
+        int FailedCount, decimal FailedAmount, int RefundedCount, decimal RefundedAmount,
+        int OutstandingDebtCount, decimal OutstandingDebtAmount);
     public sealed record MonthlyCollectionItem(Guid TransactionId, Guid TenantId, string TenantName,
         Guid TeacherId, string TeacherName, Guid StudentId, string StudentName, PaymentType Type,
-        string Method, TransactionStatus Status, decimal Amount, DateTime CreatedAt,
+        string Method, TransactionStatus Status, decimal Amount, decimal RefundedAmount, DateTime CreatedAt,
         DateTime? UpdatedAt, DateTime OccurredAtUtc, Guid? RelatedSessionId);
     public sealed record MonthlyOutstandingDebtItem(Guid TenantId, string TenantName, Guid TeacherId,
         string TeacherName, Guid StudentId, string StudentName, Guid SessionId, string GroupName,
@@ -33,6 +35,12 @@ namespace TeacherERP.Application.Interfaces
         IReadOnlyList<MonthlyPaymentMethodSummary> ByMethodAndType,
         PagedResult<MonthlyCollectionItem> Transactions,
         PagedResult<MonthlyOutstandingDebtItem> OutstandingDebts);
+
+    public sealed record PaymobAdjustmentReviewItem(Guid Id, Guid TenantId, string TenantName,
+        Guid TransactionId, Guid StudentId, string StudentName, PaymentType PaymentType,
+        decimal PaymentAmount, Guid? SessionId, decimal PreviouslyRefundedAmount,
+        string ProviderEventId, PaymobAdjustmentType Type, decimal ProviderAmount,
+        string Currency, DateTime CreatedAt);
 
     public interface IFinancialLedgerRepository
     {
@@ -58,6 +66,19 @@ namespace TeacherERP.Application.Interfaces
         Task<Transaction?> GetPaymobPaymentForCallbackAsync(string? specialReference,
             string? providerOrderId, CancellationToken cancellationToken);
         Task<bool> HasPaymentEventAsync(PaymentProvider provider, string providerEventId,
+            CancellationToken cancellationToken);
+        void AddPaymobAdjustmentReview(PaymobAdjustmentReview review);
+        Task<PaymobAdjustmentReview?> GetPaymobAdjustmentReviewTrackedAsync(Guid reviewId,
+            CancellationToken cancellationToken);
+        Task<PagedResult<PaymobAdjustmentReviewItem>> GetPendingPaymobAdjustmentReviewsPageAsync(
+            PageRequest page, CancellationToken cancellationToken);
+        Task<decimal> GetPendingPaymobRefundAmountAsync(Guid transactionId,
+            CancellationToken cancellationToken);
+        Task<Guid?> GetOldestPendingPaymobAdjustmentReviewIdAsync(Guid transactionId,
+            CancellationToken cancellationToken);
+        Task<bool> HasOtherPendingPaymobAdjustmentReviewAsync(Guid transactionId, Guid reviewId,
+            CancellationToken cancellationToken);
+        Task<PlatformCommission?> GetPlatformCommissionByTransactionTrackedAsync(Guid transactionId,
             CancellationToken cancellationToken);
         Task<bool> HasOpenExternalPaymentAsync(Guid tenantId, Guid studentId, PaymentType type,
             Guid contextSessionId, CancellationToken cancellationToken);

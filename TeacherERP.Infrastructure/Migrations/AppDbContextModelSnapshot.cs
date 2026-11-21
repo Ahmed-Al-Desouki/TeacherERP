@@ -1065,6 +1065,77 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.ToTable("PaymentEvents");
                 });
 
+            modelBuilder.Entity("TeacherERP.Domain.Entities.PaymobAdjustmentReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("CommissionReversalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<decimal>("ProviderAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ProviderEventId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ReviewedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<decimal>("StudentDebtAdjustmentAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderEventId")
+                        .IsUnique();
+
+                    b.HasIndex("TransactionId");
+
+                    b.HasIndex("TenantId", "TransactionId");
+
+                    b.HasIndex("Status", "CreatedAt", "Id");
+
+                    b.ToTable("PaymobAdjustmentReviews");
+                });
+
             modelBuilder.Entity("TeacherERP.Domain.Entities.PlatformCommission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1132,7 +1203,7 @@ namespace TeacherERP.Infrastructure.Migrations
 
                     b.HasIndex("TenantId", "CreatedAt", "SettledAtUtc");
 
-                    b.HasIndex("TenantId", "StudentId", "SessionId", "Type")
+                    b.HasIndex("TenantId", "StudentId", "SessionId", "Type", "SourceTransactionId")
                         .IsUnique()
                         .HasFilter("[SessionId] IS NOT NULL");
 
@@ -1596,6 +1667,9 @@ namespace TeacherERP.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<decimal>("ProviderRefundedAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime?>("ProviderRequestStartedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -1998,6 +2072,21 @@ namespace TeacherERP.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("TeacherERP.Domain.Entities.PaymentEvent", b =>
+                {
+                    b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TeacherERP.Domain.Entities.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("TransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("TeacherERP.Domain.Entities.PaymobAdjustmentReview", b =>
                 {
                     b.HasOne("TeacherERP.Domain.Entities.Tenant", null)
                         .WithMany()

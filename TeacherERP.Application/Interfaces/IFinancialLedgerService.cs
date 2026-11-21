@@ -34,5 +34,7 @@ namespace TeacherERP.Application.Interfaces
             CancellationToken cancellationToken);
         Task<Result<CashPaymentResult>> ApplyPaymobPaymentAsync(Guid tenantId, Guid transactionId,
             CancellationToken cancellationToken);
+        Task<Result<bool>> ApplyPaymobRefundDebtAsync(Guid tenantId, Guid transactionId,
+            decimal amount, CancellationToken cancellationToken);
     }
 }

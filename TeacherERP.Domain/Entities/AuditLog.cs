@@ -64,6 +64,7 @@ namespace TeacherERP.Domain.Entities
         PaymobPaymentSucceeded,
         PaymobPaymentFailed,
         PaymobAdjustmentNeedsReview,
+        PaymobAdjustmentReviewed,
         PlatformCommissionSettled,
         PlatformCommissionCollectionRequested
     }

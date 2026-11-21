@@ -59,6 +59,15 @@ public sealed class PlatformCommission : BaseEntity, ITenantOwned
         return true;
     }
 
+    public bool ApplyRefundReversal(decimal amount)
+    {
+        if (amount <= 0 || decimal.Round(amount, 2) != amount || amount > Amount)
+            return false;
+        Amount -= amount;
+        MarkAsUpdated();
+        return true;
+    }
+
     public bool RequestCollection(Guid administratorId, DateTime requestedAtUtc)
     {
         if (IsSettled || CollectionRequestedAtUtc.HasValue) return false;
