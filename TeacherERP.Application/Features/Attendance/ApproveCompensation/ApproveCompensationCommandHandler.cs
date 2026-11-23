@@ -63,6 +63,7 @@ namespace TeacherERP.Application.Features.Attendance.ApproveCompensation
             record.ApproveCompensation();
 
             var member = await _enrollmentRepository.GetMemberAsync(tenant.TenantId, record.StudentId, cancellationToken);
+            var reinstatedByCompensation = false;
             if (member is not null)
             {
                 // موقوف بسبب الغياب المتتالي؟ (العداد وصل الحد). نفحصها قبل تصفير العداد
@@ -79,6 +80,7 @@ namespace TeacherERP.Application.Features.Attendance.ApproveCompensation
                 if (suspendedByAbsence)
                 {
                     member.Activate();
+                    reinstatedByCompensation = true;
 
                     _auditRepository.Add(AuditLog.Create(
                         tenant.TenantId, userId, AuditAction.StudentReinstatedByCompensation, member.UserId, "Compensation session approved"));
@@ -88,6 +90,13 @@ namespace TeacherERP.Application.Features.Attendance.ApproveCompensation
             _auditRepository.Add(AuditLog.Create(
                 tenant.TenantId, userId, AuditAction.CompensationApproved, record.StudentId,
                 $"Compensation record {record.Id} approved."));
+
+            var studentMessage = reinstatedByCompensation
+                ? "Your compensation request was approved, and your membership is active again."
+                : "Your compensation request was approved.";
+            await _notificationService.NotifyUserAsync(
+                tenant.TenantId, record.StudentId, NotificationType.CompensationApproved,
+                studentMessage, record.Id, cancellationToken);
 
             if (tenant.Role == TenantRole.Assistant)
             {

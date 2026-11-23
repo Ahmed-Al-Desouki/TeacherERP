@@ -10,6 +10,44 @@ public sealed class StudentTransferIntegrationTests : IClassFixture<CustomWebApp
 {
     private readonly CustomWebApplicationFactory _factory;
 
+    [Fact]
+    public async Task EnrollmentRequestDecisionsNotifyTheStudentOnce()
+    {
+        SeededTeacher teacher = null!;
+        Guid approvedStudentId = default, rejectedStudentId = default;
+        Guid approvedRequestId = default, rejectedRequestId = default;
+        await _factory.SeedAsync(async db =>
+        {
+            teacher = await TestData.CreateTeacherAsync(db);
+            approvedStudentId = await TestData.AddStudentAsync(db, teacher.TenantId);
+            rejectedStudentId = await TestData.AddStudentAsync(db, teacher.TenantId);
+            var approvedRequest = EnrollmentRequest.Create(
+                teacher.TenantId, approvedStudentId, teacher.GroupId, EnrollmentRequestType.Join);
+            var rejectedRequest = EnrollmentRequest.Create(
+                teacher.TenantId, rejectedStudentId, teacher.GroupId, EnrollmentRequestType.Join);
+            db.EnrollmentRequests.AddRange(approvedRequest, rejectedRequest);
+            await db.SaveChangesAsync();
+            approvedRequestId = approvedRequest.Id;
+            rejectedRequestId = rejectedRequest.Id;
+        });
+
+        var staff = _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId);
+        var approved = await staff.PostAsync($"/api/Enrollment/requests/{approvedRequestId}/approve", null);
+        var rejected = await staff.PostAsJsonAsync($"/api/Enrollment/requests/{rejectedRequestId}/reject", new
+        {
+            note = "The group is not suitable"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, approved.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, rejected.StatusCode);
+        Assert.Equal(1, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(n =>
+            n.TenantId == teacher.TenantId && n.RecipientUserId == approvedStudentId
+            && n.Type == NotificationType.EnrollmentApproved && n.RelatedId == approvedRequestId)));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(n =>
+            n.TenantId == teacher.TenantId && n.RecipientUserId == rejectedStudentId
+            && n.Type == NotificationType.EnrollmentRejected && n.RelatedId == rejectedRequestId)));
+    }
+
     public StudentTransferIntegrationTests(CustomWebApplicationFactory factory) => _factory = factory;
 
     [Fact]
@@ -39,8 +77,8 @@ public sealed class StudentTransferIntegrationTests : IClassFixture<CustomWebApp
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var rows = await _factory.QueryAsync(db => db.GroupEnrollments.IgnoreQueryFilters()
             .Where(e => e.TenantId == teacher.TenantId && e.StudentId == studentId).ToListAsync());
-        var old = Assert.Single(rows.Where(e => e.GroupId == teacher.GroupId));
-        var current = Assert.Single(rows.Where(e => e.Status == EnrollmentStatus.Active));
+        var old = Assert.Single(rows, e => e.GroupId == teacher.GroupId);
+        var current = Assert.Single(rows, e => e.Status == EnrollmentStatus.Active);
         Assert.Equal(EnrollmentStatus.Ended, old.Status);
         Assert.NotNull(old.EndedAt);
         Assert.False(old.IsGroupAdmin);

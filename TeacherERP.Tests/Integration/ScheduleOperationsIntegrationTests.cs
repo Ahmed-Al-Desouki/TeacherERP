@@ -19,15 +19,27 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
         return json.TryGetProperty("errorCode", out var code) ? code.GetString() : null;
     }
 
+    private Task<NotificationType[]> GetNotificationTypesAsync(Guid tenantId, Guid userId) =>
+        _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().AsNoTracking()
+            .Where(notification => notification.TenantId == tenantId && notification.RecipientUserId == userId)
+            .OrderBy(notification => notification.CreatedAt)
+            .Select(notification => notification.Type)
+            .ToArrayAsync());
+
     [Fact]
     public async Task Reschedule_RejectsConflictThenCancelAndRestoreKeepTheSessionConsistent()
     {
         SeededTeacher teacher = null!;
-        Guid sessionId = default, blockerId = default;
+        Guid sessionId = default, blockerId = default, studentId = default, assistantId = default;
         var baseStart = DateTime.UtcNow.Date.AddDays(3).AddHours(10);
         await _factory.SeedAsync(async db =>
         {
             teacher = await TestData.CreateTeacherAsync(db);
+            studentId = await TestData.AddStudentAsync(db, teacher.TenantId, teacher.GroupId);
+            var assistant = ApplicationUser.CreateAssistant("Schedule assistant", $"assistant-{Guid.NewGuid():N}@test.local");
+            db.Users.Add(assistant);
+            db.TenantMembers.Add(TenantMember.Create(teacher.TenantId, assistant.Id, TenantRole.Assistant));
+            assistantId = assistant.Id;
             sessionId = await TestData.AddSessionAsync(db, teacher.TenantId, teacher.GroupId, baseStart);
             blockerId = await TestData.AddSessionAsync(db, teacher.TenantId, teacher.GroupId, baseStart.AddHours(2));
         });
@@ -55,11 +67,33 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
         Assert.Equal(newStart, times.StartTime);
         Assert.Equal(newStart.AddMinutes(75), times.EndTime);
         Assert.True(times.IsModified);
+        Assert.Equal(new[] { NotificationType.SessionRescheduled },
+            await GetNotificationTypesAsync(teacher.TenantId, studentId));
+        Assert.Equal(new[] { NotificationType.SessionRescheduled },
+            await GetNotificationTypesAsync(teacher.TenantId, assistantId));
+        var sameSchedule = await client.PutAsJsonAsync($"/api/Schedule/sessions/{sessionId}/reschedule", new
+        {
+            newStartTime = newStart,
+            durationMinutes = 75
+        });
+        Assert.Equal(HttpStatusCode.OK, sameSchedule.StatusCode);
+        Assert.Equal(new[] { NotificationType.SessionRescheduled },
+            await GetNotificationTypesAsync(teacher.TenantId, studentId));
 
         var cancelled = await client.PostAsJsonAsync($"/api/Schedule/sessions/{sessionId}/cancel", new { reason = "change" });
         Assert.Equal(HttpStatusCode.OK, cancelled.StatusCode);
+        var repeatedCancellation = await client.PostAsJsonAsync($"/api/Schedule/sessions/{sessionId}/cancel", new { reason = "change" });
+        Assert.Equal(HttpStatusCode.OK, repeatedCancellation.StatusCode);
         Assert.True(await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
             .Where(s => s.Id == sessionId).Select(s => s.IsCancelled).SingleAsync()));
+        var studentNotificationsAfterCancel = await GetNotificationTypesAsync(teacher.TenantId, studentId);
+        Assert.Equal(2, studentNotificationsAfterCancel.Length);
+        Assert.Contains(NotificationType.SessionRescheduled, studentNotificationsAfterCancel);
+        Assert.Contains(NotificationType.SessionCancelled, studentNotificationsAfterCancel);
+        var assistantNotificationsAfterCancel = await GetNotificationTypesAsync(teacher.TenantId, assistantId);
+        Assert.Equal(2, assistantNotificationsAfterCancel.Length);
+        Assert.Contains(NotificationType.SessionRescheduled, assistantNotificationsAfterCancel);
+        Assert.Contains(NotificationType.SessionCancelled, assistantNotificationsAfterCancel);
 
         var restored = await client.PostAsync($"/api/Schedule/sessions/{sessionId}/restore", null);
         Assert.Equal(HttpStatusCode.OK, restored.StatusCode);
@@ -67,6 +101,12 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
             .Where(s => s.Id == sessionId).Select(s => s.IsCancelled).SingleAsync()));
         Assert.False(await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
             .Where(s => s.Id == blockerId).Select(s => s.IsCancelled).SingleAsync()));
+        var studentNotificationsAfterRestore = await GetNotificationTypesAsync(teacher.TenantId, studentId);
+        Assert.Equal(3, studentNotificationsAfterRestore.Length);
+        Assert.Contains(NotificationType.SessionRestored, studentNotificationsAfterRestore);
+        var assistantNotificationsAfterRestore = await GetNotificationTypesAsync(teacher.TenantId, assistantId);
+        Assert.Equal(3, assistantNotificationsAfterRestore.Length);
+        Assert.Contains(NotificationType.SessionRestored, assistantNotificationsAfterRestore);
     }
 
     [Fact]
@@ -111,11 +151,12 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
     public async Task BulkShift_MovesAllSelectedSessionsAndLeavesAllUntouchedWhenAnyConflicts()
     {
         SeededTeacher teacher = null!;
-        Guid first = default, second = default, selectedConflict = default, blocker = default;
+        Guid first = default, second = default, selectedConflict = default, blocker = default, studentId = default;
         var baseStart = DateTime.UtcNow.Date.AddDays(5).AddHours(10);
         await _factory.SeedAsync(async db =>
         {
             teacher = await TestData.CreateTeacherAsync(db);
+            studentId = await TestData.AddStudentAsync(db, teacher.TenantId, teacher.GroupId);
             first = await TestData.AddSessionAsync(db, teacher.TenantId, teacher.GroupId, baseStart);
             second = await TestData.AddSessionAsync(db, teacher.TenantId, teacher.GroupId, baseStart.AddDays(1));
             selectedConflict = await TestData.AddSessionAsync(db, teacher.TenantId, teacher.GroupId, baseStart.AddDays(3));
@@ -137,6 +178,8 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
             .Where(s => s.Id == first).Select(s => s.StartTime).SingleAsync()));
         Assert.Equal(baseStart.AddDays(1).AddMinutes(30), await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
             .Where(s => s.Id == second).Select(s => s.StartTime).SingleAsync()));
+        Assert.Equal(new[] { NotificationType.BulkSessionsRescheduled },
+            await GetNotificationTypesAsync(teacher.TenantId, studentId));
 
         var conflict = await client.PostAsJsonAsync("/api/Schedule/sessions/bulk-shift", new
         {
@@ -151,6 +194,42 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
             .Where(s => s.Id == selectedConflict).Select(s => s.StartTime).SingleAsync()));
         Assert.Equal(baseStart.AddDays(3).AddHours(1), await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
             .Where(s => s.Id == blocker).Select(s => s.StartTime).SingleAsync()));
+        Assert.Equal(new[] { NotificationType.BulkSessionsRescheduled },
+            await GetNotificationTypesAsync(teacher.TenantId, studentId));
+    }
+
+    [Fact]
+    public async Task BulkCancel_NotifiesGroupOnceAndRepeatedRequestDoesNotDuplicateNotifications()
+    {
+        SeededTeacher teacher = null!;
+        Guid studentId = default;
+        var from = DateTime.UtcNow.Date.AddDays(6).AddHours(10);
+        await _factory.SeedAsync(async db =>
+        {
+            teacher = await TestData.CreateTeacherAsync(db);
+            studentId = await TestData.AddStudentAsync(db, teacher.TenantId, teacher.GroupId);
+            await TestData.AddSessionAsync(db, teacher.TenantId, teacher.GroupId, from);
+            await TestData.AddSessionAsync(db, teacher.TenantId, teacher.GroupId, from.AddDays(1));
+        });
+
+        var client = _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId);
+        var request = new
+        {
+            from = from.AddMinutes(-1),
+            to = from.AddDays(2),
+            groupIds = new[] { teacher.GroupId },
+            reason = "Teacher unavailable"
+        };
+
+        var first = await client.PostAsJsonAsync("/api/Schedule/sessions/bulk-cancel", request);
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(new[] { NotificationType.BulkSessionsCancelled },
+            await GetNotificationTypesAsync(teacher.TenantId, studentId));
+
+        var repeated = await client.PostAsJsonAsync("/api/Schedule/sessions/bulk-cancel", request);
+        Assert.Equal(HttpStatusCode.OK, repeated.StatusCode);
+        Assert.Equal(new[] { NotificationType.BulkSessionsCancelled },
+            await GetNotificationTypesAsync(teacher.TenantId, studentId));
     }
 
     [Fact]

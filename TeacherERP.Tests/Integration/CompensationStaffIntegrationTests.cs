@@ -55,6 +55,9 @@ public sealed class CompensationStaffIntegrationTests : IClassFixture<CustomWebA
         Assert.Equal(2, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(n =>
             n.TenantId == teacher.TenantId && n.RecipientUserId == teacher.OwnerId
             && (n.Type == NotificationType.CompensationApproved || n.Type == NotificationType.CompensationRejected))));
+        Assert.Equal(2, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(n =>
+            n.TenantId == teacher.TenantId && n.RecipientUserId == studentId
+            && (n.Type == NotificationType.CompensationApproved || n.Type == NotificationType.CompensationRejected))));
         Assert.False(await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().AnyAsync(n =>
             n.TenantId == teacher.TenantId && n.RecipientUserId == assistantId
             && (n.Type == NotificationType.CompensationApproved || n.Type == NotificationType.CompensationRejected))));

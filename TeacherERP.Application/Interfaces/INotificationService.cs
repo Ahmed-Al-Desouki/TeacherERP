@@ -5,6 +5,11 @@ namespace TeacherERP.Application.Interfaces
 {
     public interface INotificationService
     {
+        // إشعار لمستخدم محدد، يُحفظ مع بقية تغييرات العملية في وحدة العمل نفسها
+        Task NotifyUserAsync(
+            Guid tenantId, Guid recipientUserId, NotificationType type,
+            string message, Guid? relatedId, CancellationToken cancellationToken);
+
         // يضيف إشعاراً للمدرس ومساعديه (بدون حفظ: يُحفظ مع باقي تغييرات الطلب)
         Task NotifyStaffAsync(
             Guid tenantId, NotificationType type, string message, Guid? relatedId, CancellationToken cancellationToken);

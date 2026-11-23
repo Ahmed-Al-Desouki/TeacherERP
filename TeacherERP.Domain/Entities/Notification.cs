@@ -61,6 +61,17 @@ namespace TeacherERP.Domain.Entities
         CompensationRejected,
         PlatformCommissionPaymentRequested,
         HomeworkUploaded,
-        SessionAttachmentUploaded
+        SessionAttachmentUploaded,
+        SessionCancelled,
+        SessionRescheduled,
+        SessionMoved,
+        SessionRestored,
+        BulkSessionsCancelled,
+        BulkSessionsRescheduled,
+        EnrollmentApproved,
+        EnrollmentRejected,
+        GroupAdminRequestApproved,
+        GroupAdminRequestRejected,
+        StudentReactivated
     }
 }

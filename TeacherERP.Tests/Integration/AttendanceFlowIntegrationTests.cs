@@ -251,6 +251,102 @@ public sealed class AttendanceFlowIntegrationTests : IClassFixture<CustomWebAppl
         Assert.True(await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters().AnyAsync(log =>
             log.TenantId == teacher.TenantId && log.Action == AuditAction.StudentReinstatedByCompensation
             && log.TargetUserId == studentId && log.ActorUserId == teacher.OwnerId)));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(notification =>
+            notification.TenantId == teacher.TenantId && notification.RecipientUserId == studentId
+            && notification.Type == NotificationType.CompensationApproved
+            && notification.RelatedId == compensationRecordId)));
+    }
+
+    [Fact]
+    public async Task ManualUnsuspend_NotifiesTheReactivatedStudent()
+    {
+        SeededTeacher teacher = null!;
+        Guid studentId = default;
+        await _factory.SeedAsync(async db =>
+        {
+            teacher = await TestData.CreateTeacherAsync(db);
+            studentId = await TestData.AddStudentAsync(db, teacher.TenantId, teacher.GroupId);
+            var member = await db.TenantMembers.IgnoreQueryFilters()
+                .SingleAsync(item => item.TenantId == teacher.TenantId && item.UserId == studentId);
+            member.Suspend();
+            await db.SaveChangesAsync();
+        });
+
+        var staff = _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId);
+        var response = await staff.PostAsJsonAsync($"/api/students/{studentId}/unsuspend", new
+        {
+            reason = "Reviewed by teacher"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(MembershipStatus.Active, await _factory.QueryAsync(db => db.TenantMembers.IgnoreQueryFilters()
+            .Where(item => item.TenantId == teacher.TenantId && item.UserId == studentId)
+            .Select(item => item.Status).SingleAsync()));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(notification =>
+            notification.TenantId == teacher.TenantId && notification.RecipientUserId == studentId
+            && notification.Type == NotificationType.StudentReactivated && notification.RelatedId == studentId)));
+    }
+
+    [Fact]
+    public async Task AbsenceAutoSuspension_NotifiesTheAffectedStudent()
+    {
+        SeededTeacher teacher = null!;
+        Guid studentId = default;
+        await _factory.SeedAsync(async db =>
+        {
+            teacher = await TestData.CreateTeacherAsync(db);
+            studentId = await TestData.AddStudentAsync(db, teacher.TenantId);
+            var member = await db.TenantMembers.IgnoreQueryFilters()
+                .SingleAsync(item => item.TenantId == teacher.TenantId && item.UserId == studentId);
+            member.SetConsecutiveAbsences(3);
+            db.GroupEnrollments.Add(GroupEnrollment.Create(
+                teacher.TenantId, teacher.GroupId, studentId, DateTime.UtcNow.AddDays(-1), null));
+            await TestData.AddSessionAsync(db, teacher.TenantId, teacher.GroupId,
+                DateTime.UtcNow.AddHours(-4), TimeSpan.FromHours(1));
+        });
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var currentTenant = scope.ServiceProvider.GetRequiredService<ICurrentTenantAccessor>();
+            currentTenant.Set(new TenantContext(teacher.TenantId, TenantRole.Owner, MembershipStatus.Active));
+            var processor = scope.ServiceProvider.GetRequiredService<IAbsenceProcessor>();
+            await processor.ProcessAsync(CancellationToken.None);
+        }
+
+        Assert.Equal(MembershipStatus.Suspended, await _factory.QueryAsync(db => db.TenantMembers.IgnoreQueryFilters()
+            .Where(item => item.TenantId == teacher.TenantId && item.UserId == studentId)
+            .Select(item => item.Status).SingleAsync()));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(notification =>
+            notification.TenantId == teacher.TenantId && notification.RecipientUserId == studentId
+            && notification.Type == NotificationType.StudentAutoSuspended
+            && notification.RelatedId == studentId)));
+    }
+
+    [Fact]
+    public async Task Unblacklist_NotifiesTheReactivatedStudent()
+    {
+        SeededTeacher teacher = null!;
+        Guid studentId = default;
+        await _factory.SeedAsync(async db =>
+        {
+            teacher = await TestData.CreateTeacherAsync(db);
+            studentId = await TestData.AddStudentAsync(db, teacher.TenantId, teacher.GroupId);
+            var member = await db.TenantMembers.IgnoreQueryFilters()
+                .SingleAsync(item => item.TenantId == teacher.TenantId && item.UserId == studentId);
+            member.Blacklist();
+            await db.SaveChangesAsync();
+        });
+
+        var staff = _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId);
+        var response = await staff.PostAsJsonAsync($"/api/students/{studentId}/unblacklist", new
+        {
+            reason = "Issue resolved"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(notification =>
+            notification.TenantId == teacher.TenantId && notification.RecipientUserId == studentId
+            && notification.Type == NotificationType.StudentReactivated && notification.RelatedId == studentId)));
     }
 
     [Fact]

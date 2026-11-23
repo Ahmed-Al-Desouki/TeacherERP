@@ -16,6 +16,7 @@ public class CancelSessionCommandHandlerTests
     private readonly ICurrentTenantAccessor _tenant = Substitute.For<ICurrentTenantAccessor>();
     private readonly IGroupSessionRepository _sessions = Substitute.For<IGroupSessionRepository>();
     private readonly IAttendanceRepository _attendance = Substitute.For<IAttendanceRepository>();
+    private readonly INotificationService _notifications = Substitute.For<INotificationService>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
 
     public CancelSessionCommandHandlerTests()
@@ -24,7 +25,7 @@ public class CancelSessionCommandHandlerTests
     }
 
     private CancelSessionCommandHandler CreateHandler()
-        => new(_tenant, _sessions, _attendance, _unitOfWork, new FixedTimeProvider(Now));
+        => new(_tenant, _sessions, _attendance, _notifications, _unitOfWork, new FixedTimeProvider(Now));
 
     private Session UpcomingSession()
     {
@@ -119,6 +120,7 @@ public class BulkCancelSessionsCommandHandlerTests
     private readonly ICurrentTenantAccessor _tenant = Substitute.For<ICurrentTenantAccessor>();
     private readonly IGroupSessionRepository _sessions = Substitute.For<IGroupSessionRepository>();
     private readonly IAttendanceRepository _attendance = Substitute.For<IAttendanceRepository>();
+    private readonly INotificationService _notifications = Substitute.For<INotificationService>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
 
     public BulkCancelSessionsCommandHandlerTests()
@@ -127,7 +129,7 @@ public class BulkCancelSessionsCommandHandlerTests
     }
 
     private BulkCancelSessionsCommandHandler CreateHandler()
-        => new(_tenant, _sessions, _attendance, _unitOfWork, new FixedTimeProvider(Now));
+        => new(_tenant, _sessions, _attendance, _notifications, _unitOfWork, new FixedTimeProvider(Now));
 
     private static Session Upcoming(int daysAhead)
         => Session.Create(TenantId, Guid.NewGuid(), Now.AddDays(daysAhead), Now.AddDays(daysAhead).AddHours(1));

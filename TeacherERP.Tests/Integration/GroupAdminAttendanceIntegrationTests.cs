@@ -157,6 +157,12 @@ public sealed class GroupAdminAttendanceIntegrationTests : IClassFixture<CustomW
             && e.IsGroupAdmin)));
         Assert.Equal(GroupAdminRequestStatus.Approved, await _factory.QueryAsync(db => db.GroupAdminRequests
             .IgnoreQueryFilters().Where(r => r.Id == requestId).Select(r => r.Status).SingleAsync()));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(n =>
+            n.TenantId == s.Teacher.TenantId && n.RecipientUserId == assistantId
+            && n.Type == NotificationType.GroupAdminRequestApproved && n.RelatedId == requestId)));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(n =>
+            n.TenantId == s.Teacher.TenantId && n.RecipientUserId == s.AdminStudentId
+            && n.Type == NotificationType.GroupAdminRequestApproved && n.RelatedId == requestId)));
 
         var removeRequested = await assistantClient.DeleteAsync(
             $"/api/Groups/{s.Teacher.GroupId}/admins/{s.AdminStudentId}");
@@ -170,6 +176,12 @@ public sealed class GroupAdminAttendanceIntegrationTests : IClassFixture<CustomW
         Assert.Equal(HttpStatusCode.OK, rejected.StatusCode);
         Assert.Equal(GroupAdminRequestStatus.Rejected, await _factory.QueryAsync(db => db.GroupAdminRequests
             .IgnoreQueryFilters().Where(r => r.Id == removalId).Select(r => r.Status).SingleAsync()));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(n =>
+            n.TenantId == s.Teacher.TenantId && n.RecipientUserId == assistantId
+            && n.Type == NotificationType.GroupAdminRequestRejected && n.RelatedId == removalId)));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(n =>
+            n.TenantId == s.Teacher.TenantId && n.RecipientUserId == s.AdminStudentId
+            && n.Type == NotificationType.GroupAdminRequestRejected && n.RelatedId == removalId)));
         Assert.True(await _factory.QueryAsync(db => db.GroupEnrollments.IgnoreQueryFilters().AnyAsync(e =>
             e.TenantId == s.Teacher.TenantId && e.StudentId == s.AdminStudentId && e.GroupId == s.Teacher.GroupId
             && e.IsGroupAdmin)));

@@ -12,6 +12,7 @@ namespace TeacherERP.Application.Features.GroupAdmins.RejectGroupAdminRequest
         private readonly ICurrentUserService _currentUser;
         private readonly ICurrentTenantAccessor _currentTenant;
         private readonly IGroupAdminRepository _groupAdminRepository;
+        private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
 
@@ -19,12 +20,14 @@ namespace TeacherERP.Application.Features.GroupAdmins.RejectGroupAdminRequest
             ICurrentUserService currentUser,
             ICurrentTenantAccessor currentTenant,
             IGroupAdminRepository groupAdminRepository,
+            INotificationService notificationService,
             IUnitOfWork unitOfWork,
             TimeProvider timeProvider)
         {
             _currentUser = currentUser;
             _currentTenant = currentTenant;
             _groupAdminRepository = groupAdminRepository;
+            _notificationService = notificationService;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
         }
@@ -53,6 +56,18 @@ namespace TeacherERP.Application.Features.GroupAdmins.RejectGroupAdminRequest
             }
 
             pending.Reject(userId, _timeProvider.GetUtcNow().UtcDateTime, request.Note);
+            var requesterMessage = string.IsNullOrWhiteSpace(request.Note)
+                ? "Your group admin request was rejected."
+                : $"Your group admin request was rejected. Reason: {request.Note.Trim()}";
+            await _notificationService.NotifyUserAsync(
+                pending.TenantId, pending.RequestedByUserId, NotificationType.GroupAdminRequestRejected,
+                requesterMessage, pending.Id, cancellationToken);
+            if (pending.StudentId != pending.RequestedByUserId)
+            {
+                await _notificationService.NotifyUserAsync(
+                    pending.TenantId, pending.StudentId, NotificationType.GroupAdminRequestRejected,
+                    "A request affecting your group admin role was rejected.", pending.Id, cancellationToken);
+            }
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result<bool>.Success(true);

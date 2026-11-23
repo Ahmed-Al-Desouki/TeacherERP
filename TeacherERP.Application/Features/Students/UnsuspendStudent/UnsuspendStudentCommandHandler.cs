@@ -13,6 +13,7 @@ namespace TeacherERP.Application.Features.Students.UnsuspendStudent
         private readonly ICurrentTenantAccessor _currentTenant;
         private readonly IEnrollmentRepository _enrollmentRepository;
         private readonly IAuditRepository _auditRepository;
+        private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
 
         public UnsuspendStudentCommandHandler(
@@ -20,12 +21,14 @@ namespace TeacherERP.Application.Features.Students.UnsuspendStudent
             ICurrentTenantAccessor currentTenant,
             IEnrollmentRepository enrollmentRepository,
             IAuditRepository auditRepository,
+            INotificationService notificationService,
             IUnitOfWork unitOfWork)
         {
             _currentUser = currentUser;
             _currentTenant = currentTenant;
             _enrollmentRepository = enrollmentRepository;
             _auditRepository = auditRepository;
+            _notificationService = notificationService;
             _unitOfWork = unitOfWork;
         }
 
@@ -57,6 +60,9 @@ namespace TeacherERP.Application.Features.Students.UnsuspendStudent
             member.ResetAbsence();
 
             _auditRepository.Add(AuditLog.Create(tenant.TenantId, actorId, AuditAction.StudentUnsuspended, member.UserId, request.Reason));
+            await _notificationService.NotifyUserAsync(
+                tenant.TenantId, member.UserId, NotificationType.StudentReactivated,
+                "Your membership was reactivated by the teacher.", member.UserId, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result<bool>.Success(true);

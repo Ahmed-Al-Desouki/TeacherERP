@@ -2,6 +2,7 @@
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Application.Scheduling;
+using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Schedule.BulkCancelSessions
@@ -11,6 +12,7 @@ namespace TeacherERP.Application.Features.Schedule.BulkCancelSessions
         private readonly ICurrentTenantAccessor _currentTenant;
         private readonly IGroupSessionRepository _sessionRepository;
         private readonly IAttendanceRepository _attendanceRepository;
+        private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
 
@@ -18,12 +20,14 @@ namespace TeacherERP.Application.Features.Schedule.BulkCancelSessions
             ICurrentTenantAccessor currentTenant,
             IGroupSessionRepository sessionRepository,
             IAttendanceRepository attendanceRepository,
+            INotificationService notificationService,
             IUnitOfWork unitOfWork,
             TimeProvider timeProvider)
         {
             _currentTenant = currentTenant;
             _sessionRepository = sessionRepository;
             _attendanceRepository = attendanceRepository;
+            _notificationService = notificationService;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
         }
@@ -72,6 +76,21 @@ namespace TeacherERP.Application.Features.Schedule.BulkCancelSessions
 
             if (affected > 0)
             {
+                foreach (var group in cancellable.GroupBy(session => session.GroupId))
+                {
+                    var groupSessions = group.ToArray();
+                    var message = $"{groupSessions.Length} group session(s) were cancelled " +
+                                  $"from {groupSessions.Min(session => session.StartTime):O} " +
+                                  $"through {groupSessions.Max(session => session.StartTime):O}." +
+                                  (string.IsNullOrWhiteSpace(request.Reason) ? string.Empty : $" Reason: {request.Reason.Trim()}");
+                    await _notificationService.NotifyGroupStudentsAsync(
+                        groupSessions[0].TenantId, group.Key, NotificationType.BulkSessionsCancelled,
+                        message, group.Key, cancellationToken);
+                }
+
+                await _notificationService.NotifyStaffAsync(
+                    cancellable[0].TenantId, NotificationType.BulkSessionsCancelled,
+                    $"{affected} upcoming session(s) were cancelled.", null, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
 

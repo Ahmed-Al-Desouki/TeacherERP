@@ -12,12 +12,18 @@ namespace TeacherERP.Application.Enrollment
         private readonly IEnrollmentRepository _repository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
+        private readonly INotificationService _notificationService;
 
-        public EnrollmentService(IEnrollmentRepository repository, IUnitOfWork unitOfWork, TimeProvider timeProvider)
+        public EnrollmentService(
+            IEnrollmentRepository repository,
+            IUnitOfWork unitOfWork,
+            TimeProvider timeProvider,
+            INotificationService notificationService)
         {
             _repository = repository;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
+            _notificationService = notificationService;
         }
 
         public Task<Result<bool>> ApproveAsync(EnrollmentRequest request, Guid? decidedByUserId, CancellationToken cancellationToken)
@@ -134,6 +140,9 @@ namespace TeacherERP.Application.Enrollment
 
             _repository.AddEnrollment(GroupEnrollment.Create(request.TenantId, request.GroupId, request.StudentId, now, decidedByUserId));
             request.Approve(decidedByUserId, now);
+            await _notificationService.NotifyUserAsync(
+                request.TenantId, request.StudentId, NotificationType.EnrollmentApproved,
+                "Your request to join or transfer to the group was approved.", request.Id, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result<bool>.Success(true);

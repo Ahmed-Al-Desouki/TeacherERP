@@ -76,6 +76,10 @@ namespace TeacherERP.Application.Features.Attendance.RejectCompensation
                     tenant.TenantId, userId, AuditAction.CompensationRejected, record.StudentId,
                     $"Compensation record {record.Id} rejected."));
 
+                await _notificationService.NotifyUserAsync(
+                    tenant.TenantId, record.StudentId, NotificationType.CompensationRejected,
+                    "Your compensation request was rejected.", record.Id, cancellationToken);
+
                 if (tenant.Role == TenantRole.Assistant)
                 {
                     await _notificationService.NotifyTeacherAsync(

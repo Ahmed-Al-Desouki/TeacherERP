@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
+using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Schedule.CancelSession
@@ -10,6 +11,7 @@ namespace TeacherERP.Application.Features.Schedule.CancelSession
         private readonly ICurrentTenantAccessor _currentTenant;
         private readonly IGroupSessionRepository _sessionRepository;
         private readonly IAttendanceRepository _attendanceRepository;
+        private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
 
@@ -17,12 +19,14 @@ namespace TeacherERP.Application.Features.Schedule.CancelSession
             ICurrentTenantAccessor currentTenant,
             IGroupSessionRepository sessionRepository,
             IAttendanceRepository attendanceRepository,
+            INotificationService notificationService,
             IUnitOfWork unitOfWork,
             TimeProvider timeProvider)
         {
             _currentTenant = currentTenant;
             _sessionRepository = sessionRepository;
             _attendanceRepository = attendanceRepository;
+            _notificationService = notificationService;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
         }
@@ -57,6 +61,15 @@ namespace TeacherERP.Application.Features.Schedule.CancelSession
                 }
 
                 session.Cancel(request.Reason);
+                var message = string.IsNullOrWhiteSpace(request.Reason)
+                    ? "Your group session was cancelled."
+                    : $"Your group session was cancelled. Reason: {request.Reason.Trim()}";
+                await _notificationService.NotifyGroupStudentsAsync(
+                    session.TenantId, session.GroupId, NotificationType.SessionCancelled,
+                    message, session.Id, cancellationToken);
+                await _notificationService.NotifyStaffAsync(
+                    session.TenantId, NotificationType.SessionCancelled,
+                    $"A group session was cancelled. {message}", session.Id, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
 

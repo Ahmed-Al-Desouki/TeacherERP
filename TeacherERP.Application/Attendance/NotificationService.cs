@@ -13,11 +13,20 @@ namespace TeacherERP.Application.Attendance
             _repository = repository;
         }
 
+        public Task NotifyUserAsync(
+            Guid tenantId, Guid recipientUserId, NotificationType type,
+            string message, Guid? relatedId, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Add(recipientUserId, tenantId, type, message, relatedId);
+            return Task.CompletedTask;
+        }
+
         public async Task NotifyTeacherAsync(
             Guid tenantId, NotificationType type, string message, Guid? relatedId, CancellationToken cancellationToken)
         {
             var teacherId = await _repository.GetTeacherRecipientIdAsync(tenantId, cancellationToken);
-            _repository.Add(Notification.Create(teacherId, tenantId, type, message, relatedId));
+            Add(teacherId, tenantId, type, message, relatedId);
         }
 
         public async Task NotifyStaffAsync(
@@ -27,7 +36,7 @@ namespace TeacherERP.Application.Attendance
 
             foreach (var recipientId in recipients)
             {
-                _repository.Add(Notification.Create(recipientId, tenantId, type, message, relatedId));
+                Add(recipientId, tenantId, type, message, relatedId);
             }
         }
 
@@ -40,8 +49,14 @@ namespace TeacherERP.Application.Attendance
 
             foreach (var recipientId in recipients)
             {
-                _repository.Add(Notification.Create(recipientId, tenantId, type, message, relatedId));
+                Add(recipientId, tenantId, type, message, relatedId);
             }
+        }
+
+        private void Add(Guid recipientUserId, Guid tenantId, NotificationType type, string message, Guid? relatedId)
+        {
+            var boundedMessage = message.Length <= 300 ? message : message[..300];
+            _repository.Add(Notification.Create(recipientUserId, tenantId, type, boundedMessage, relatedId));
         }
     }
 }

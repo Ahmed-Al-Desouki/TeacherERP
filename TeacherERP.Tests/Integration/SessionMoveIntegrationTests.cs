@@ -69,6 +69,12 @@ public sealed class SessionMoveIntegrationTests : IClassFixture<CustomWebApplica
             .AnyAsync(e => e.TenantId == teacher.TenantId && e.GroupId == teacher.GroupId && e.StudentId == sourceStudentId)));
         Assert.True(await _factory.QueryAsync(db => db.GroupEnrollments.IgnoreQueryFilters()
             .AnyAsync(e => e.TenantId == teacher.TenantId && e.GroupId == targetGroupId && e.StudentId == targetStudentId)));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(notification =>
+            notification.TenantId == teacher.TenantId && notification.RecipientUserId == sourceStudentId
+            && notification.Type == NotificationType.SessionMoved && notification.RelatedId == sessionId)));
+        Assert.Equal(1, await _factory.QueryAsync(db => db.Notifications.IgnoreQueryFilters().CountAsync(notification =>
+            notification.TenantId == teacher.TenantId && notification.RecipientUserId == targetStudentId
+            && notification.Type == NotificationType.SessionMoved && notification.RelatedId == sessionId)));
 
         using var scope = _factory.Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<ICurrentTenantAccessor>()

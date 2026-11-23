@@ -47,6 +47,11 @@ namespace TeacherERP.Application.Absence
                 member.UserId,
                 cancellationToken);
 
+            await _notificationService.NotifyUserAsync(
+                member.TenantId, member.UserId, NotificationType.StudentAutoSuspended,
+                "Your membership was suspended after reaching the consecutive absence limit.",
+                member.UserId, cancellationToken);
+
             _auditRepository.Add(AuditLog.Create(
                 member.TenantId, null, AuditAction.StudentAutoSuspended, member.UserId, $"{count} consecutive absences"));
 

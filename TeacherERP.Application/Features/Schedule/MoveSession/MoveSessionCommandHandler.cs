@@ -3,6 +3,7 @@ using TeacherERP.Application.Features.Groups;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Application.Scheduling;
+using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Schedule.MoveSession;
@@ -12,6 +13,7 @@ public sealed class MoveSessionCommandHandler : IRequestHandler<MoveSessionComma
     private readonly ICurrentTenantAccessor _currentTenant;
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupSessionRepository _sessionRepository;
+    private readonly INotificationService _notificationService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
 
@@ -19,12 +21,14 @@ public sealed class MoveSessionCommandHandler : IRequestHandler<MoveSessionComma
         ICurrentTenantAccessor currentTenant,
         IGroupRepository groupRepository,
         IGroupSessionRepository sessionRepository,
+        INotificationService notificationService,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider)
     {
         _currentTenant = currentTenant;
         _groupRepository = groupRepository;
         _sessionRepository = sessionRepository;
+        _notificationService = notificationService;
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
     }
@@ -79,7 +83,38 @@ public sealed class MoveSessionCommandHandler : IRequestHandler<MoveSessionComma
         if (roomConflicts.Length > 0 && !request.ConfirmRoomConflicts)
             return Result<SessionTimeDto>.Failure(ScheduleErrors.RoomConflictConfirmationRequired, roomConflicts);
 
+        var sourceGroupId = session.GroupId;
+        var scheduleChanged = sourceGroupId != targetGroup.Id
+                              || session.StartTime != newStart
+                              || session.EndTime != newEnd;
         session.MoveToGroup(targetGroup.Id, newStart, newEnd);
+        if (scheduleChanged && sourceGroupId == targetGroup.Id)
+        {
+            const string message = "A group session was rescheduled. Check the updated schedule.";
+            await _notificationService.NotifyGroupStudentsAsync(
+                tenant.TenantId, targetGroup.Id, NotificationType.SessionRescheduled,
+                message, session.Id, cancellationToken);
+        }
+        else if (scheduleChanged)
+        {
+            await _notificationService.NotifyGroupStudentsAsync(
+                tenant.TenantId, sourceGroupId, NotificationType.SessionMoved,
+                "A session was moved out of your group. Check the updated schedule.",
+                session.Id, cancellationToken);
+            await _notificationService.NotifyGroupStudentsAsync(
+                tenant.TenantId, targetGroup.Id, NotificationType.SessionMoved,
+                "A session was moved into your group. Check the updated schedule.",
+                session.Id, cancellationToken);
+        }
+        if (scheduleChanged)
+        {
+            var staffNotificationType = sourceGroupId == targetGroup.Id
+                ? NotificationType.SessionRescheduled
+                : NotificationType.SessionMoved;
+            await _notificationService.NotifyStaffAsync(
+                tenant.TenantId, staffNotificationType,
+                "A group session was moved or rescheduled. Check the updated schedule.", session.Id, cancellationToken);
+        }
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result<SessionTimeDto>.Success(SessionTimeDto.From(session));

@@ -18,6 +18,7 @@ namespace TeacherERP.Application.GroupAdmins
         private readonly IAuditRepository _auditRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
+        private readonly INotificationService _notificationService;
 
         public GroupAdminService(
             ICurrentTenantAccessor currentTenant,
@@ -26,7 +27,8 @@ namespace TeacherERP.Application.GroupAdmins
             IGroupAdminRepository groupAdminRepository,
             IAuditRepository auditRepository,
             IUnitOfWork unitOfWork,
-            TimeProvider timeProvider)
+            TimeProvider timeProvider,
+            INotificationService notificationService)
         {
             _currentTenant = currentTenant;
             _groupRepository = groupRepository;
@@ -35,6 +37,7 @@ namespace TeacherERP.Application.GroupAdmins
             _auditRepository = auditRepository;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
+            _notificationService = notificationService;
         }
 
         public Task<Result<bool>> ApplyAsync(
@@ -121,6 +124,24 @@ namespace TeacherERP.Application.GroupAdmins
 
             // اعتماد الطلب في نفس الـ Transaction (لا يبقى التغيير منفَّذاً والطلب معلّقاً)
             fulfills?.Approve(actorUserId, now);
+
+            if (fulfills is not null)
+            {
+                var verb = type == GroupAdminRequestType.Appoint ? "appoint you as group admin" : "remove your group admin role";
+                await _notificationService.NotifyUserAsync(
+                    tenantId, fulfills.RequestedByUserId, NotificationType.GroupAdminRequestApproved,
+                    $"Your request to {verb} was approved.", fulfills.Id, cancellationToken);
+
+                if (fulfills.StudentId != fulfills.RequestedByUserId)
+                {
+                    var studentMessage = type == GroupAdminRequestType.Appoint
+                        ? "You were appointed as a group admin."
+                        : "Your group admin role was removed.";
+                    await _notificationService.NotifyUserAsync(
+                        tenantId, fulfills.StudentId, NotificationType.GroupAdminRequestApproved,
+                        studentMessage, fulfills.Id, cancellationToken);
+                }
+            }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

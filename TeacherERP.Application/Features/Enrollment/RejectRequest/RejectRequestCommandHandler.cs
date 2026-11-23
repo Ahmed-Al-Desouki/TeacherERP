@@ -12,6 +12,7 @@ namespace TeacherERP.Application.Features.Enrollment.RejectRequest
         private readonly ICurrentUserService _currentUser;
         private readonly ICurrentTenantAccessor _currentTenant;
         private readonly IEnrollmentRepository _repository;
+        private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
 
@@ -19,12 +20,14 @@ namespace TeacherERP.Application.Features.Enrollment.RejectRequest
             ICurrentUserService currentUser,
             ICurrentTenantAccessor currentTenant,
             IEnrollmentRepository repository,
+            INotificationService notificationService,
             IUnitOfWork unitOfWork,
             TimeProvider timeProvider)
         {
             _currentUser = currentUser;
             _currentTenant = currentTenant;
             _repository = repository;
+            _notificationService = notificationService;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
         }
@@ -53,6 +56,12 @@ namespace TeacherERP.Application.Features.Enrollment.RejectRequest
             }
 
             enrollmentRequest.Reject(userId, _timeProvider.GetUtcNow().UtcDateTime, request.Note);
+            var message = string.IsNullOrWhiteSpace(request.Note)
+                ? "Your request to join or transfer to the group was rejected."
+                : $"Your request to join or transfer to the group was rejected. Reason: {request.Note.Trim()}";
+            await _notificationService.NotifyUserAsync(
+                tenant.TenantId, enrollmentRequest.StudentId, NotificationType.EnrollmentRejected,
+                message, enrollmentRequest.Id, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result<bool>.Success(true);

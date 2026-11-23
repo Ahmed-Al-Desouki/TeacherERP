@@ -2,6 +2,7 @@
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Application.Scheduling;
+using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Schedule.BulkShiftSessions
@@ -11,6 +12,7 @@ namespace TeacherERP.Application.Features.Schedule.BulkShiftSessions
         private readonly ICurrentTenantAccessor _currentTenant;
         private readonly IGroupSessionRepository _sessionRepository;
         private readonly IGroupRepository _groupRepository;
+        private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
 
@@ -18,12 +20,14 @@ namespace TeacherERP.Application.Features.Schedule.BulkShiftSessions
             ICurrentTenantAccessor currentTenant,
             IGroupSessionRepository sessionRepository,
             IGroupRepository groupRepository,
+            INotificationService notificationService,
             IUnitOfWork unitOfWork,
             TimeProvider timeProvider)
         {
             _currentTenant = currentTenant;
             _sessionRepository = sessionRepository;
             _groupRepository = groupRepository;
+            _notificationService = notificationService;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
         }
@@ -110,6 +114,23 @@ namespace TeacherERP.Application.Features.Schedule.BulkShiftSessions
 
             if (movable.Count > 0)
             {
+                if (request.ShiftMinutes != 0)
+                {
+                    foreach (var group in movable.GroupBy(session => session.GroupId))
+                    {
+                        var groupSessions = group.ToArray();
+                        var message = $"{groupSessions.Length} group session(s) are now scheduled between " +
+                                      $"{groupSessions.Min(session => session.StartTime):O} " +
+                                      $"and {groupSessions.Max(session => session.StartTime):O}.";
+                        await _notificationService.NotifyGroupStudentsAsync(
+                            groupSessions[0].TenantId, group.Key, NotificationType.BulkSessionsRescheduled,
+                            message, group.Key, cancellationToken);
+                    }
+
+                    await _notificationService.NotifyStaffAsync(
+                        movable[0].TenantId, NotificationType.BulkSessionsRescheduled,
+                        $"{movable.Count} upcoming session(s) were rescheduled.", null, cancellationToken);
+                }
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
 

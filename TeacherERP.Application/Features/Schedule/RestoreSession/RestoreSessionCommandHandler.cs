@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using TeacherERP.Application.Features.Tenants;
 using TeacherERP.Application.Interfaces;
+using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
 
 namespace TeacherERP.Application.Features.Schedule.RestoreSession
@@ -10,6 +11,7 @@ namespace TeacherERP.Application.Features.Schedule.RestoreSession
         private readonly ICurrentTenantAccessor _currentTenant;
         private readonly IGroupSessionRepository _sessionRepository;
         private readonly IGroupRepository _groupRepository;
+        private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
 
@@ -17,12 +19,14 @@ namespace TeacherERP.Application.Features.Schedule.RestoreSession
             ICurrentTenantAccessor currentTenant,
             IGroupSessionRepository sessionRepository,
             IGroupRepository groupRepository,
+            INotificationService notificationService,
             IUnitOfWork unitOfWork,
             TimeProvider timeProvider)
         {
             _currentTenant = currentTenant;
             _sessionRepository = sessionRepository;
             _groupRepository = groupRepository;
+            _notificationService = notificationService;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
         }
@@ -68,6 +72,13 @@ namespace TeacherERP.Application.Features.Schedule.RestoreSession
                 }
 
                 session.Restore();
+                const string notificationMessage = "A cancelled group session has been restored. Check the updated schedule.";
+                await _notificationService.NotifyGroupStudentsAsync(
+                    session.TenantId, session.GroupId, NotificationType.SessionRestored,
+                    notificationMessage, session.Id, cancellationToken);
+                await _notificationService.NotifyStaffAsync(
+                    session.TenantId, NotificationType.SessionRestored,
+                    notificationMessage, session.Id, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
 
