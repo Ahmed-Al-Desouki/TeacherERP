@@ -1,4 +1,4 @@
-# Graph Report - TeacherERP  (2026-11-21)
+# Graph Report - TeacherERP  (2026-11-23)
 
 ## Corpus Check
 - cluster-only mode — file stats not available
@@ -9,7 +9,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `025f97ff`
+- Built from commit: `37d2f97e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -722,16 +722,16 @@ Nodes (3): ForgotPasswordCommand, ForgotPasswordCommandHandler, ForgotPasswordRe
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Result` connect `system` to `HangfireBasicAuthFilter`, `TeacherERP.Application.Interfaces`, `PreviewTeacherRequestQuery`, `system_text`, `GetMyEnrollmentsQuery`, `CreateAssistantCommandHandler`, `GetMyNotificationsQuery`, `Result`, `ListTeacherRequestsQuery`, `IRequestHandler`, `List`, `.ValidateIdTokenAsync`, `LogoutCommand`, `GetTeacherRequestStatusQuery`, `AppDbContext`, `LoginSession`, `ForgotPasswordCommandHandler`, `.Handle`, `ICurrentTenantAccessor`, `MembershipStatus`, `.SaveChangesAsync`, `AbstractValidator`, `TeacherERP.Application.Features.Users.Commands.Auth.Login`, `.Handle`, `AuthResponseDto`, `.ResolveAsync`, `ResetGrantService`, `TenantRole`, `.ValidateIdTokenAsync`, `RevokeSessionCommand`, `HangfireBasicAuthFilter`, `Centerdto.cs`, `TeacherERP.Application.Features.Students`, `GeoDistance`, `CachedRegistrationData`, `Updatecentervalidator.cs`, `AddExtraSessionValidator.cs`, `BulkShiftSessionsValidator.cs`, `CreateAssistantValidator.cs`, `RemoveAssistantValidator.cs`, `ResendWelcomeValidator.cs`, `SetFinancialDelegationValidator.cs`, `GoogleSignInValidator.cs`, `VerifyResetOtpValidator.cs`, `CreateStudentValidator.cs`, `ProfileAuthorizationResultHandler.cs`, `TeacherERP.Application.Features.Schedule.GetSessions`, `UpdateGroupValidator`, `GroupScanValidator.cs`, `RequestGroupAdminChangeValidator.cs`, `LogoutValidator.cs`, `ChangePasswordValidator.cs`, `CreateStudentValidator.cs`, `ProfileAuthorizationResultHandler.cs`, `HangfireBasicAuthFilter`, `CloudinarySettings`, `.TokenValidated`, `.Meters`?**
-  _High betweenness centrality (0.072) - this node is a cross-community bridge._
+  _High betweenness centrality (0.069) - this node is a cross-community bridge._
 - **What connects `Address`, `GeofenceRadiusMeters`, `Latitude` to the rest of the system?**
   _594 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `TeacherERP.Domain.Shared` be split into smaller, more focused modules?**
   _Cohesion score 0.022338317420284633 - nodes in this community are weakly interconnected._
-- **Why does `AppDbContext` connect `Group` to `PaymobWebhookOutcome`, `system_text`, `CreateAssistantCommandHandler`, `.AddApplicationServices`, `Result`, `Session`, `TeacherERP.API`, `AppDbContext`, `LoginSession`, `.SeedAsync`, `IUserAccountService`, `GroupDto`, `PasswordController.cs`, `MembershipStatus`, `GuardianRelation`, `TeacherERP.Application.Features.Users.Commands.Auth.Login`, `AuthResponseDto`, `BaseEntity`, `GroupSessionRepository`, `.ResolveAsync`, `ResetGrantService`, `.HandleAsync`, `IServiceCollection`, `.ValidateIdTokenAsync`, `SetFinancialDelegationCommandHandler.cs`, `UpdateGroupValidator`, `Updatecentervalidator.cs`, `VerifyResetOtpValidator.cs`, `Updatecentervalidator.cs`, `ResendWelcomeValidator.cs`, `RefreshTokenValidator.cs`, `CreateStudentValidator.cs`, `AttendanceOutcome`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+- **Why does `TeacherERP.Application.Interfaces` connect `IActionResult` to `TeacherERP.Domain.Shared`, `TeacherERP.Application.Features.Students`, `TeacherERP.Application.Interfaces`, `Task`, `system`, `Guid`, `CreateAssistantCommandHandler`, `Result`, `Session`, `IRequestHandler`, `List`, `DateTime`, `ApplicationUser`, `SessionCleanupJob`, `LoginSession`, `AttendanceController.cs`, `.SeedAsync`, `MembershipStatus`, `.SaveChangesAsync`, `TeacherERP.Application.Features.Groups`, `ITenantRepository`, `EnrollmentRequestStatus`, `TeacherERP.Application.Features.Users.Commands.Auth.Login`, `AttendanceResultDto`, `.Handle`, `.ResolveAsync`, `TeacherERP.Application.Features.Team`, `LoggingBehavior.cs`, `UpdateGroupValidator`, `CreateAssistantValidator.cs`, `TeacherERP.Application.Features.Schedule.GetSessions`, `RefreshTokenValidator.cs`, `ProfileAuthorizationResultHandler.cs`, `ForwardedHeadersExtensions.cs`, `CloudinarySettings`?**
+  _High betweenness centrality (0.056) - this node is a cross-community bridge._
 - **Should `IActionResult` be split into smaller, more focused modules?**
   _Cohesion score 0.03074712643678161 - nodes in this community are weakly interconnected._
-- **Why does `TeacherERP.Application.Interfaces` connect `IActionResult` to `TeacherERP.Domain.Shared`, `TeacherERP.Application.Features.Students`, `TeacherERP.Application.Interfaces`, `Task`, `system`, `Guid`, `CreateAssistantCommandHandler`, `Result`, `Session`, `IRequestHandler`, `List`, `DateTime`, `ApplicationUser`, `SessionCleanupJob`, `LoginSession`, `AttendanceController.cs`, `.SeedAsync`, `MembershipStatus`, `.SaveChangesAsync`, `TeacherERP.Application.Features.Groups`, `ITenantRepository`, `EnrollmentRequestStatus`, `TeacherERP.Application.Features.Users.Commands.Auth.Login`, `AttendanceResultDto`, `.Handle`, `.ResolveAsync`, `TeacherERP.Application.Features.Team`, `LoggingBehavior.cs`, `UpdateGroupValidator`, `CreateAssistantValidator.cs`, `TeacherERP.Application.Features.Schedule.GetSessions`, `RefreshTokenValidator.cs`, `ProfileAuthorizationResultHandler.cs`, `ForwardedHeadersExtensions.cs`, `CloudinarySettings`?**
-  _High betweenness centrality (0.047) - this node is a cross-community bridge._
+- **Why does `TeacherERP.Domain.Entities` connect `IActionResult` to `TeacherERP.Domain.Shared`, `Task`, `TeacherERP.Application.Interfaces`, `system`, `Guid`, `CreateAssistantCommandHandler`, `List`, `DateTime`, `.AddInfrastructureServices`, `ApplicationUser`, `AppDbContext`, `LoginSession`, `AttendanceController.cs`, `.SeedAsync`, `IUserAccountService`, `.SaveChangesAsync`, `TeacherERP.Application.Features.Groups`, `GuardianRelation`, `EnrollmentRequestStatus`, `GroupEnrollment`, `AbstractValidator`, `AttendanceResultDto`, `.ResolveAsync`, `.HandleAsync`, `.AddApiRateLimiting`, `ICenterRepository`, `CompleteProfileValidator`, `SessionManager`, `TeacherERP.Application.Features.Team`, `CancelSessionCommandHandler.cs`, `HangfireBasicAuthFilter`, `Centerdto.cs`, `.RequiresProfileCompletion`, `BulkCancelSessionsValidator.cs`, `RescheduleSessionValidator.cs`, `BlacklistStudentValidator.cs`, `SetFinancialDelegationValidator.cs`, `VerifyOtpValidator.cs`, `UpdateGroupValidator`, `Updatecentervalidator.cs`, `RejectRequestValidator.cs`, `CancelSessionValidator.cs`, `BlacklistStudentValidator.cs`, `ResendWelcomeValidator.cs`, `ProfileAuthorizationResultHandler.cs`, `CloudinarySettings`?**
+  _High betweenness centrality (0.050) - this node is a cross-community bridge._
 - **Should `Task` be split into smaller, more focused modules?**
   _Cohesion score 0.025494943740207946 - nodes in this community are weakly interconnected._

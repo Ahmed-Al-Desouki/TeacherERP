@@ -189,16 +189,21 @@ namespace TeacherERP.Infrastructure.Repositories
         {
             var fromUtc = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
             var toUtc = fromUtc.AddMonths(1);
-            var query = from commission in _context.PlatformCommissions.IgnoreQueryFilters().AsNoTracking()
+            var commissions = _context.PlatformCommissions.IgnoreQueryFilters().AsNoTracking()
+                .Where(commission => commission.CreatedAt >= fromUtc && commission.CreatedAt < toUtc
+                    && (tenantId == null || commission.TenantId == tenantId.Value)
+                    && (!unsettledOnly || commission.SettledAtUtc == null));
+
+            if (unsettledOnly && !IsSqliteProvider())
+                commissions = commissions.Where(commission => commission.Amount > 0m);
+
+            var query = from commission in commissions
                         join tenant in _context.Tenants.IgnoreQueryFilters().AsNoTracking()
                             on commission.TenantId equals tenant.Id
                         join teacher in _context.Users.IgnoreQueryFilters().AsNoTracking()
                             on tenant.OwnerId equals teacher.Id
                         join student in _context.Users.IgnoreQueryFilters().AsNoTracking()
                             on commission.StudentId equals student.Id
-                        where commission.CreatedAt >= fromUtc && commission.CreatedAt < toUtc
-                            && (tenantId == null || commission.TenantId == tenantId.Value)
-                            && (!unsettledOnly || commission.SettledAtUtc == null)
                         orderby tenant.Name, commission.CreatedAt, commission.Id
                         select new PlatformCommissionItem(commission.Id, commission.TenantId, tenant.Name,
                             teacher.Id, teacher.FullName, student.Id, student.FullName,
@@ -208,9 +213,6 @@ namespace TeacherERP.Infrastructure.Repositories
 
             if (unsettledOnly && IsSqliteProvider())
                 return GetPositiveUnsettledCommissionsPageAsync(query, page, cancellationToken);
-
-            if (unsettledOnly)
-                query = query.Where(x => x.Amount > 0m);
 
             return query.ToPagedAsync(page, cancellationToken);
         }
