@@ -757,3 +757,25 @@ Content-Type: application/json
   "commissionReversalAmount": 0,
   "decisionNote": "لم يتم تأكيد الاسترداد في حساب التاجر"
 }
+
+### E1: كارت QR للطالب الحالي فقط (استخدم studentToken وtenantId لعضويته)
+GET {{TeacherERP.API_HostAddress}}/api/students/me/card
+Authorization: Bearer {{studentToken}}
+X-Teacher-Id: {{tenantId}}
+
+### E1: الجدول الأسبوعي للمجموعات النشطة في السنتر الحالي (الأوقات حسب timeZoneId في الرد)
+GET {{TeacherERP.API_HostAddress}}/api/students/me/schedule
+Authorization: Bearer {{studentToken}}
+X-Teacher-Id: {{tenantId}}
+
+
+### E2: قائمة طلاب المجموعة للمدرس أو المساعد (مغطاة بالتستات الآلية)
+@groupId = 00000000-0000-0000-0000-000000000000
+GET {{TeacherERP.API_HostAddress}}/api/Students?groupId={{groupId}}&page=1&pageSize=20
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### E2: تفاصيل طالب داخل مساحة المدرس الحالية (يرجع 404 إذا لم يكن الطالب ضمن المساحة)
+GET {{TeacherERP.API_HostAddress}}/api/Students/{{studentId}}/details
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}

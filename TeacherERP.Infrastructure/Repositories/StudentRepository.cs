@@ -8,7 +8,7 @@ using TeacherERP.Infrastructure.Extensions;
 
 namespace TeacherERP.Infrastructure.Repositories
 {
-    // طلاب المدرس الحالي (الفلتر العام يعمل). بدون موبايل ولا ولي أمر ولا مالية عمداً
+    // بيانات الطلاب تظل محكومة بعضوية الطالب في مساحة العمل الحالية.
     public class StudentRepository : IStudentRepository
     {
         private readonly AppDbContext _context;
@@ -61,6 +61,67 @@ namespace TeacherERP.Infrastructure.Repositories
                 r.GroupId,
                 r.GroupId.HasValue && groupNames.TryGetValue(r.GroupId.Value, out var name) ? name : null,
                 r.EnrolledAt));
+        }
+
+        public async Task<StudentDetailsItem?> GetStudentDetailsAsync(
+            Guid studentId, CancellationToken cancellationToken)
+        {
+            var student = await _context.TenantMembers
+                .AsNoTracking()
+                .Where(member => member.UserId == studentId && member.Role == TenantRole.Student)
+                .Select(member => new
+                {
+                    member.UserId,
+                    member.Status,
+                    member.ConsecutiveAbsences,
+                    member.User.FullName,
+                    member.User.Email,
+                    member.User.PhoneNumber,
+                    member.User.Gender,
+                    member.User.DateOfBirth,
+                    GuardianName = member.User.Guardian == null ? null : member.User.Guardian.Name,
+                    GuardianPhoneNumber = member.User.Guardian == null ? null : member.User.Guardian.PhoneNumber,
+                    GuardianRelation = member.User.Guardian == null
+                    ? (TeacherERP.Domain.ValueObjects.GuardianRelation?)null
+                        : member.User.Guardian.Relation
+                })
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if (student is null)
+            {
+                return null;
+            }
+
+            var activeGroups = await (from enrollment in _context.GroupEnrollments.AsNoTracking()
+                join studentGroup in _context.Groups.AsNoTracking()
+                    on enrollment.GroupId equals studentGroup.Id
+                                      where enrollment.StudentId == studentId
+                                            && enrollment.Status == EnrollmentStatus.Active
+                orderby studentGroup.Name, enrollment.EnrolledAt
+                                      select new StudentActiveGroupItem(
+                    studentGroup.Id, studentGroup.Name, enrollment.EnrolledAt))
+                .ToListAsync(cancellationToken);
+
+            var completedProfileFields = 0;
+            if (!string.IsNullOrWhiteSpace(student.PhoneNumber)) completedProfileFields++;
+            if (!string.IsNullOrWhiteSpace(student.GuardianName)) completedProfileFields++;
+            if (!string.IsNullOrWhiteSpace(student.GuardianPhoneNumber)) completedProfileFields++;
+            if (student.GuardianRelation.HasValue) completedProfileFields++;
+
+            return new StudentDetailsItem(
+                student.UserId,
+                student.FullName,
+                student.Email,
+                student.PhoneNumber,
+                student.Gender,
+                student.DateOfBirth,
+                student.Status,
+                student.ConsecutiveAbsences,
+                student.GuardianName,
+                student.GuardianPhoneNumber,
+                student.GuardianRelation,
+                completedProfileFields * 100 / 4,
+                activeGroups);
         }
     }
 }

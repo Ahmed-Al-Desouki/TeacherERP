@@ -7,6 +7,9 @@ using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Students;
 using TeacherERP.Application.Features.Students.BlacklistStudent;
 using TeacherERP.Application.Features.Students.GetStudents;
+using TeacherERP.Application.Features.Students.GetStudentDetails;
+using TeacherERP.Application.Features.Students.GetStudentCard;
+using TeacherERP.Application.Features.Students.GetWeeklySchedule;
 using TeacherERP.Application.Features.Students.UnblacklistStudent;
 using TeacherERP.Application.Features.Students.UnsuspendStudent;
 using TeacherERP.Domain.Entities;
@@ -24,6 +27,24 @@ namespace TeacherERP.API.Controllers
             _mediator = mediator;
         }
 
+        // كارت الطالب وكود QR الخاص بالحساب المسجّل فقط
+        [HttpGet("~/api/students/me/card")]
+        [Authorize(Policy = AuthPolicies.TenantStudent)]
+        public async Task<IActionResult> GetMyCard(CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetStudentCardQuery(), cancellationToken);
+            return ToResponse(result);
+        }
+
+        // القالب الأسبوعي لمجموعات الطالب النشطة في السنتر الحالي؛ الوقت محلي حسب TimeZoneId
+        [HttpGet("~/api/students/me/schedule")]
+        [Authorize(Policy = AuthPolicies.TenantStudent)]
+        public async Task<IActionResult> GetMySchedule(CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetStudentWeeklyScheduleQuery(), cancellationToken);
+            return ToResponse(result);
+        }
+
         // ?status=Suspended&groupId=&page=1&pageSize=20 : الطلاب مع حالتهم وعداد غيابهم ومجموعتهم (للمدرس والمساعد)
         [HttpGet]
         [Authorize(Policy = AuthPolicies.TenantStaff)]
@@ -35,6 +56,24 @@ namespace TeacherERP.API.Controllers
             CancellationToken cancellationToken = default)
         {
             var result = await _mediator.Send(new GetStudentsQuery(status, groupId, page, pageSize), cancellationToken);
+            return ToResponse(result);
+        }
+
+        // تفاصيل طالب داخل مساحة العمل الحالية (للمدرس والمساعد)
+        [HttpGet("{studentId:guid}/details")]
+        [Authorize(Policy = AuthPolicies.TenantStaff)]
+        public async Task<IActionResult> GetStudentDetails(Guid studentId, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetStudentDetailsQuery(studentId), cancellationToken);
+            if (!result.IsSuccess && result.Error.Code == StudentErrors.NotFound.Code)
+            {
+                return NotFound(new
+                {
+                    errorCode = result.Error.Code,
+                    errorMessage = result.Error.Message
+                });
+            }
+
             return ToResponse(result);
         }
 

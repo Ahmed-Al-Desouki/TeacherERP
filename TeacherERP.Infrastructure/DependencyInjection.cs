@@ -96,6 +96,7 @@ namespace TeacherERP.Infrastructure
             services.AddScoped<IGroupSessionRepository, GroupSessionRepository>();
             services.AddScoped<ISessionAttachmentRepository, SessionAttachmentRepository>();
             services.AddScoped<IStudentTimelineRepository, StudentTimelineRepository>();
+            services.AddScoped<IStudentWeeklyScheduleRepository, StudentWeeklyScheduleRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ISessionRepository, SessionRepository>();
             services.AddScoped<ISessionValidator, SessionValidator>();

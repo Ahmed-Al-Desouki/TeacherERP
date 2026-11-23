@@ -84,10 +84,10 @@
     "semantic_hash": "f3733074ccd921b6ec8b4ed1ca7b3854"
   },
   "TeacherERP.API/Controllers/StudentsController.cs": {
-    "mtime": 1794376103.0,
-    "seen": 1795251545.4034696,
-    "ast_hash": "c16ea106eab6c438add7a44447244f55",
-    "semantic_hash": "c16ea106eab6c438add7a44447244f55"
+    "mtime": 1795439265.3890705,
+    "seen": 1795439464.2995124,
+    "ast_hash": "f6b76a90b608cee7391d9bc5c480ff8c",
+    "semantic_hash": "f6b76a90b608cee7391d9bc5c480ff8c"
   },
   "TeacherERP.API/Controllers/TeachersController.cs": {
     "mtime": 1793795667.775535,
@@ -1704,10 +1704,10 @@
     "semantic_hash": "94e6535a24d1651f694fdf9349c86c03"
   },
   "TeacherERP.Application/Interfaces/IStudentRepository.cs": {
-    "mtime": 1794376103.0,
-    "seen": 1795251545.546586,
-    "ast_hash": "9b38cc7ccbfd37e0ed58fd201051e8db",
-    "semantic_hash": "9b38cc7ccbfd37e0ed58fd201051e8db"
+    "mtime": 1795437868.229682,
+    "seen": 1795438539.46792,
+    "ast_hash": "afd3d271f4667a8eea36623589813e9a",
+    "semantic_hash": "afd3d271f4667a8eea36623589813e9a"
   },
   "TeacherERP.Application/Interfaces/ITeamRepository.cs": {
     "mtime": 1793082180.5106468,
@@ -2022,10 +2022,10 @@
     "semantic_hash": "02238118b4ce2fbea4325932190a8f17"
   },
   "TeacherERP.Infrastructure/DependencyInjection.cs": {
-    "mtime": 1795245391.0224419,
-    "seen": 1795251545.573155,
-    "ast_hash": "0ed3afbaf9863f1d0325e5467a316bcf",
-    "semantic_hash": "0ed3afbaf9863f1d0325e5467a316bcf"
+    "mtime": 1795434131.7761023,
+    "seen": 1795434933.0693336,
+    "ast_hash": "5608bb05b4d69ff13556e3d08fe582df",
+    "semantic_hash": "5608bb05b4d69ff13556e3d08fe582df"
   },
   "TeacherERP.Infrastructure/Migrations/20261005172006_InitialCreate.Designer.cs": {
     "mtime": 1791220806.1061704,
@@ -2250,10 +2250,10 @@
     "semantic_hash": "a43e43e45f83309a12afbfc9e222c78a"
   },
   "TeacherERP.Infrastructure/Repositories/StudentRepository.cs": {
-    "mtime": 1794376103.0,
-    "seen": 1795251545.5949903,
-    "ast_hash": "efb7a3f88d9c35314ac091c37d7559a4",
-    "semantic_hash": "efb7a3f88d9c35314ac091c37d7559a4"
+    "mtime": 1795438982.771013,
+    "seen": 1795439124.2897222,
+    "ast_hash": "ef210d7ecdbbe8e741ac332a823021dd",
+    "semantic_hash": "ef210d7ecdbbe8e741ac332a823021dd"
   },
   "TeacherERP.Infrastructure/Repositories/TeamRepository.cs": {
     "mtime": 1793082622.5084634,
@@ -4331,5 +4331,77 @@
     "seen": 1795270771.113756,
     "ast_hash": "d88cdd8c1bf88aaaf6da7123a195eda4",
     "semantic_hash": "d88cdd8c1bf88aaaf6da7123a195eda4"
+  },
+  "TeacherERP.Application/Features/Students/GetStudentCard/GetStudentCardQuery.cs": {
+    "mtime": 1795434131.769275,
+    "seen": 1795434933.026502,
+    "ast_hash": "20b944d2d5f669575b55637104e086d0",
+    "semantic_hash": "20b944d2d5f669575b55637104e086d0"
+  },
+  "TeacherERP.Application/Features/Students/GetStudentCard/GetStudentCardQueryHandler.cs": {
+    "mtime": 1795434131.7707262,
+    "seen": 1795434933.026505,
+    "ast_hash": "98572817813fbc69db4a3cb2c2f7aed0",
+    "semantic_hash": "98572817813fbc69db4a3cb2c2f7aed0"
+  },
+  "TeacherERP.Application/Features/Students/GetStudentCard/StudentCardDto.cs": {
+    "mtime": 1795434131.769275,
+    "seen": 1795434933.0265074,
+    "ast_hash": "6a1dcd7b2d8fa00f937e8fa8a0496162",
+    "semantic_hash": "6a1dcd7b2d8fa00f937e8fa8a0496162"
+  },
+  "TeacherERP.Application/Features/Students/GetWeeklySchedule/GetStudentWeeklyScheduleQuery.cs": {
+    "mtime": 1795434131.7721026,
+    "seen": 1795434933.027064,
+    "ast_hash": "0e327bc69e83b823308df7155cd39167",
+    "semantic_hash": "0e327bc69e83b823308df7155cd39167"
+  },
+  "TeacherERP.Application/Features/Students/GetWeeklySchedule/GetStudentWeeklyScheduleQueryHandler.cs": {
+    "mtime": 1795434131.7734323,
+    "seen": 1795434933.0270667,
+    "ast_hash": "8ed198fa080ad2e38aeafe775b09baad",
+    "semantic_hash": "8ed198fa080ad2e38aeafe775b09baad"
+  },
+  "TeacherERP.Application/Features/Students/GetWeeklySchedule/StudentWeeklyScheduleDto.cs": {
+    "mtime": 1795434131.7734323,
+    "seen": 1795434933.0270681,
+    "ast_hash": "df7d3b9d182f848e20b8e8e288d2be87",
+    "semantic_hash": "df7d3b9d182f848e20b8e8e288d2be87"
+  },
+  "TeacherERP.Application/Interfaces/IStudentWeeklyScheduleRepository.cs": {
+    "mtime": 1795434131.7678652,
+    "seen": 1795434933.057199,
+    "ast_hash": "75c6b94962e370504c34f2ec4845d645",
+    "semantic_hash": "75c6b94962e370504c34f2ec4845d645"
+  },
+  "TeacherERP.Infrastructure/Repositories/StudentWeeklyScheduleRepository.cs": {
+    "mtime": 1795434131.7750597,
+    "seen": 1795434933.081701,
+    "ast_hash": "0550f0b2a56af87461f0cd82fde9b53c",
+    "semantic_hash": "0550f0b2a56af87461f0cd82fde9b53c"
+  },
+  "TeacherERP.Tests/Integration/StudentExperienceIntegrationTests.cs": {
+    "mtime": 1795438092.0731719,
+    "seen": 1795438539.499412,
+    "ast_hash": "9d9ee5de3d7a10bde286c6207f945405",
+    "semantic_hash": "9d9ee5de3d7a10bde286c6207f945405"
+  },
+  "TeacherERP.Application/Features/Students/GetStudentDetails/GetStudentDetailsQuery.cs": {
+    "mtime": 1795437903.612547,
+    "seen": 1795438539.438496,
+    "ast_hash": "aa6e09e28585b880b412130a1572fb17",
+    "semantic_hash": "aa6e09e28585b880b412130a1572fb17"
+  },
+  "TeacherERP.Application/Features/Students/GetStudentDetails/GetStudentDetailsQueryHandler.cs": {
+    "mtime": 1795437903.993356,
+    "seen": 1795438539.4384987,
+    "ast_hash": "5c2bd5d2fea625a049eccc071d37875c",
+    "semantic_hash": "5c2bd5d2fea625a049eccc071d37875c"
+  },
+  "TeacherERP.Application/Features/Students/GetStudentDetails/StudentDetailsDto.cs": {
+    "mtime": 1795437903.8072543,
+    "seen": 1795438539.4385006,
+    "ast_hash": "cef49cba380369e970cacf4dcdd0d664",
+    "semantic_hash": "cef49cba380369e970cacf4dcdd0d664"
   }
 }
