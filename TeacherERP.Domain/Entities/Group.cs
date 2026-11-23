@@ -1,6 +1,7 @@
 ﻿// موجود (تعديل) — TeacherERP.Domain/Entities/Group.cs
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using TeacherERP.Domain.ValueObjects;
 
 namespace TeacherERP.Domain.Entities
@@ -39,6 +40,15 @@ namespace TeacherERP.Domain.Entities
         /// <summary>رابط الانضمام لمجموعة الواتساب ليستخدم في الـ Deep Linking (اختياري)</summary>
         public string? WhatsAppGroupLink { get; private set; }
 
+        /// <summary>كود الانضمام الثابت للمجموعة، يُعرض للمدرس فقط</summary>
+        public string? StaticJoinCode { get; private set; }
+
+        /// <summary>سر اشتقاق كود الانضمام المتغير، لا يُعرض عبر الـ API</summary>
+        public string? DynamicJoinSecret { get; private set; }
+
+        public bool StaticJoinEnabled { get; private set; } = true;
+        public bool DynamicJoinEnabled { get; private set; } = true;
+
         /// <summary>المجموعة المؤرشفة لا تولّد حصصاً جديدة</summary>
         public bool IsActive { get; private set; }
 
@@ -74,6 +84,8 @@ namespace TeacherERP.Domain.Entities
                 PerSessionPrice = perSessionPrice,
                 MonthlyPrice = monthlyPrice,
                 WhatsAppGroupLink = Clean(whatsappLink),
+                StaticJoinCode = NewStaticJoinCode(),
+                DynamicJoinSecret = NewDynamicJoinSecret(),
                 IsActive = true,
                 Slots = new List<GroupScheduleSlot>(),
                 Sessions = new List<Session>(),
@@ -106,6 +118,8 @@ namespace TeacherERP.Domain.Entities
                 PerSessionPrice = perSessionPrice,
                 MonthlyPrice = monthlyPrice,
                 WhatsAppGroupLink = Clean(whatsappLink),
+                StaticJoinCode = NewStaticJoinCode(),
+                DynamicJoinSecret = NewDynamicJoinSecret(),
                 IsActive = true,
                 Slots = new List<GroupScheduleSlot>(),
                 Sessions = new List<Session>(),
@@ -176,6 +190,53 @@ namespace TeacherERP.Domain.Entities
             MarkAsUpdated();
         }
 
+        public bool EnsureJoinCodes()
+        {
+            var changed = false;
+            if (string.IsNullOrWhiteSpace(StaticJoinCode))
+            {
+                StaticJoinCode = NewStaticJoinCode();
+                changed = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(DynamicJoinSecret))
+            {
+                DynamicJoinSecret = NewDynamicJoinSecret();
+                changed = true;
+            }
+
+            if (changed)
+            {
+                MarkAsUpdated();
+            }
+
+            return changed;
+        }
+
+        public void UpdateJoinCodeSettings(bool staticEnabled, bool dynamicEnabled)
+        {
+            if (DynamicJoinEnabled && !dynamicEnabled)
+            {
+                DynamicJoinSecret = NewDynamicJoinSecret();
+            }
+
+            StaticJoinEnabled = staticEnabled;
+            DynamicJoinEnabled = dynamicEnabled;
+            MarkAsUpdated();
+        }
+
+        public void RotateStaticJoinCode()
+        {
+            StaticJoinCode = NewStaticJoinCode();
+            MarkAsUpdated();
+        }
+
+        public void RotateDynamicJoinCode()
+        {
+            DynamicJoinSecret = NewDynamicJoinSecret();
+            MarkAsUpdated();
+        }
+
         private static void ValidatePricing(decimal? perSessionPrice, decimal? monthlyPrice)
         {
             if (perSessionPrice is < 0m)
@@ -190,5 +251,11 @@ namespace TeacherERP.Domain.Entities
         }
 
         private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        private static string NewStaticJoinCode()
+            => Convert.ToHexString(RandomNumberGenerator.GetBytes(10));
+
+        private static string NewDynamicJoinSecret()
+            => Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
     }
 }

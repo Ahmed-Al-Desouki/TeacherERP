@@ -86,6 +86,7 @@ namespace TeacherERP.Infrastructure
             services.AddScoped<ICenterRepository, CenterRepository>();
             services.AddScoped<ICenterMembershipRepository, CenterMembershipRepository>();
             services.AddScoped<IGroupRepository, GroupRepository>();
+            services.AddScoped<IDashboardRepository, DashboardRepository>();
             services.AddScoped<IGroupAdminRepository, GroupAdminRepository>();
             services.AddScoped<IDirectoryRepository, DirectoryRepository>();
             services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();

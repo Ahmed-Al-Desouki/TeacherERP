@@ -2,6 +2,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using TeacherERP.API.Extensions;
 using TeacherERP.API.Security;
 using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Enrollment.ApproveRequest;
@@ -11,6 +13,7 @@ using TeacherERP.Application.Features.Enrollment.GetRequests;
 using TeacherERP.Application.Features.Enrollment.MoveStudent;
 using TeacherERP.Application.Features.Enrollment.RejectRequest;
 using TeacherERP.Application.Features.Enrollment.RequestGroup;
+using TeacherERP.Application.Features.Enrollment.RequestGroupByCode;
 using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.API.Controllers
@@ -32,6 +35,16 @@ namespace TeacherERP.API.Controllers
         [HttpPost("requests")]
         [Authorize(Policy = AuthPolicies.CompletedProfile)]
         public async Task<IActionResult> RequestGroup([FromBody] RequestGroupCommand command, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return ToResponse(result);
+        }
+
+        [HttpPost("requests/by-code")]
+        [Authorize(Policy = AuthPolicies.CompletedProfile)]
+        [EnableRateLimiting(RateLimitPolicies.GroupJoinCode)]
+        public async Task<IActionResult> RequestGroupByCode(
+            [FromBody] RequestGroupByCodeCommand command, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result);

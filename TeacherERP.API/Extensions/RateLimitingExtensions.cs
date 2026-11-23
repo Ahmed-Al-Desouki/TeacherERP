@@ -19,6 +19,7 @@ namespace TeacherERP.API.Extensions
         private const int TeacherRequestReviewPerMinute = 30;
         private const int CenterMembershipWritePerHour = 30;
         private const int PaymentInitiationsPerMinute = 10;
+        private const int GroupJoinCodeRequestsPerMinute = 10;
         private const int GlobalPerMinute = 300;
 
         public static IServiceCollection AddApiRateLimiting(this IServiceCollection services)
@@ -71,6 +72,10 @@ namespace TeacherERP.API.Extensions
                 options.AddPolicy(RateLimitPolicies.PaymentInitiation, context =>
                     RateLimitPartition.GetFixedWindowLimiter(
                         UserOrIpKey(context), _ => Window(PaymentInitiationsPerMinute, TimeSpan.FromMinutes(1))));
+
+                options.AddPolicy(RateLimitPolicies.GroupJoinCode, context =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        UserOrIpKey(context), _ => Window(GroupJoinCodeRequestsPerMinute, TimeSpan.FromMinutes(1))));
 
                 options.OnRejected = async (context, cancellationToken) =>
                 {

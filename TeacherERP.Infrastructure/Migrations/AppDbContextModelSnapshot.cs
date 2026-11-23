@@ -650,6 +650,15 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("DynamicJoinEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("DynamicJoinSecret")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("EducationStage")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
@@ -682,6 +691,15 @@ namespace TeacherERP.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("StaticJoinCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("StaticJoinEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
@@ -695,6 +713,10 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CenterId");
+
+                    b.HasIndex("StaticJoinCode")
+                        .IsUnique()
+                        .HasFilter("[StaticJoinCode] IS NOT NULL");
 
                     b.HasIndex("TenantId", "Name")
                         .IsUnique();

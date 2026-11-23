@@ -2,8 +2,10 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TeacherERP.API.Security;
 using TeacherERP.Application.Common;
+using TeacherERP.Application.Features.Groups.JoinCodes;
 using TeacherERP.Application.Features.Groups.CreateGroup;
 using TeacherERP.Application.Features.Groups.GetGroup;
 using TeacherERP.Application.Features.Groups.GetGroups;
@@ -75,5 +77,30 @@ namespace TeacherERP.API.Controllers
             var result = await _mediator.Send(new GetGroupQuery(id), cancellationToken);
             return ToResponse(result);
         }
+
+        [HttpGet("{id:guid}/join-codes")]
+        [Authorize(Policy = AuthPolicies.TenantOwner)]
+        public async Task<IActionResult> GetJoinCodes(Guid id, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetGroupJoinCodesQuery(id), cancellationToken);
+            return ToResponse(result);
+        }
+
+        [HttpPut("{id:guid}/join-codes")]
+        [Authorize(Policy = AuthPolicies.TenantOwner)]
+        public async Task<IActionResult> UpdateJoinCodes(
+            Guid id, [FromBody] UpdateGroupJoinCodesRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new UpdateGroupJoinCodesCommand(
+                id, request.StaticEnabled, request.DynamicEnabled,
+                request.RotateStaticCode, request.RotateDynamicCode), cancellationToken);
+            return ToResponse(result);
+        }
     }
+
+    public sealed record UpdateGroupJoinCodesRequest(
+        bool StaticEnabled,
+        bool DynamicEnabled,
+        bool RotateStaticCode = false,
+        bool RotateDynamicCode = false);
 }

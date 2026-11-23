@@ -779,3 +779,48 @@ X-Teacher-Id: {{teacherId}}
 GET {{TeacherERP.API_HostAddress}}/api/Students/{{studentId}}/details
 Authorization: Bearer {{token}}
 X-Teacher-Id: {{teacherId}}
+
+### E4: المالك يعرض كود الانضمام الثابت والمتغير وروابطهما للمجموعة
+GET {{TeacherERP.API_HostAddress}}/api/Groups/{{groupId}}/join-codes
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+
+### E4: المالك يفعّل/يعطّل الأكواد أو يدوّر أحدها (تدوير الثابت يبطل الرابط القديم)
+PUT {{TeacherERP.API_HostAddress}}/api/Groups/{{groupId}}/join-codes
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "staticEnabled": true,
+  "dynamicEnabled": true,
+  "rotateStaticCode": false,
+  "rotateDynamicCode": false
+}
+
+### E4: الطالب يطلب الانضمام باستخدام الكود الثابت؛ نفس قواعد السعة والحظر والموافقة المعتادة
+POST {{TeacherERP.API_HostAddress}}/api/Enrollment/requests/by-code
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "code": "{{staticJoinCode}}"
+}
+
+### E4: الطالب يطلب الانضمام باستخدام الكود المتغير؛ يقبل الكود الحالي والسابق خلال نافذة السماح فقط
+POST {{TeacherERP.API_HostAddress}}/api/Enrollment/requests/by-code
+Authorization: Bearer {{anotherStudentToken}}
+Content-Type: application/json
+
+{
+  "code": "{{dynamicJoinCode}}"
+}
+
+### E5: ملخص Dashboard للمدرس في مساحة واحدة (المؤشرات المالية تخص الشهر الحالي UTC)
+GET {{TeacherERP.API_HostAddress}}/api/dashboard/teacher
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+
+### E5: ملخص Dashboard لمدير النظام (مؤشرات إجمالية على مستوى المنصة)
+GET {{TeacherERP.API_HostAddress}}/api/dashboard/administrator
+Authorization: Bearer {{adminToken}}

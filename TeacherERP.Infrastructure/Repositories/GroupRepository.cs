@@ -61,6 +61,33 @@ namespace TeacherERP.Infrastructure.Repositories
                 .FirstOrDefaultAsync(g => g.Id == groupId, cancellationToken);
         }
 
+        public Task<GroupJoinCodeLookup?> GetJoinCodeLookupAsync(Guid groupId, CancellationToken cancellationToken)
+        {
+            return (from g in _context.Groups.IgnoreQueryFilters().AsNoTracking()
+                    join tenant in _context.Tenants.IgnoreQueryFilters().AsNoTracking()
+                        on g.TenantId equals tenant.Id
+                    where g.Id == groupId
+                    select new GroupJoinCodeLookup(
+                        g.Id, g.TenantId, g.IsActive, tenant.Status,
+                        g.StaticJoinEnabled, g.DynamicJoinEnabled,
+                        g.StaticJoinCode, g.DynamicJoinSecret))
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public Task<GroupJoinCodeLookup?> GetJoinCodeLookupByStaticCodeAsync(
+            string normalizedCode, CancellationToken cancellationToken)
+        {
+            return (from g in _context.Groups.IgnoreQueryFilters().AsNoTracking()
+                    join tenant in _context.Tenants.IgnoreQueryFilters().AsNoTracking()
+                        on g.TenantId equals tenant.Id
+                    where g.StaticJoinCode == normalizedCode
+                    select new GroupJoinCodeLookup(
+                        g.Id, g.TenantId, g.IsActive, tenant.Status,
+                        g.StaticJoinEnabled, g.DynamicJoinEnabled,
+                        g.StaticJoinCode, g.DynamicJoinSecret))
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
         public Task<bool> NameExistsExceptAsync(string name, Guid excludeGroupId, CancellationToken cancellationToken)
         {
             return _context.Groups.AnyAsync(g => g.Name == name && g.Id != excludeGroupId, cancellationToken);

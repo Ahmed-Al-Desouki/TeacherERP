@@ -42,6 +42,7 @@ namespace TeacherERP.Application
             services.AddScoped<ISessionGenerator, SessionGenerator>();
             services.AddScoped<ISessionGenerationJob, SessionGenerationJob>();
             services.AddScoped<IEnrollmentService, EnrollmentService>();
+            services.AddScoped<IGroupJoinCodeService, GroupJoinCodeService>();
             services.AddScoped<IAttendanceCodeService, AttendanceCodeService>();
             services.AddScoped<IAttendanceRecorder, AttendanceRecorder>();
             services.AddScoped<INotificationService, NotificationService>();

@@ -32,5 +32,8 @@ namespace TeacherERP.API.Extensions
 
         /// <summary>إنشاء محاولة دفع من الطالب؛ يمنع إنشاء نوايا دفع بكثافة.</summary>
         public const string PaymentInitiation = "payment-initiation";
+
+        /// <summary>طلب الانضمام لمجموعة باستخدام كود ثابت أو متغير</summary>
+        public const string GroupJoinCode = "group-join-code";
     }
 }

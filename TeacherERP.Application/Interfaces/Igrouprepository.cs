@@ -4,6 +4,10 @@ using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
 {
+    public record GroupJoinCodeLookup(
+        Guid GroupId, Guid TenantId, bool GroupIsActive, TenantStatus TenantStatus,
+        bool StaticJoinEnabled, bool DynamicJoinEnabled, string? StaticJoinCode, string? DynamicJoinSecret);
+
     // كل الاستعلامات تتفلتر تلقائياً بالمدرس الحالي (الفلتر العام)
     public interface IGroupRepository
     {
@@ -20,6 +24,8 @@ namespace TeacherERP.Application.Interfaces
 
         // للتعديل: المجموعة متتبَّعة مع حصص القالب. الحفظ يتم عبر IUnitOfWork
         Task<Group?> GetTrackedWithSlotsAsync(Guid groupId, CancellationToken cancellationToken);
+        Task<GroupJoinCodeLookup?> GetJoinCodeLookupAsync(Guid groupId, CancellationToken cancellationToken);
+        Task<GroupJoinCodeLookup?> GetJoinCodeLookupByStaticCodeAsync(string normalizedCode, CancellationToken cancellationToken);
         Task<bool> NameExistsExceptAsync(string name, Guid excludeGroupId, CancellationToken cancellationToken);
 
         // حصة قالب جديدة تُتتبَّع صراحةً (Added)، وحذف حصص القالب

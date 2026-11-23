@@ -213,8 +213,17 @@ namespace TeacherERP.Infrastructure.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             // 5. ارتباط الكيانات التابعة للسنتر به (Restrict لمنع حذف سنتر بيانات تابعة له بالخطأ)
-            builder.Entity<Group>()
-                .HasOne<Tenant>().WithMany().HasForeignKey(g => g.TenantId).OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<Group>(entity =>
+            {
+                entity.HasOne<Tenant>().WithMany().HasForeignKey(g => g.TenantId).OnDelete(DeleteBehavior.Restrict);
+                entity.Property(g => g.StaticJoinCode).HasMaxLength(20);
+                entity.Property(g => g.DynamicJoinSecret).HasMaxLength(64);
+                entity.Property(g => g.StaticJoinEnabled).HasDefaultValue(true);
+                entity.Property(g => g.DynamicJoinEnabled).HasDefaultValue(true);
+                entity.HasIndex(g => g.StaticJoinCode)
+                    .IsUnique()
+                    .HasFilter("[StaticJoinCode] IS NOT NULL");
+            });
 
             builder.Entity<Session>()
                 .HasOne<Tenant>().WithMany().HasForeignKey(s => s.TenantId).OnDelete(DeleteBehavior.Restrict);

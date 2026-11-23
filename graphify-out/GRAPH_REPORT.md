@@ -4,12 +4,12 @@
 - cluster-only mode — file stats not available
 
 ## Summary
-- 4404 nodes · 16523 edges · 137 communities (115 shown, 22 thin omitted)
-- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 1597 edges (avg confidence: 0.85)
+- 4543 nodes · 17060 edges · 139 communities (110 shown, 29 thin omitted)
+- Extraction: 90% EXTRACTED · 10% INFERRED · 0% AMBIGUOUS · INFERRED: 1667 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6f8cfce7`
+- Built from commit: `f372ba0a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -35,13 +35,14 @@
 - IGroupSessionRepository
 - TeacherERP.API
 - AttendanceRecord
+- AppDbContext
 - Center
 - LoginSession
 - .Handle
 - http
-- AttendanceController.cs
 - .SeedAsync
 - ICurrentTenantAccessor
+- IUserAccountService
 - Transaction
 - GroupDto
 - PasswordController.cs
@@ -139,6 +140,7 @@
 - CloudinarySettings
 - JwtSettings
 - .TokenValidated
+- .Meters
 - PaymobWebhookOutcome
 - MailSettings
 - TeacherERP.Application.Features.Students
@@ -147,516 +149,497 @@
 - PreviewTeacherRequestQuery
 - .ValidateIdTokenAsync
 - GetMyEnrollmentsQuery
-- GetMyNotificationsQuery
+- GetMySessionsQueryHandler
+- PaymobCallbackVerifier
 
 ## God Nodes (most connected - your core abstractions)
 1. `Result` - 387 edges
-2. `TeacherERP.Application.Interfaces` - 297 edges
+2. `TeacherERP.Application.Interfaces` - 309 edges
 3. `TeacherERP.Domain.Shared` - 264 edges
-4. `TeacherERP.Domain.Entities` - 236 edges
-5. `AppDbContext` - 110 edges
+4. `TeacherERP.Domain.Entities` - 240 edges
+5. `AppDbContext` - 111 edges
 6. `ApplicationUser` - 88 edges
-7. `TeacherERP.Infrastructure.Data` - 58 edges
-8. `TeacherERP.Infrastructure.Migrations` - 56 edges
-9. `Session` - 49 edges
+7. `Group` - 61 edges
+8. `TeacherERP.Infrastructure.Data` - 59 edges
+9. `TeacherERP.Infrastructure.Migrations` - 58 edges
 10. `Transaction` - 49 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `CustomWebApplicationFactory` --calls--> `AppDbContext`  [INFERRED]
-  TeacherERP.Tests/Integration/CustomWebApplicationFactory.cs → TeacherERP.Infrastructure/Data/AppDbContext.cs
+- `WalkInApprovalTests` --calls--> `TenantContext`  [INFERRED]
+  TeacherERP.Tests/Unit/WalkInLocationTests.cs → TeacherERP.Application/Interfaces/Icurrenttenantaccessor.cs
 - `BulkCancelSessionsCommandHandlerTests` --calls--> `TenantContext`  [INFERRED]
   TeacherERP.Tests/Unit/CancelSessionHandlersTests.cs → TeacherERP.Application/Interfaces/Icurrenttenantaccessor.cs
 - `CancelSessionCommandHandlerTests` --calls--> `TenantContext`  [INFERRED]
   TeacherERP.Tests/Unit/CancelSessionHandlersTests.cs → TeacherERP.Application/Interfaces/Icurrenttenantaccessor.cs
-- `SubmitTeacherRequestCommandHandlerTests` --calls--> `OtpIssueResult`  [INFERRED]
-  TeacherERP.Tests/Unit/TeacherRequestTests.cs → TeacherERP.Application/Interfaces/IOtpService.cs
-- `SubmitInstaPayReceiptForm` --references--> `PaymentType`  [EXTRACTED]
-  TeacherERP.API/Controllers/StudentPaymentsController.cs → TeacherERP.Domain/Entities/Transaction.cs
+- `TeamErrors` --references--> `Error`  [EXTRACTED]
+  TeacherERP.Application/Features/Team/TeamErrors.cs → TeacherERP.Domain/Shared/Error.cs
+- `CustomWebApplicationFactory` --calls--> `AppDbContext`  [INFERRED]
+  TeacherERP.Tests/Integration/CustomWebApplicationFactory.cs → TeacherERP.Infrastructure/Data/AppDbContext.cs
 
 ## Import Cycles
 - None detected.
 
-## Communities (137 total, 22 thin omitted)
+## Communities (139 total, 29 thin omitted)
 
 ### Community 0 - "TeacherERP.Domain.Shared"
-Cohesion: 0.02
-Nodes (38): TeacherERP.Application.Features.Team.GetTeam, TeacherERP.Application.Features.Finance.GetPaymentOptions, TeacherERP.Application.Features.Centers.JoinRequests, TeacherERP.Application.Features.Finance.UpdateTeacherPaymentSettings, TeacherERP.Application.Features.Finance.ApproveInstaPayReceipt, TeacherERP.Application.Features.Profile.GetMyProfile, TeacherERP.Application.Features.Groups.GetGroup, TeacherERP.Application.Features.Users.Commands.Auth.ChangePassword (+30 more)
+Cohesion: 0.03
+Nodes (24): MoveStudentRequest, RequestPlatformCommissionCollection, SettlePlatformCommissionRequest, GroupAdminChangeResultDto, RequestGroupAdminChangeCommand, RequestGroupAdminChangeValidator, MoveSessionRequest, AttendanceSettingsInfo (+16 more)
 
 ### Community 1 - "IActionResult"
-Cohesion: 0.05
-Nodes (24): AdministrationController, AttendanceController, AuditController, AuthController, BaseApiController, CentersController, DirectoryController, EnrollmentController (+16 more)
+Cohesion: 0.04
+Nodes (27): AdministrationController, AttendanceController, AuditController, AuthController, BaseApiController, CentersController, DashboardController, DirectoryController (+19 more)
 
 ### Community 2 - "Task"
-Cohesion: 0.03
-Nodes (20): MoveStudentRequest, LinkTeacherToCenterRequest, UpdateGroupRequest, MoveSessionRequest, AttendanceSettingsInfo, GroupJoinInfo, MyEnrollmentItem, MyRequestItem (+12 more)
+Cohesion: 0.02
+Nodes (43): TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn, TeacherERP.Application.Features.TeacherRequests.Review, TeacherERP.Application.Features.Centers.JoinRequests, TeacherERP.Application.Features.Finance.UpdateTeacherPaymentSettings, TeacherERP.Application.Features.SessionContent.UploadSessionAttachment, TeacherERP.Application.Features.Profile.GetMyProfile, TeacherERP.Application.Features.Users.Commands.Auth.Login, TeacherERP.Application.Features.Students.UnblacklistStudent (+35 more)
 
 ### Community 3 - "TeacherERP.Application.Interfaces"
 Cohesion: 0.03
-Nodes (104): TeacherERP.Application.Features.Notifications.GetWhatsAppShare, PagedRequestRules, AdminScanValidator, ApproveCompensationCommand, GetSessionAttendanceValidator, RejectCompensationCommand, ScanAttendanceCommand, ScanAttendanceValidator (+96 more)
+Nodes (19): TeacherERP.Application.Enrollment, TeacherERP.API.Middlewares, TeacherERP.Application, TeacherERP.Infrastructure.Settings, TeacherERP.Application.Absence, TeacherERP.Infrastructure, TeacherERP.Application.Sessions, TeacherERP.Application.Features.Users.Commands.Auth.ForgotPassword (+11 more)
 
 ### Community 4 - "system"
-Cohesion: 0.04
-Nodes (13): TeacherERP.Infrastructure.Settings, TeacherERP.Application.Features.Users.Commands.VerifyOtp, TeacherERP.Infrastructure, TeacherERP.Application.Finance, TeacherERP.Application.Features.Users.Commands.Auth.ForgotPassword, TeacherERP.Application.Features.Users.Commands.CreateStudent, TeacherERP.Tests.Integration, TeacherERP.Infrastructure.Services (+5 more)
+Cohesion: 0.03
+Nodes (39): CenterMembershipPolicy, MyEnrollmentDto, UpdateGroupScheduleRequest, SessionDto, RescheduleSessionRequest, SessionTimeDto, PlatformCommissionCollectionRequestResult, PlatformCommissionSettlementResult (+31 more)
 
 ### Community 5 - "TimeSpan"
-Cohesion: 0.04
-Nodes (20): TeacherERP.Application.Features.Users.Commands.Auth.SetPassword, TeacherERP.Application.Features.Finance.CreatePaymobIntent, TeacherERP.Application.Features.Enrollment.ApproveRequest, TeacherERP.Application.Attendance, TeacherERP.Application.Features.Attendance.ScanAttendance, TeacherERP.Application.Features.Centers.CreateCenter, TeacherERP.Application.Features.Administration.CreateCenter, TeacherERP.Application.Features.Audit (+12 more)
+Cohesion: 0.03
+Nodes (18): TeacherERP.Application.Features.Schedule.GetSessions, TeacherERP.Application.Features.Enrollment.GetMyEnrollments, TeacherERP.Application.Features.Groups.GetGroups, TeacherERP.Application.Features.Audit, TeacherERP.Application.Features.Directory.SearchDirectory, TeacherERP.Application.Features.Finance.GetPendingInstaPayReceipts, TeacherERP.Application.Features.SessionContent.GetSessionAttachments, TeacherERP.Application.Features.Attendance.GetPendingCompensations (+10 more)
 
 ### Community 6 - "system_text"
-Cohesion: 0.03
-Nodes (30): TeacherERP.Application.Features.Attendance, TeacherERP.Application.Features.GroupAdmins.GetGroupAdminRequests, TeacherERP.Application.Features.GroupAdmins.GetMyGroupAdmin, TeacherERP.Application.Features.Students.GetStudentDetails, TeacherERP.Application.Features.Students.GetWeeklySchedule, TeacherERP.Application.Features.Groups, TeacherERP.Application.Features.SessionContent.UploadSessionAttachment, TeacherERP.Application.Features.Students.GetStudentCard (+22 more)
+Cohesion: 0.04
+Nodes (31): TeacherERP.Application.Features.Attendance.RejectCompensation, TeacherERP.Application.Features.GroupAdmins.GetGroupAdminRequests, TeacherERP.Application.Features.GroupAdmins.GetMyGroupAdmin, TeacherERP.Application.Features.Students.GetStudentDetails, TeacherERP.Application.Features.Finance.GetPaymentOptions, TeacherERP.Application.Features.Students.GetWeeklySchedule, TeacherERP.Application.Features.Finance.ApproveInstaPayReceipt, TeacherERP.Application.Features.Students.GetStudentCard (+23 more)
 
 ### Community 7 - "Guid"
-Cohesion: 0.04
-Nodes (23): InitialCreate, FixLoginSessionUserId, AddTenants, MoveCenterStateToMembership, AddCentersAndTeacherSubject, TestSeeder, AddNotificationANDAttendanceSystem, AlignRolesWithTeam (+15 more)
+Cohesion: 0.05
+Nodes (9): TeacherERP.Application.SessionContent, TeacherERP.API.Security, TeacherERP.API.Controllers, TeacherERP.API.Extensions, UpdateGroupJoinCodesRequest, ResolvePaymobAdjustmentBody, UpdatePlatformCommissionSettingsRequest, RateLimitPolicies (+1 more)
 
 ### Community 8 - "CreateAssistantCommandHandler"
 Cohesion: 0.09
-Nodes (8): CenterMembershipIntegrationTests, FinanceAuthorizationIntegrationTests, GroupPricingIntegrationTests, ScheduleOperationsIntegrationTests, SessionMoveIntegrationTests, StudentExperienceIntegrationTests, StudentTransferIntegrationTests, TestData
+Nodes (8): CompensationStaffIntegrationTests, DashboardIntegrationTests, FinanceAuthorizationIntegrationTests, ScheduleOperationsIntegrationTests, SessionMoveIntegrationTests, StudentExperienceIntegrationTests, StudentTransferIntegrationTests, TestData
 
 ### Community 9 - ".AddApplicationServices"
-Cohesion: 0.07
-Nodes (39): AbsenceService, ApproveCompensationCommandHandler, RejectCompensationCommandHandler, RejectRequestCommandHandler, ApproveGroupAdminRequestCommand, ApproveGroupAdminRequestCommandHandler, GetGroupAdminsQuery, GetGroupAdminsQueryHandler (+31 more)
+Cohesion: 0.09
+Nodes (60): AbsenceService, AttendanceRecorder, CenterProvisioningService, ApproveCompensationCommandHandler, GetPendingCompensationsQueryHandler, GetSessionAttendanceQueryHandler, ManualAttendanceCommandHandler, RejectCompensationCommandHandler (+52 more)
 
 ### Community 10 - "Result"
-Cohesion: 0.03
-Nodes (26): TeacherERP.Application.Features.Finance.GetMyPaymentOptions, TeacherERP.Application.Features.Users.Commands.Auth.GoogleSignIn, TeacherERP.Application.Features.TeacherRequests.Review, TeacherERP.Application.Features.Users.Commands.Auth.Login, TeacherERP.Application.Features.Students.UnblacklistStudent, TeacherERP.Application.Features.Schedule.GetSessions, TeacherERP.Application.Features.TeacherRequests.Status, TeacherERP.Application.Features.Tenants (+18 more)
+Cohesion: 0.04
+Nodes (68): PagedRequestRules, ApproveCompensationCommand, GetAttendanceSettingsQuery, RegenerateStaticCodeCommand, RejectCompensationCommand, ScanAttendanceCommand, ApproveCenterJoinRequestCommand, ApproveCenterJoinRequestValidator (+60 more)
 
 ### Community 11 - "Session"
-Cohesion: 0.05
-Nodes (11): TeacherERP.Application.SessionContent, TeacherERP.API.Security, TeacherERP.API.Controllers, TeacherERP.API.Extensions, ResolvePaymobAdjustmentBody, PaymobReturnController, PaymobWebhookController, UpdatePlatformCommissionSettingsRequest (+3 more)
+Cohesion: 0.06
+Nodes (16): TeacherPlatformCommissionsController, CenterJoinRequestListItem, JoinCenterCommand, StudentTimelineAttachmentDto, StudentTimelineSessionDto, AuditLogItem, EnrollmentRequestListItem, PlatformCommissionItem (+8 more)
 
 ### Community 12 - "IRequestHandler"
-Cohesion: 0.05
-Nodes (7): IExternalLoginService, AttendanceRepository, GroupRepository, TeacherAccessRequestRepository, CredentialService, ExternalLoginService, UserAccountService
-
-### Community 13 - "List"
-Cohesion: 0.03
-Nodes (26): TeacherERP.Application.Features.Attendance.RejectCompensation, TeacherERP.Application.Enrollment, TeacherERP.Application.Features.TeacherRequests.Submit, TeacherERP.Tests.Unit, TeacherERP.Application.Features.Notifications, TeacherERP.Application.Features.Administration, TeacherERP.Application.Features.TeacherRequests.Verify, TeacherERP.Application.Features.Enrollment.MoveStudent (+18 more)
+Cohesion: 0.08
+Nodes (6): ScheduleConflictItem, ScheduleSlotCandidate, SessionMoveBlockers, GroupSessionRepository, BulkCancelSessionsCommandHandlerTests, CancelSessionCommandHandlerTests
 
 ### Community 14 - "DateTime"
-Cohesion: 0.07
-Nodes (44): GetPendingCompensationsQuery, GetPendingCompensationsQueryHandler, GetPendingCompensationsValidator, GetSessionAttendanceQuery, GetSessionAttendanceQueryHandler, GetAuditLogQuery, GetAuditLogQueryHandler, GetAuditLogValidator (+36 more)
+Cohesion: 0.04
+Nodes (15): TeacherERP.Application.Features.TeacherRequests.Submit, TeacherERP.Application.Features.Users.Commands.VerifyOtp, TeacherERP.Application.Features.Administration, TeacherERP.Application.Features.TeacherRequests.Verify, TeacherERP.Application.Features.Administration.CreateCenter, TeacherERP.Application.Features.Administration.CreateTeacher, TeacherERP.Application.Features.Team.CreateAssistant, TeacherERP.Application.Features.TeacherRequests.Admin (+7 more)
 
 ### Community 16 - "Group"
 Cohesion: 0.04
-Nodes (30): AppDbContext, AttendanceRecords, AuditLogs, CenterInvitations, CenterJoinRequests, Centers, CenterTeachers, CurrentTenantId (+22 more)
+Nodes (32): IStudentTimelineRepository, AppDbContext, AttendanceRecords, AuditLogs, CenterInvitations, CenterJoinRequests, Centers, CenterTeachers (+24 more)
 
 ### Community 17 - "ApplicationUser"
-Cohesion: 0.06
-Nodes (34): AdminCenterDto, CenterTeacherLinkDto, CreateCenterCommand, CreateCenterCommandHandler, CreateCenterValidator, LinkTeacherToCenterCommand, LinkTeacherToCenterCommandHandler, LinkTeacherToCenterValidator (+26 more)
+Cohesion: 0.04
+Nodes (26): TeacherERP.Application.Features.Attendance, TeacherERP.Application.Features.Finance.GetMyPaymentOptions, TeacherERP.Application.Features.Finance.CreatePaymobIntent, TeacherERP.Application.Features.Notifications, TeacherERP.Application.Files, TeacherERP.Application.Features.SessionContent, TeacherERP.Application.Finance, TeacherERP.Application.Features.Enrollment (+18 more)
 
 ### Community 18 - "IGroupSessionRepository"
 Cohesion: 0.05
-Nodes (19): MonthlyCollectionReportsController, PaymobAdjustmentReviewsController, PlatformCommissionsController, RequestPlatformCommissionCollection, SettlePlatformCommissionRequest, TeacherMonthlyCollectionReportsController, TeacherPlatformCommissionsController, SessionDto (+11 more)
-
-### Community 19 - "TeacherERP.API"
-Cohesion: 0.06
-Nodes (35): CompleteProfileCommand, CompleteProfileCommandHandler, CompleteProfileValidator, GetMyProfileQuery, GetMyProfileQueryHandler, GuardianDto, ProfileDto, ChangePasswordCommand (+27 more)
+Nodes (34): TenantMember, CanManageFinance, ConsecutiveAbsences, CurrentBalance, HasFinancialDelegation, Role, Status, Tenant (+26 more)
 
 ### Community 20 - "AttendanceRecord"
 Cohesion: 0.07
-Nodes (11): UserTime, ResetTokenDto, VerifyResetOtpCommand, VerifyResetOtpCommandHandler, VerifyResetOtpValidator, IEmailService, IResetGrantService, ResetGrant (+3 more)
+Nodes (34): RejectCenterJoinRequestCommand, RejectCenterJoinRequestValidator, CancelRequestCommand, CancelRequestCommandHandler, RejectInstaPayReceiptCommand, RejectInstaPayReceiptCommandHandler, GetNotificationWhatsAppShareQuery, NotificationWhatsAppShareDto (+26 more)
+
+### Community 21 - "AppDbContext"
+Cohesion: 0.06
+Nodes (34): GetPendingCompensationsQuery, GetPendingCompensationsValidator, GetSessionAttendanceQuery, GetSessionAttendanceValidator, GetAuditLogQuery, GetAuditLogQueryHandler, GetAuditLogValidator, GetCenterJoinRequestsQuery (+26 more)
 
 ### Community 22 - "Center"
-Cohesion: 0.10
-Nodes (42): AttendanceRecorder, CenterJoinRequestNotifier, CenterMembershipCleanupJob, CenterProvisioningService, ManualAttendanceCommandHandler, AcceptCenterInvitationCommandHandler, CreateCenterInvitationCommandHandler, ApproveCenterJoinRequestCommandHandler (+34 more)
+Cohesion: 0.05
+Nodes (14): TeacherERP.Application.Features.Users.Commands.Auth.SetPassword, TeacherERP.Application.Features.Schedule.BulkCancelSessions, TeacherERP.Tests.Unit, TeacherERP.Application.Features.Enrollment.ApproveRequest, TeacherERP.Application.Scheduling, TeacherERP.Application.Attendance, TeacherERP.Application.Features.Attendance.ScanAttendance, TeacherERP.Application.Features.Enrollment.MoveStudent (+6 more)
 
 ### Community 23 - "LoginSession"
-Cohesion: 0.04
-Nodes (13): TeacherERP.API.Middlewares, TeacherERP.Application, TeacherERP.Application.Absence, TeacherERP.Application.Centers, TeacherERP.Application.Features.Attendance.ApproveCompensation, TeacherERP.Application.Files, TeacherERP.Application.Features.Team.CreateAssistant, TeacherERP.Application.Features.Users.Commands.Auth.ResetPassword (+5 more)
+Cohesion: 0.10
+Nodes (5): AttendanceCodeService, CenterMembershipIntegrationTests, DynamicQrIntegrationTests, AttendanceCodeServiceTests, CenterMembershipTests
 
 ### Community 24 - ".Handle"
-Cohesion: 0.05
-Nodes (34): TeacherERP.Infrastructure.Extensions, IPagedRequest, Page, PageSize, PagedResult, HasNext, HasPrevious, TotalPages (+26 more)
+Cohesion: 0.07
+Nodes (28): GlobalExceptionHandler, AbsenceProcessingJob, AbsenceProcessor, RequestGroupCommandHandler, BlacklistStudentCommandHandler, AssistantDto, CreateAssistantCommand, CreateAssistantCommandHandler (+20 more)
 
 ### Community 25 - "http"
-Cohesion: 0.09
-Nodes (26): ApproveInstaPayReceiptCommand, ApproveInstaPayReceiptCommandHandler, CollectCashPaymentCommand, CollectCashPaymentCommandValidator, CollectCashPaymentCommandHandler, GetMyPaymentOptionsQuery, GetMyPaymentOptionsQueryHandler, GetMyPaymentOptionsValidator (+18 more)
-
-### Community 26 - "AttendanceController.cs"
-Cohesion: 0.06
-Nodes (20): MyEnrollmentDto, RescheduleSessionRequest, IAttendanceCodeService, PlatformCommissionCollectionRequestResult, PlatformCommissionSettlementResult, CenterJoinRequest, CenterId, DecisionNote (+12 more)
+Cohesion: 0.10
+Nodes (27): AttendanceSettingsDto, GetAttendanceSettingsQueryHandler, RegenerateStaticCodeCommandHandler, UpdateAttendanceSettingsCommand, UpdateAttendanceSettingsCommandHandler, UpdateAttendanceSettingsValidator, GetGroupSessionAttendanceQueryHandler, GetMyGroupAdminQuery (+19 more)
 
 ### Community 27 - ".SeedAsync"
-Cohesion: 0.08
-Nodes (13): AdministrationIntegrationTests, CompensationStaffIntegrationTests, CustomWebApplicationFactory, FileStorage, PaymobGateway, PaymobSettings, GroupGradeIntegrationTests, ManualAttendanceIntegrationTests (+5 more)
+Cohesion: 0.07
+Nodes (20): GoogleSignInCommand, GoogleSignInCommandHandler, GoogleSignInValidator, IExternalLoginService, IUserAccountService, ApplicationUser, Attendances, DateOfBirth (+12 more)
 
 ### Community 28 - "ICurrentTenantAccessor"
+Cohesion: 0.06
+Nodes (18): LoggingBehavior, ValidationBehavior, ProfileRequirement, Session, AbsencesProcessedAt, Attendances, BoardImageUrl, CancelReason (+10 more)
+
+### Community 29 - "IUserAccountService"
 Cohesion: 0.09
-Nodes (8): GetTeamQuery, GetTeamQueryHandler, TeamMemberDto, IAbsenceRepository, RunningSessionInfo, PlatformCommissionSummary, TeamMemberItem, AbsenceRepository
+Nodes (11): ApproveGroupAdminRequestCommand, GetGroupAdminsQuery, GetGroupAdminsQueryHandler, GroupAdminDto, IAbsenceRepository, RunningSessionInfo, PlatformCommissionSummary, GroupAdminItem (+3 more)
 
 ### Community 30 - "Transaction"
-Cohesion: 0.05
-Nodes (38): AuditLogDto, AuditAction, AttendanceCorrected, CashPaymentCollected, CompensationApproved, CompensationRejected, FinancialDelegationGranted, FinancialDelegationRevoked (+30 more)
+Cohesion: 0.10
+Nodes (4): UserTime, IEmailService, EmailService, EmailTemplates
 
 ### Community 31 - "GroupDto"
-Cohesion: 0.09
-Nodes (15): ApplicationUser, Attendances, DateOfBirth, FullName, Gender, Guardian, IsProfileComplete, LoginSessions (+7 more)
+Cohesion: 0.08
+Nodes (20): Group, Capacity, CenterId, DynamicJoinEnabled, DynamicJoinSecret, EducationStage, GradeLevel, GradeNumber (+12 more)
 
 ### Community 32 - "PasswordController.cs"
+Cohesion: 0.05
+Nodes (37): AuditLogDto, AuditAction, AttendanceCorrected, CashPaymentCollected, CompensationApproved, CompensationRejected, FinancialDelegationGranted, FinancialDelegationRevoked (+29 more)
+
+### Community 33 - "MembershipStatus"
 Cohesion: 0.07
 Nodes (37): CloudinaryDotNet (1.29.3), coverlet.collector (6.0.4), FluentValidation (12.1.1), FluentValidation.DependencyInjectionExtensions (12.1.1), Google.Apis.Auth (1.77.0), Hangfire.AspNetCore (1.8.25), Hangfire.Core (1.8.25), Hangfire.Dashboard.BasicAuthorization (1.0.2) (+29 more)
 
-### Community 33 - "MembershipStatus"
-Cohesion: 0.14
-Nodes (3): AttendanceCodeService, DynamicQrIntegrationTests, AttendanceCodeServiceTests
-
-### Community 34 - "OtpService"
-Cohesion: 0.07
-Nodes (15): Session, AbsencesProcessedAt, Attendances, BoardImageUrl, CancelReason, EndTime, Group, GroupId (+7 more)
-
 ### Community 35 - ".SaveChangesAsync"
-Cohesion: 0.13
-Nodes (5): ScheduleConflictItem, SessionMoveBlockers, GroupSessionRepository, BulkCancelSessionsCommandHandlerTests, CancelSessionCommandHandlerTests
+Cohesion: 0.12
+Nodes (3): AdministrationIntegrationTests, TeacherRequestsIntegrationTests, SeededTeacher
+
+### Community 36 - "TeacherERP.Application.Features.Groups"
+Cohesion: 0.11
+Nodes (21): ApproveInstaPayReceiptCommand, ApproveInstaPayReceiptCommandHandler, CollectCashPaymentCommand, CollectCashPaymentCommandValidator, GetMyPaymentOptionsQuery, GetMyPaymentOptionsQueryHandler, GetMyPaymentOptionsValidator, GetPaymentOptionsQuery (+13 more)
 
 ### Community 37 - "GuardianRelation"
-Cohesion: 0.07
-Nodes (15): CenterMembershipPolicy, GroupSlotDto, TeacherRequestPolicy, SessionPolicy, GroupScheduleSlot, Day, DurationMinutes, Group (+7 more)
+Cohesion: 0.09
+Nodes (19): GetPendingInstaPayReceiptsQuery, GetPendingInstaPayReceiptsValidator, GetPendingInstaPayReceiptsQueryHandler, SubmitInstaPayReceiptCommand, SubmitInstaPayReceiptCommandHandler, SubmitInstaPayReceiptValidator, UploadSessionAttachmentCommand, UploadSessionAttachmentValidator (+11 more)
+
+### Community 38 - ".GetByIdAsync"
+Cohesion: 0.11
+Nodes (20): CenterTeacherLinkDto, LinkTeacherToCenterCommand, LinkTeacherToCenterCommandHandler, LinkTeacherToCenterValidator, CenterTeacher, Center, CenterId, Origin (+12 more)
 
 ### Community 39 - "ITenantRepository"
-Cohesion: 0.14
-Nodes (3): FinancialLedgerService, PaymobAdjustmentReviewService, IFinancialLedgerRepository
+Cohesion: 0.12
+Nodes (14): SubmitTeacherRequestCommand, SubmitTeacherRequestCommandHandler, SubmitTeacherRequestValidator, TeacherRequestOtpDto, CachedRegistrationData, Email, FullName, Password (+6 more)
 
 ### Community 40 - "EnrollmentRequestStatus"
-Cohesion: 0.06
-Nodes (22): Transaction, Amount, IdempotencyKey, PaymentContextSessionId, ProcessedByAdminId, Provider, ProviderClientSecret, ProviderFailureCode (+14 more)
+Cohesion: 0.13
+Nodes (6): GroupJoinCodeService, RequestGroupByCodeCommand, RequestGroupByCodeCommandHandler, RequestGroupByCodeValidator, IGroupJoinCodeService, GroupJoinCodeServiceTests
 
 ### Community 41 - "GroupEnrollment"
-Cohesion: 0.07
-Nodes (29): Notification, IsRead, Message, RecipientUserId, RelatedId, TenantId, Type, NotificationType (+21 more)
+Cohesion: 0.08
+Nodes (22): TeacherRequestRules, ReviewerKind, Administrator, Teacher, TeacherAccessRequest, CreatedUserId, DecisionNote, Email (+14 more)
 
 ### Community 42 - "AbstractValidator"
 Cohesion: 0.11
-Nodes (11): IAbsenceProcessor, TenantContext, TenantRole, Assistant, Owner, Student, CurrentTenantAccessor, Current (+3 more)
+Nodes (11): CustomWebApplicationFactory, FileStorage, PaymobGateway, PaymobSettings, GroupGradeIntegrationTests, GroupPricingIntegrationTests, ManualAttendanceIntegrationTests, PasswordIntegrationTests (+3 more)
 
 ### Community 43 - "TeacherERP.Application.Features.Users.Commands.Auth.Login"
-Cohesion: 0.10
-Nodes (12): IFileStorage, StoredFile, IStoredFileCleanupJob, StoredFileCleanupJob, PaymentType, DebtSettlement, MonthlySubscription, PerSession (+4 more)
+Cohesion: 0.07
+Nodes (29): Notification, IsRead, Message, RecipientUserId, RelatedId, TenantId, Type, NotificationType (+21 more)
 
 ### Community 44 - "fluentvalidation"
-Cohesion: 0.07
-Nodes (25): BaseEntity, CreatedAt, Id, UpdatedAt, LoginSession, AbsoluteExpiresAt, DeviceId, DeviceName (+17 more)
-
-### Community 45 - "AttendanceResultDto"
-Cohesion: 0.24
-Nodes (4): Scenario, TeacherPaymentsIntegrationTests, Scenario, WalkInLocationIntegrationTests
+Cohesion: 0.11
+Nodes (17): GetStudentDetailsQuery, GetStudentDetailsQueryHandler, StudentActiveGroupDto, StudentDetailsDto, StudentListDto, GetTeamQuery, GetTeamQueryHandler, TeamMemberDto (+9 more)
 
 ### Community 46 - "TenantSettings"
-Cohesion: 0.08
-Nodes (19): EnrollmentRequest, DecidedAt, DecidedByUserId, DecisionNote, Group, GroupId, SourceLatitude, SourceLongitude (+11 more)
+Cohesion: 0.11
+Nodes (19): CompleteProfileCommand, CompleteProfileCommandHandler, CompleteProfileValidator, GetMyProfileQuery, GetMyProfileQueryHandler, GuardianDto, ProfileDto, GetMySessionsQuery (+11 more)
 
 ### Community 47 - ".Handle"
+Cohesion: 0.08
+Nodes (11): TeacherERP.Application.Features.Team.GetTeam, TeacherERP.Application.Features.Groups.GetGroup, TeacherERP.Application.Features.Tenants, TeacherERP.Application.Features.Team.RemoveAssistant, TeacherERP.Application.Features.Attendance.GetDisplayCode, TeacherERP.Application.Features.Team.SetAssistantSuspension, TeacherERP.Application.Features.Team.ResendWelcome, RemoveAssistantCommand (+3 more)
+
+### Community 48 - "AuthResponseDto"
+Cohesion: 0.13
+Nodes (18): AdminScanCommand, AdminScanCommandHandler, AdminScanValidator, ManualAttendanceCommand, ManualAttendanceValidator, ScanAttendanceCommandHandler, ScanAttendanceValidator, GroupScanCommand (+10 more)
+
+### Community 49 - "Error"
 Cohesion: 0.14
 Nodes (14): FinancialSessionInfo, CashPaymentRequest, FinancialObligation, Amount, GroupId, GroupName, IsSettled, OutstandingAmount (+6 more)
 
-### Community 48 - "AuthResponseDto"
-Cohesion: 0.08
-Nodes (19): PlatformCommission, Amount, CollectionRequestedAtUtc, CollectionRequestedByUserId, GroupId, IsSettled, SessionId, SettledAtUtc (+11 more)
-
-### Community 49 - "Error"
-Cohesion: 0.09
-Nodes (12): TeacherERP.Application.Features.Team, TeacherERP.Application.Features.Students, ApiAuthorizationResultHandler, GroupErrors, StudentErrors, StudentReasonRequest, TeamErrors, TeamPolicy (+4 more)
-
 ### Community 50 - "AuditLog"
-Cohesion: 0.17
-Nodes (10): AdminScanCommand, AdminScanCommandHandler, ManualAttendanceCommand, ManualAttendanceValidator, ScanAttendanceCommandHandler, GroupScanCommand, GroupScanCommandHandler, AttendanceRequest (+2 more)
+Cohesion: 0.08
+Nodes (21): LoginSession, AbsoluteExpiresAt, DeviceId, DeviceName, LastRefreshedAt, PreviousRefreshTokenHash, RefreshExpiresAt, RefreshTokenHash (+13 more)
+
+### Community 51 - "BaseEntity"
+Cohesion: 0.08
+Nodes (24): EnrollmentRequest, DecidedAt, DecidedByUserId, DecisionNote, Group, GroupId, SourceLatitude, SourceLongitude (+16 more)
 
 ### Community 52 - "GroupSessionRepository"
-Cohesion: 0.09
-Nodes (21): PaymobAdjustmentResolution, PaymobAdjustmentReview, CommissionReversalAmount, Currency, DecisionNote, ProviderAmount, ProviderEventId, ReviewedAtUtc (+13 more)
-
-### Community 53 - "SessionValidator"
-Cohesion: 0.09
-Nodes (18): TeacherAccessRequest, CreatedUserId, DecisionNote, Email, ExpiresAtUtc, FullName, Note, ReviewedAtUtc (+10 more)
-
-### Community 54 - ".ResolveAsync"
 Cohesion: 0.08
 Nodes (22): AttendanceRecord, CompensatesSessionId, RecordedByUserId, ScannedLatitude, ScannedLongitude, ScannedVia, Session, SessionId (+14 more)
 
+### Community 53 - "SessionValidator"
+Cohesion: 0.09
+Nodes (7): TeacherERP.Application.Features.Groups, TeacherERP.Application.Features.Profile.CompleteProfile, TeacherERP.Application.Features.Groups.UpdateGroup, TeacherERP.Application.Features.Profile, TeacherERP.Application.Features.Attendance.ManualAttendance, TeacherERP.Domain.ValueObjects, TeacherERP.Application.Features.Groups.CreateGroup
+
+### Community 54 - ".ResolveAsync"
+Cohesion: 0.09
+Nodes (16): CenterInvitationToken, CenterInvitationDto, CreateCenterInvitationCommand, CreateCenterInvitationValidator, CenterInvitation, AcceptedAtUtc, AcceptedByTenantId, CenterId (+8 more)
+
 ### Community 55 - "ResetGrantService"
-Cohesion: 0.13
-Nodes (4): NotificationService, INotificationRepository, NotificationShareItem, NotificationRepository
+Cohesion: 0.09
+Nodes (19): PlatformCommission, Amount, CollectionRequestedAtUtc, CollectionRequestedByUserId, GroupId, IsSettled, SessionId, SettledAtUtc (+11 more)
 
 ### Community 56 - ".HandleAsync"
-Cohesion: 0.14
-Nodes (12): AccessTokenResult, IJwtProvider, ISessionRepository, SessionManager, TokenHasher, SessionRepository, JwtProvider, JwtSettings (+4 more)
+Cohesion: 0.12
+Nodes (8): Center, Address, GeofenceRadiusMeters, Latitude, Longitude, Name, OwnerUserId, CenterRepository
 
 ### Community 57 - ".AddApiRateLimiting"
 Cohesion: 0.13
-Nodes (4): CorsExtensions, ForwardedHeadersExtensions, RateLimitingExtensions, GlobalExceptionHandler
+Nodes (12): ResetPasswordCommand, ResetPasswordCommandHandler, ResetPasswordValidator, ResetTokenDto, VerifyResetOtpCommand, VerifyResetOtpCommandHandler, VerifyResetOtpValidator, IResetGrantService (+4 more)
 
 ### Community 58 - "TenantRole"
 Cohesion: 0.09
-Nodes (23): ASPNETCORE_ENVIRONMENT, applicationUrl, commandName, dotnetRunMessages, environmentVariables, applicationUrl, commandName, dotnetRunMessages (+15 more)
+Nodes (16): GroupSlotInput, IGroupSchedule, Slots, BaseEntity, CreatedAt, Id, UpdatedAt, GroupScheduleSlot (+8 more)
 
 ### Community 59 - "IServiceCollection"
-Cohesion: 0.10
-Nodes (16): Group, Capacity, CenterId, EducationStage, GradeLevel, GradeNumber, IsActive, MonthlyPrice (+8 more)
+Cohesion: 0.14
+Nodes (5): IPasswordGenerator, TeacherProvisioningService, WelcomeEmailFailedException, PasswordGenerator, TeacherProvisioningServiceTests
 
 ### Community 60 - "ICenterRepository"
 Cohesion: 0.15
-Nodes (6): RegistrationCacheKey, VerifyOtpCommandHandler, IUserAccountService, TeacherProvisioningService, WelcomeEmailFailedException, TeacherProvisioningServiceTests
+Nodes (7): SessionJwtBearerEvents, AccessTokenResult, IJwtProvider, ISessionValidator, SessionManager, TokenHasher, JwtProvider
 
 ### Community 61 - ".ValidateIdTokenAsync"
-Cohesion: 0.20
-Nodes (12): CreatedTeacherDto, CreateTeacherCommand, CreateTeacherCommandHandler, CreateTeacherValidator, ApproveTeacherRequestByAdminCommand, ApproveTeacherRequestByAdminCommandHandler, ApproveTeacherRequestCommand, ApproveTeacherRequestCommandHandler (+4 more)
+Cohesion: 0.09
+Nodes (21): PaymobAdjustmentResolution, PaymobAdjustmentReview, CommissionReversalAmount, Currency, DecisionNote, ProviderAmount, ProviderEventId, ReviewedAtUtc (+13 more)
 
 ### Community 62 - "CompleteProfileValidator"
-Cohesion: 0.10
-Nodes (14): CreateMyCenterValidator, CenterInvitation, AcceptedAtUtc, AcceptedByTenantId, CenterId, CreatedByUserId, ExpiresAtUtc, Status (+6 more)
+Cohesion: 0.09
+Nodes (13): MonthlySubscription, Amount, GroupId, Month, PaymentTransactionId, StudentId, TenantId, Year (+5 more)
 
 ### Community 63 - "SessionManager"
 Cohesion: 0.18
-Nodes (14): ActivateAccountCommand, ActivateAccountCommandHandler, ActivateAccountValidator, GoogleSignInCommand, GoogleSignInCommandHandler, GoogleSignInValidator, AuthResponseDto, LoginCommand (+6 more)
+Nodes (3): FinancialLedgerService, PaymobAdjustmentReviewService, IFinancialLedgerRepository
 
 ### Community 64 - "TeacherERP.Application.Features.Team"
-Cohesion: 0.12
-Nodes (11): TenantMember, CanManageFinance, ConsecutiveAbsences, CurrentBalance, HasFinancialDelegation, Role, Status, Tenant (+3 more)
+Cohesion: 0.18
+Nodes (7): TeacherRequestQrDto, TeacherRequestToken, VerifyTeacherRequestCommand, VerifyTeacherRequestCommandHandler, VerifyTeacherRequestValidator, TeacherRequestBasicsTests, VerifyTeacherRequestCommandHandlerTests
 
 ### Community 65 - "GetSessionsQueryHandler"
-Cohesion: 0.13
-Nodes (19): AbsenceProcessor, RemoveAssistantCommand, RemoveAssistantCommandHandler, RemoveAssistantValidator, ResendWelcomeCommand, ResendWelcomeCommandHandler, WelcomeEmailFailedException, ResendWelcomeValidator (+11 more)
+Cohesion: 0.12
+Nodes (7): SnapshotAccessor, AddStructuredGroupGrades, SnapshotAccessor, AddSessionOriginalStartTime, SnapshotAccessor, AddGroupPricing, AppDbContextModelSnapshot
 
 ### Community 66 - "SetFinancialDelegationCommandHandler.cs"
-Cohesion: 0.14
-Nodes (12): GetSessionAttachmentsQuery, GetSessionAttachmentsQueryHandler, GetSessionAttachmentsValidator, SessionAttachmentDto, UploadSessionAttachmentCommand, UploadSessionAttachmentValidator, GroupAccessService, GroupAccessLevel (+4 more)
+Cohesion: 0.09
+Nodes (23): ASPNETCORE_ENVIRONMENT, applicationUrl, commandName, dotnetRunMessages, environmentVariables, applicationUrl, commandName, dotnetRunMessages (+15 more)
 
 ### Community 67 - "RevokeSessionCommand"
-Cohesion: 0.15
-Nodes (14): OtpIssueResult, OtpPurpose, Activation, PasswordReset, Registration, TeacherRequest, IssueCounter, Count (+6 more)
+Cohesion: 0.14
+Nodes (4): NotificationService, INotificationRepository, NotificationShareItem, NotificationRepository
 
 ### Community 68 - "CancelSessionCommandHandler.cs"
-Cohesion: 0.20
-Nodes (3): ScheduleSlotCandidate, SessionTimeCalculator, AddStudentProfile
+Cohesion: 0.18
+Nodes (9): TeacherERP.Application.Features.Users.Commands.Auth.ChangePassword, ChangePasswordCommand, ChangePasswordCommandHandler, ChangePasswordValidator, SetPasswordCommand, SetPasswordCommandHandler, SetPasswordValidator, ICredentialService (+1 more)
 
 ### Community 69 - "HangfireBasicAuthFilter"
-Cohesion: 0.11
-Nodes (15): EnrollmentStatus, Active, Ended, GroupEnrollment, ApprovedByUserId, EndedAt, EnrolledAt, Group (+7 more)
+Cohesion: 0.15
+Nodes (8): PlatformCommissionSettingsService, IPlatformCommissionSettingsService, PlatformCommissionSettingsDto, PlatformCommissionSettings, MonthlySubscriptionAmount, PerSessionAmount, UpdatedAtUtc, UpdatedByUserId
 
 ### Community 70 - "GetMySessionsQueryHandler"
 Cohesion: 0.17
-Nodes (11): AttendanceSettingsDto, DisplayCodeDto, GetAttendanceSettingsQuery, GetAttendanceSettingsQueryHandler, GetDisplayCodeQuery, GetDisplayCodeQueryHandler, RegenerateStaticCodeCommand, RegenerateStaticCodeCommandHandler (+3 more)
+Nodes (14): LogoutCommand, LogoutCommandHandler, LogoutValidator, ActivateAccountCommand, ActivateAccountCommandHandler, ActivateAccountValidator, AuthResponseDto, LoginCommand (+6 more)
 
 ### Community 71 - "Centerdto.cs"
-Cohesion: 0.11
-Nodes (12): CreateGroupCommand, CreateGroupValidator, IGroupPricing, MonthlyPrice, PerSessionPrice, GroupSlotInput, GroupSlotsRules, IGroupSchedule (+4 more)
+Cohesion: 0.14
+Nodes (15): AdminCenterDto, CreateCenterCommand, CreateCenterCommandHandler, CreateCenterValidator, CenterDto, CreateMyCenterCommand, CreateMyCenterCommandHandler, CreateMyCenterValidator (+7 more)
+
+### Community 72 - "TeacherERP.Application.Features.Students"
+Cohesion: 0.16
+Nodes (10): TenantContext, TenantRole, Assistant, Owner, Student, CurrentTenantAccessor, Current, TenantId (+2 more)
 
 ### Community 73 - "LoggingBehavior.cs"
 Cohesion: 0.15
-Nodes (13): ApproveTeacherRequestValidator, PreviewTeacherRequestQuery, PreviewTeacherRequestQueryHandler, PreviewTeacherRequestValidator, RejectTeacherRequestValidator, GetTeacherRequestStatusQuery, GetTeacherRequestStatusQueryHandler, GetTeacherRequestStatusValidator (+5 more)
+Nodes (15): IPagedRequest, Page, PageSize, PagedResult, HasNext, HasPrevious, TotalPages, GetGroupAdminRequestsQuery (+7 more)
 
 ### Community 74 - "GeoDistance"
-Cohesion: 0.15
-Nodes (9): CompletedProfileHandler, CompletedProfileRequirement, TenantHandler, TenantRequirement, AllowedRoles, RequiresFinancialDelegation, ProfileCompletionChecker, ProfileRequirement (+1 more)
+Cohesion: 0.12
+Nodes (9): TeacherERP.Application.Features.Students, ApiAuthorizationResultHandler, GroupErrors, StudentErrors, StudentReasonRequest, TenantErrors, Error, Code (+1 more)
 
 ### Community 75 - "CachedRegistrationData"
-Cohesion: 0.25
-Nodes (7): TeacherRequestQrDto, VerifyTeacherRequestCommand, VerifyTeacherRequestCommandHandler, VerifyTeacherRequestValidator, IOtpService, ITeacherAccessRequestRepository, VerifyTeacherRequestCommandHandlerTests
+Cohesion: 0.10
+Nodes (16): PaymobSettings, ApiKey, BaseUrl, Currency, HmacNullValue, HmacSecret, InitializationLeaseSeconds, IntegrationIds (+8 more)
 
 ### Community 76 - ".TryHandleAsync"
 Cohesion: 0.11
-Nodes (16): PaymentEvent, CurrentStatus, EventType, PayloadSha256, PreviousStatus, Provider, ProviderEventId, ProviderOccurredAtUtc (+8 more)
+Nodes (15): GroupAdminRequest, DecidedAt, DecidedByUserId, DecisionNote, Group, GroupId, RequestedByUserId, Status (+7 more)
 
-### Community 77 - "UpdateGroupValidator"
-Cohesion: 0.11
-Nodes (18): SessionAttachment, Caption, ContentType, FileName, Kind, PublicId, Session, SessionId (+10 more)
+### Community 78 - ".RequiresProfileCompletion"
+Cohesion: 0.20
+Nodes (14): CreatedTeacherDto, ApproveTeacherRequestByAdminCommand, ApproveTeacherRequestByAdminCommandHandler, ApproveTeacherRequestCommand, ApproveTeacherRequestCommandHandler, ApproveTeacherRequestValidator, PreviewTeacherRequestQuery, PreviewTeacherRequestQueryHandler (+6 more)
 
 ### Community 79 - "Updatecentervalidator.cs"
-Cohesion: 0.14
-Nodes (6): AddCenterMembershipRequests, SnapshotAccessor, SnapshotAccessor, AddSessionOriginalStartTime, SnapshotAccessor, AppDbContextModelSnapshot
+Cohesion: 0.11
+Nodes (13): CenterJoinRequest, CenterId, DecisionNote, LastNotifiedAtUtc, ReviewedAtUtc, ReviewedByUserId, Status, TenantId (+5 more)
 
 ### Community 80 - "AddExtraSessionValidator.cs"
 Cohesion: 0.16
-Nodes (15): FinancialTransactionInfo, MonthlyCollectionItem, MonthlyCollectionReport, MonthlyCollectionTotals, MonthlyOutstandingDebtItem, MonthlyPaymentMethodSummary, TransactionStatus, Failed (+7 more)
+Nodes (8): CompletedProfileHandler, CompletedProfileRequirement, TenantHandler, TenantRequirement, AllowedRoles, RequiresFinancialDelegation, ProfileCompletionChecker, IProfileCompletionChecker
 
 ### Community 81 - "BulkCancelSessionsValidator.cs"
-Cohesion: 0.21
-Nodes (8): AssistantDto, CreateAssistantCommand, CreateAssistantCommandHandler, WelcomeEmailFailedException, CreateAssistantValidator, IPasswordGenerator, ITeamRepository, PasswordGenerator
+Cohesion: 0.12
+Nodes (4): TeacherERP.Application.Centers, TeacherERP.Application.Features.Centers.CreateCenter, TeacherERP.Application.Features.Centers, TeacherERP.Application.Features.Centers.Invitations
 
 ### Community 82 - "BulkShiftSessionsValidator.cs"
-Cohesion: 0.12
-Nodes (10): PlatformCommissionSettings, MonthlySubscriptionAmount, PerSessionAmount, UpdatedAtUtc, UpdatedByUserId, TeacherPaymentSettings, InstaPayLink, QrImagePublicId (+2 more)
+Cohesion: 0.20
+Nodes (8): IPaymobGateway, PaymobIntentCommandData, PaymobIntentData, PaymobGateway, TestPaymobGateway, CreateCount, FailNextWithCode, LastRequest
+
+### Community 83 - "RescheduleSessionValidator.cs"
+Cohesion: 0.17
+Nodes (13): OtpPurpose, Activation, PasswordReset, Registration, TeacherRequest, IssueCounter, Count, OtpEntry (+5 more)
 
 ### Community 84 - "BlacklistStudentValidator.cs"
-Cohesion: 0.12
-Nodes (6): TeacherERP.Application.Features.Schedule.BulkCancelSessions, TeacherERP.Application.Scheduling, TeacherERP.Application.Features.Schedule.BulkShiftSessions, TeacherERP.Application.Features.Schedule.CancelSession, CancelSessionRequest, SchedulePolicy
+Cohesion: 0.11
+Nodes (15): EnrollmentStatus, Active, Ended, GroupEnrollment, ApprovedByUserId, EndedAt, EnrolledAt, Group (+7 more)
 
 ### Community 85 - "UnblacklistStudentValidator.cs"
-Cohesion: 0.12
-Nodes (14): PaymobSettings, ApiKey, BaseUrl, Currency, HmacNullValue, HmacSecret, InitializationLeaseSeconds, IntegrationIds (+6 more)
+Cohesion: 0.11
+Nodes (18): SessionAttachment, Caption, ContentType, FileName, Kind, PublicId, Session, SessionId (+10 more)
 
 ### Community 86 - "CreateAssistantValidator.cs"
-Cohesion: 0.25
-Nodes (5): SubmitTeacherRequestCommand, SubmitTeacherRequestCommandHandler, TeacherRequestCacheKey, TeacherRequestOtpDto, SubmitTeacherRequestCommandHandlerTests
+Cohesion: 0.13
+Nodes (13): TeacherERP.Application.Features.TeacherRequests, CachedTeacherRequestData, Email, FullName, Note, Subject, TimeZoneId, GetTeacherRequestStatusQuery (+5 more)
 
 ### Community 87 - "RemoveAssistantValidator.cs"
-Cohesion: 0.12
-Nodes (8): MonthlySubscription, Amount, GroupId, Month, PaymentTransactionId, StudentId, TenantId, Year
+Cohesion: 0.16
+Nodes (15): FinancialTransactionInfo, MonthlyCollectionItem, MonthlyCollectionReport, MonthlyCollectionTotals, MonthlyOutstandingDebtItem, MonthlyPaymentMethodSummary, TransactionStatus, Failed (+7 more)
 
-### Community 88 - "ResendWelcomeValidator.cs"
+### Community 90 - "GoogleSignInValidator.cs"
+Cohesion: 0.12
+Nodes (16): PaymentEvent, CurrentStatus, EventType, PayloadSha256, PreviousStatus, Provider, ProviderEventId, ProviderOccurredAtUtc (+8 more)
+
+### Community 91 - "ResetPasswordValidator.cs"
+Cohesion: 0.17
+Nodes (9): UpdateGroupRequest, EducationStage, Preparatory, Primary, Secondary, Unspecified, SchoolGrade, GroupPricingTests (+1 more)
+
+### Community 92 - "VerifyResetOtpValidator.cs"
 Cohesion: 0.17
 Nodes (9): FileNames, DetectedFileType, Jpeg, Pdf, Png, Unknown, Webp, FileSignature (+1 more)
 
-### Community 89 - "SetFinancialDelegationValidator.cs"
+### Community 93 - "CreateStudentValidator.cs"
 Cohesion: 0.22
 Nodes (13): CreatePaymobIntentBody, CreatePaymobIntentCommand, CreatePaymobIntentCommandValidator, CreatePaymobIntentCommandHandler, CreatePaymobPaymentRequest, IPaymobPaymentService, PaymobIntegrationKey, CaggOnlineNonShopify (+5 more)
 
-### Community 90 - "GoogleSignInValidator.cs"
-Cohesion: 0.17
-Nodes (4): TeacherERP.Application.Features.Profile.CompleteProfile, TeacherERP.Application.Features.Groups.UpdateGroup, TeacherERP.Application.Features.Profile, TeacherERP.Domain.ValueObjects
+### Community 94 - "VerifyOtpValidator.cs"
+Cohesion: 0.27
+Nodes (10): GetStudentWeeklyScheduleQuery, GetStudentWeeklyScheduleQueryHandler, StudentWeeklyGroupScheduleDto, StudentWeeklyScheduleDto, StudentWeeklyScheduleSlotDto, IStudentWeeklyScheduleRepository, StudentWeeklyScheduleData, StudentWeeklyScheduleGroupItem (+2 more)
 
-### Community 91 - "ResetPasswordValidator.cs"
+### Community 95 - "ProfileAuthorizationResultHandler.cs"
+Cohesion: 0.12
+Nodes (14): GuardianInfo, Name, PhoneNumber, Relation, GuardianRelation, Aunt, Brother, Father (+6 more)
+
+### Community 96 - "IdentityService.cs"
+Cohesion: 0.25
+Nodes (12): TeacherERP.Application.Features.Directory, DirectoryCenterDto, DirectoryCenterInfoDto, DirectoryGroupDto, DirectoryTeacherDto, TeacherProfileDto, GetTeacherProfileQuery, GetTeacherProfileQueryHandler (+4 more)
+
+### Community 97 - "TeacherERP.Application.Features.Schedule.GetSessions"
 Cohesion: 0.18
 Nodes (4): PaymobGatewayTests, RecordingLogger, Messages, StubHandler
 
-### Community 92 - "VerifyResetOtpValidator.cs"
-Cohesion: 0.26
-Nodes (3): PlatformCommissionSettingsService, IPlatformCommissionSettingsService, PlatformCommissionSettingsDto
+### Community 98 - "UpdateGroupValidator"
+Cohesion: 0.15
+Nodes (5): CenterJoinRequestNotifier, TeacherPaymentService, ICenterJoinRequestNotifier, IStoredFileCleanupJob, StoredFileCleanupJob
 
-### Community 93 - "CreateStudentValidator.cs"
+### Community 99 - "ManualAttendanceValidator.cs"
 Cohesion: 0.23
-Nodes (4): StudentTimelineAttachmentDto, ISessionAttachmentRepository, SessionAttachmentItem, SessionAttachmentRepository
+Nodes (8): PageRequest, Skip, AdministratorDashboardDto, TeacherDashboardDto, GetAdministratorDashboardQuery, GetAdministratorDashboardQueryHandler, GetTeacherDashboardQuery, GetTeacherDashboardQueryHandler
 
-### Community 94 - "VerifyOtpValidator.cs"
+### Community 100 - "Updatecentervalidator.cs"
 Cohesion: 0.14
 Nodes (12): Tenant, AutoApproveGroupAdminChanges, AutoApproveJoinRequests, IsListedInSearch, Name, OwnerId, Status, Subject (+4 more)
 
-### Community 96 - "IdentityService.cs"
-Cohesion: 0.21
-Nodes (9): CenterInvitationDto, CenterJoinRequestListItem, CreateCenterInvitationCommand, CreateCenterInvitationValidator, GetCenterJoinRequestsQuery, GetCenterJoinRequestsQueryHandler, GetCenterJoinRequestsValidator, JoinCenterCommand (+1 more)
-
-### Community 97 - "TeacherERP.Application.Features.Schedule.GetSessions"
-Cohesion: 0.21
-Nodes (6): EducationStage, Preparatory, Primary, Secondary, Unspecified, SchoolGrade
-
-### Community 98 - "UpdateGroupValidator"
+### Community 101 - "RejectRequestValidator.cs"
 Cohesion: 0.16
 Nodes (11): AttendanceMode, AdminOnly, DynamicScreenQR, StaticGlobalQR, TenantSettings, AutoApproveGroupAdminScans, AutoRegisterOnScan, Mode (+3 more)
 
-### Community 100 - "Updatecentervalidator.cs"
-Cohesion: 0.29
-Nodes (7): GetStudentDetailsQuery, GetStudentDetailsQueryHandler, StudentActiveGroupDto, StudentDetailsDto, IStudentRepository, StudentActiveGroupItem, StudentDetailsItem
+### Community 104 - "RequestGroupAdminChangeValidator.cs"
+Cohesion: 0.30
+Nodes (6): CreateTeacherCommand, CreateTeacherCommandHandler, CreateTeacherValidator, ITeacherProvisioningService, CreateTeacherCommandHandlerTests, CreateTeacherValidatorTests
 
-### Community 101 - "RejectRequestValidator.cs"
+### Community 105 - "CancelSessionValidator.cs"
+Cohesion: 0.26
+Nodes (6): AdministratorDashboardOperationalStats, DashboardUpcomingSession, IDashboardRepository, TeacherDashboardOperationalStats, DashboardRepository, StudentRepository
+
+### Community 106 - "LogoutValidator.cs"
 Cohesion: 0.15
 Nodes (12): UpdateTeacherPaymentSettingsForm, InstaPayLink, QrImage, UploadSessionAttachmentForm, Caption, File, Kind, SubmitInstaPayReceiptForm (+4 more)
 
-### Community 102 - "RequestGroupValidator.cs"
-Cohesion: 0.31
-Nodes (6): IStudentWeeklyScheduleRepository, StudentWeeklyScheduleData, StudentWeeklyScheduleGroupItem, StudentWeeklyScheduleSlotItem, StudentRepository, StudentWeeklyScheduleRepository
+### Community 107 - "BlacklistStudentValidator.cs"
+Cohesion: 0.26
+Nodes (4): MonthlyCollectionReportsController, TeacherMonthlyCollectionReportsController, MonthlyCollectionReportService, IMonthlyCollectionReportService
 
-### Community 103 - "GroupScanValidator.cs"
-Cohesion: 0.27
-Nodes (7): TeacherRequestRules, ReviewerKind, Administrator, Teacher, ProvisioningRejectedException, Error, TeacherRequestReviewService
-
-### Community 104 - "RequestGroupAdminChangeValidator.cs"
+### Community 109 - "RemoveAssistantValidator.cs"
 Cohesion: 0.36
 Nodes (6): DirectoryCenterInfo, DirectoryRow, DirectorySearchPage, IDirectoryRepository, TeacherProfileData, DirectoryRepository
 
-### Community 105 - "CancelSessionValidator.cs"
-Cohesion: 0.29
-Nodes (4): StudentTimelineSessionDto, IStudentTimelineRepository, StudentTimelineSessionItem, StudentTimelineRepository
-
-### Community 108 - "CreateAssistantValidator.cs"
-Cohesion: 0.20
-Nodes (7): IUserTimeZoneAccessor, TimeZoneId, CurrentUserService, SessionId, UserId, HttpUserTimeZoneAccessor, TimeZoneId
-
-### Community 109 - "RemoveAssistantValidator.cs"
-Cohesion: 0.22
-Nodes (5): AbsenceProcessingJob, IAbsenceProcessingJob, ISessionGenerationJob, ISessionGenerator, SessionGenerationJob
-
-### Community 110 - "ResendWelcomeValidator.cs"
-Cohesion: 0.29
-Nodes (8): EnrollmentRequestDto, MyEnrollmentsDto, GetMyEnrollmentsQuery, GetMyEnrollmentsQueryHandler, GetMyEnrollmentsValidator, RequestGroupCommand, RequestGroupCommandHandler, RequestGroupValidator
-
-### Community 111 - "Updatetenantprofilevalidator.cs"
-Cohesion: 0.42
-Nodes (7): TeacherERP.Application.Features.Directory, DirectoryCenterInfoDto, DirectoryGroupDto, TeacherProfileDto, GetTeacherProfileQuery, GetTeacherProfileQueryHandler, GetTeacherProfileValidator
-
-### Community 112 - "ChangePasswordValidator.cs"
-Cohesion: 0.39
-Nodes (7): GetGroupQuery, GetGroupQueryHandler, GetGroupsQuery, GetGroupsQueryHandler, GetGroupsValidator, GroupDto, UpdateGroupScheduleCommand
-
 ### Community 113 - "GoogleSignInValidator.cs"
-Cohesion: 0.33
-Nodes (7): IPaymobGateway, PaymobIntentCommandData, PaymobIntentData, TestPaymobGateway, CreateCount, FailNextWithCode, LastRequest
+Cohesion: 0.31
+Nodes (7): EnrollmentRequestDto, MyEnrollmentsDto, GetMyEnrollmentsQuery, GetMyEnrollmentsQueryHandler, GetMyEnrollmentsValidator, RequestGroupCommand, RequestGroupValidator
 
 ### Community 115 - "CreateStudentValidator.cs"
-Cohesion: 0.50
-Nodes (5): GetCurrentTenantQuery, GetCurrentTenantQueryHandler, GetMyTenantsQuery, GetMyTenantsQueryHandler, TenantDto
+Cohesion: 0.36
+Nodes (4): PaymobAdjustmentReviewsController, PaymobAdjustmentReviewItem, IPaymobAdjustmentReviewService, ResolvePaymobAdjustmentRequest
 
 ### Community 116 - "ProfileAuthorizationResultHandler.cs"
-Cohesion: 0.36
-Nodes (6): EnrollmentRequestListItem, EnrollmentRequestStatus, Approved, Cancelled, Pending, Rejected
+Cohesion: 0.43
+Nodes (4): DisplayCodeDto, GetDisplayCodeQuery, GetDisplayCodeQueryHandler, IAttendanceCodeService
 
 ### Community 117 - "IdentityService.cs"
+Cohesion: 0.32
+Nodes (5): GoogleUserInfo, IGoogleAuthService, GoogleAuthService, GoogleAuthSettings, ClientIds
+
+### Community 119 - "MailSettings"
 Cohesion: 0.29
-Nodes (3): TeacherERP.Application.Behaviors, LoggingBehavior, ValidationBehavior
-
-### Community 118 - "AttendanceOutcome"
-Cohesion: 0.29
-Nodes (6): CachedTeacherRequestData, Email, FullName, Note, Subject, TimeZoneId
-
-### Community 120 - "HangfireBasicAuthFilter"
-Cohesion: 0.67
-Nodes (3): StudentWeeklyGroupScheduleDto, StudentWeeklyScheduleDto, StudentWeeklyScheduleSlotDto
-
-### Community 121 - "ForwardedHeadersExtensions.cs"
-Cohesion: 0.33
-Nodes (5): StudentListDto, MembershipStatus, Active, Blacklisted, Suspended
+Nodes (3): PaymobReturnController, PaymobWebhookController, RolesController
 
 ### Community 122 - "GetNotificationWhatsAppShareQuery"
-Cohesion: 0.33
-Nodes (6): AttendanceOutcome, AlreadyRecorded, Corrected, PendingApproval, PendingCompensation, Recorded
-
-### Community 123 - "SessionCleanupJob"
-Cohesion: 0.53
-Nodes (3): GoogleUserInfo, IGoogleAuthService, GoogleAuthService
+Cohesion: 0.29
+Nodes (5): CurrentUserService, SessionId, UserId, HttpUserTimeZoneAccessor, TimeZoneId
 
 ### Community 124 - "CloudinarySettings"
 Cohesion: 0.33
-Nodes (6): PaymobWebhookOutcome, Accepted, Duplicate, Ignored, InvalidPayload, InvalidSignature
+Nodes (3): TeacherERP.Application.Features.Team, TeamErrors, TeamPolicy
 
 ### Community 125 - "JwtSettings"
+Cohesion: 0.53
+Nodes (4): ForgotPasswordCommand, ForgotPasswordCommandHandler, ForgotPasswordResponseDto, ForgotPasswordValidator
+
+### Community 126 - ".TokenValidated"
+Cohesion: 0.33
+Nodes (6): PaymobWebhookOutcome, Accepted, Duplicate, Ignored, InvalidPayload, InvalidSignature
+
+### Community 127 - ".Meters"
 Cohesion: 0.33
 Nodes (6): MailSettings, DisplayName, Host, Mail, Password, Port
 
-### Community 129 - "MailSettings"
+### Community 133 - "PreviewTeacherRequestQuery"
 Cohesion: 0.40
 Nodes (4): CloudinarySettings, ApiKey, ApiSecret, CloudName
 
-### Community 133 - "PreviewTeacherRequestQuery"
-Cohesion: 1.00
-Nodes (3): ForgotPasswordCommand, ForgotPasswordCommandHandler, ForgotPasswordResponseDto
-
 ### Community 134 - ".ValidateIdTokenAsync"
-Cohesion: 0.50
-Nodes (4): CachedRegistrationData, Email, FullName, Password
-
-### Community 135 - "GetMyEnrollmentsQuery"
-Cohesion: 0.50
-Nodes (4): StudentStatus, Active, Blacklisted, Suspended
+Cohesion: 0.40
+Nodes (5): JwtSettings, Audience, ExpiryMinutes, Issuer, Secret
 
 ## Knowledge Gaps
-- **605 isolated node(s):** `InstaPayLink`, `QrImage`, `Caption`, `File`, `Kind` (+600 more)
-  These have ≤1 connection - possible missing edges. (Counts symbols only; 875 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **22 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **609 isolated node(s):** `MonthlyPrice`, `PerSessionPrice`, `AutoApproveGroupAdminChanges`, `AutoApproveJoinRequests`, `IsListedInSearch` (+604 more)
+  These have ≤1 connection - possible missing edges. (Counts symbols only; 889 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **29 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Result` connect `TeacherERP.Application.Interfaces` to `Task`, `system`, `PreviewTeacherRequestQuery`, `.AddApplicationServices`, `IRequestHandler`, `List`, `DateTime`, `ApplicationUser`, `IGroupSessionRepository`, `TeacherERP.API`, `AttendanceRecord`, `Center`, `http`, `ICurrentTenantAccessor`, `GroupDto`, `TeacherERP.Application.Features.Groups`, `TeacherERP.Application.Features.Users.Commands.Auth.Login`, `.Handle`, `AuditLog`, `.HandleAsync`, `ICenterRepository`, `.ValidateIdTokenAsync`, `SessionManager`, `GetSessionsQueryHandler`, `SetFinancialDelegationCommandHandler.cs`, `RevokeSessionCommand`, `CancelSessionCommandHandler.cs`, `GetMySessionsQueryHandler`, `Centerdto.cs`, `LoggingBehavior.cs`, `CachedRegistrationData`, `BulkCancelSessionsValidator.cs`, `RescheduleSessionValidator.cs`, `CreateAssistantValidator.cs`, `SetFinancialDelegationValidator.cs`, `VerifyResetOtpValidator.cs`, `IdentityService.cs`, `GroupScanValidator.cs`, `CancelSessionValidator.cs`, `BlacklistStudentValidator.cs`, `ResendWelcomeValidator.cs`, `Updatetenantprofilevalidator.cs`, `ChangePasswordValidator.cs`, `GoogleSignInValidator.cs`, `CreateStudentValidator.cs`, `SessionCleanupJob`?**
-  _High betweenness centrality (0.066) - this node is a cross-community bridge._
-- **What connects `InstaPayLink`, `QrImage`, `Caption` to the rest of the system?**
-  _605 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `TeacherERP.Application.Interfaces` connect `TimeSpan` to `TeacherERP.Domain.Shared`, `Task`, `TeacherERP.Application.Interfaces`, `HangfireBasicAuthFilter`, `.Resolve`, `system_text`, `Guid`, `List`, `DateTime`, `ApplicationUser`, `Center`, `.Handle`, `Transaction`, `TeacherERP.Application.Features.Groups`, `GuardianRelation`, `EnrollmentRequestStatus`, `fluentvalidation`, `TenantSettings`, `.Handle`, `AuthResponseDto`, `SessionValidator`, `.AddApiRateLimiting`, `IServiceCollection`, `ICenterRepository`, `HangfireBasicAuthFilter`, `AddExtraSessionValidator.cs`, `BulkCancelSessionsValidator.cs`, `RemoveAssistantValidator.cs`, `CreateStudentValidator.cs`, `VerifyOtpValidator.cs`, `UpdateGroupValidator`, `CancelSessionValidator.cs`, `RemoveAssistantValidator.cs`, `HangfireBasicAuthFilter`?**
+  _High betweenness centrality (0.062) - this node is a cross-community bridge._
+- **What connects `MonthlyPrice`, `PerSessionPrice`, `AutoApproveGroupAdminChanges` to the rest of the system?**
+  _609 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `TeacherERP.Domain.Shared` be split into smaller, more focused modules?**
-  _Cohesion score 0.021377331420373027 - nodes in this community are weakly interconnected._
-- **Why does `TeacherERP.Domain.Entities` connect `TimeSpan` to `TeacherERP.Domain.Shared`, `TeacherERP.Application.Interfaces`, `system`, `system_text`, `Result`, `Session`, `List`, `DateTime`, `ApplicationUser`, `TeacherERP.API`, `LoginSession`, `.Handle`, `http`, `AttendanceController.cs`, `.SeedAsync`, `Transaction`, `OtpService`, `GuardianRelation`, `GroupEnrollment`, `fluentvalidation`, `TenantSettings`, `.Handle`, `AuthResponseDto`, `GroupSessionRepository`, `SessionValidator`, `.ResolveAsync`, `CompleteProfileValidator`, `HangfireBasicAuthFilter`, `GetMySessionsQueryHandler`, `.TryHandleAsync`, `UpdateGroupValidator`, `AddExtraSessionValidator.cs`, `BulkShiftSessionsValidator.cs`, `BlacklistStudentValidator.cs`, `RemoveAssistantValidator.cs`, `SetFinancialDelegationValidator.cs`, `GoogleSignInValidator.cs`, `VerifyOtpValidator.cs`, `IdentityService.cs`, `RequestGroupAdminChangeValidator.cs`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+  _Cohesion score 0.030028827674567583 - nodes in this community are weakly interconnected._
+- **Why does `Result` connect `AttendanceRecord` to `TeacherERP.Domain.Shared`, `Task`, `TeacherERP.Application.Interfaces`, `.AddApplicationServices`, `Result`, `Session`, `IRequestHandler`, `DateTime`, `ApplicationUser`, `TeacherERP.API`, `AppDbContext`, `.Handle`, `.SeedAsync`, `TeacherERP.Application.Features.Groups`, `GuardianRelation`, `.GetByIdAsync`, `ITenantRepository`, `GroupEnrollment`, `fluentvalidation`, `TenantSettings`, `.Handle`, `AuthResponseDto`, `Error`, `.ResolveAsync`, `.HandleAsync`, `.AddApiRateLimiting`, `IServiceCollection`, `ICenterRepository`, `TeacherERP.Application.Features.Team`, `CancelSessionCommandHandler.cs`, `HangfireBasicAuthFilter`, `GetMySessionsQueryHandler`, `Centerdto.cs`, `.RequiresProfileCompletion`, `BulkShiftSessionsValidator.cs`, `RescheduleSessionValidator.cs`, `CreateAssistantValidator.cs`, `SetFinancialDelegationValidator.cs`, `CreateStudentValidator.cs`, `IdentityService.cs`, `UpdateGroupValidator`, `RequestGroupAdminChangeValidator.cs`, `BlacklistStudentValidator.cs`, `GoogleSignInValidator.cs`, `ProfileAuthorizationResultHandler.cs`, `IdentityService.cs`, `JwtSettings`?**
+  _High betweenness centrality (0.055) - this node is a cross-community bridge._
 - **Should `IActionResult` be split into smaller, more focused modules?**
-  _Cohesion score 0.045312603813700086 - nodes in this community are weakly interconnected._
-- **Why does `TeacherERP.Application.Interfaces` connect `TimeSpan` to `TeacherERP.Domain.Shared`, `Task`, `TeacherERP.Application.Interfaces`, `system`, `system_text`, `Result`, `Session`, `List`, `DateTime`, `.AddInfrastructureServices`, `AttendanceRecord`, `Center`, `LoginSession`, `http`, `AbstractValidator`, `TeacherERP.Application.Features.Users.Commands.Auth.Login`, `RevokeSessionCommand`, `GeoDistance`, `AddExtraSessionValidator.cs`, `BulkCancelSessionsValidator.cs`, `BlacklistStudentValidator.cs`, `SetFinancialDelegationValidator.cs`, `GoogleSignInValidator.cs`, `VerifyResetOtpValidator.cs`, `Updatecentervalidator.cs`, `RequestGroupValidator.cs`, `RequestGroupAdminChangeValidator.cs`, `CreateAssistantValidator.cs`, `RemoveAssistantValidator.cs`, `HangfireBasicAuthFilter`, `SessionCleanupJob`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+  _Cohesion score 0.04008507853403141 - nodes in this community are weakly interconnected._
+- **Why does `TeacherERP.Domain.Entities` connect `TimeSpan` to `TeacherERP.Domain.Shared`, `Task`, `TeacherERP.Application.Interfaces`, `system_text`, `Guid`, `List`, `DateTime`, `ApplicationUser`, `Center`, `ICurrentTenantAccessor`, `PasswordController.cs`, `.SaveChangesAsync`, `TeacherERP.Application.Features.Groups`, `.GetByIdAsync`, `GroupEnrollment`, `TeacherERP.Application.Features.Users.Commands.Auth.Login`, `TenantSettings`, `.Handle`, `AuthResponseDto`, `Error`, `AuditLog`, `BaseEntity`, `GroupSessionRepository`, `SessionValidator`, `.ResolveAsync`, `ResetGrantService`, `.HandleAsync`, `TenantRole`, `ICenterRepository`, `.ValidateIdTokenAsync`, `CompleteProfileValidator`, `HangfireBasicAuthFilter`, `.TryHandleAsync`, `Updatecentervalidator.cs`, `BulkCancelSessionsValidator.cs`, `BlacklistStudentValidator.cs`, `UnblacklistStudentValidator.cs`, `CreateAssistantValidator.cs`, `RemoveAssistantValidator.cs`, `GoogleSignInValidator.cs`, `CreateStudentValidator.cs`, `Updatecentervalidator.cs`, `RejectRequestValidator.cs`, `RemoveAssistantValidator.cs`, `HangfireBasicAuthFilter`?**
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._
 - **Should `Task` be split into smaller, more focused modules?**
-  _Cohesion score 0.03126385809312639 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.01810790835181079 - nodes in this community are weakly interconnected._
