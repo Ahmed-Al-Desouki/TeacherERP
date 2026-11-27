@@ -40,6 +40,7 @@ namespace TeacherERP.Application
             services.AddScoped<ISessionManager, SessionManager>();
             services.AddScoped<ISessionCleanupJob, SessionCleanupJob>();
             services.AddScoped<ITransientAuthStateCleanupJob, TransientAuthStateCleanupJob>();
+            services.AddScoped<IPasswordChangedNotifier, PasswordChangedNotifier>();
             services.AddScoped<IProfileCompletionChecker, ProfileCompletionChecker>();
             services.AddScoped<ISessionGenerator, SessionGenerator>();
             services.AddScoped<ISessionGenerationJob, SessionGenerationJob>();

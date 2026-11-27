@@ -42,10 +42,10 @@
     "semantic_hash": "d4c4af3df2cdc53ad62a6d68591308b7"
   },
   "TeacherERP.API/Program.cs": {
-    "mtime": 1795795963.8430414,
-    "seen": 1795796666.1544826,
-    "ast_hash": "c507ecdb43a2c9ce416de2f5d19cf419",
-    "semantic_hash": "c507ecdb43a2c9ce416de2f5d19cf419"
+    "mtime": 1795798959.7004993,
+    "seen": 1795799414.8198693,
+    "ast_hash": "b1d9ffb2d6e650ce3e2a357e36244f33",
+    "semantic_hash": "b1d9ffb2d6e650ce3e2a357e36244f33"
   },
   "TeacherERP.API/Properties/launchSettings.json": {
     "mtime": 1791274132.0176005,
@@ -120,10 +120,10 @@
     "semantic_hash": "6054bb1a419bdfcf92ba2db25c1ef4f0"
   },
   "TeacherERP.Application/DependencyInjection.cs": {
-    "mtime": 1795796106.3871071,
-    "seen": 1795796666.1571982,
-    "ast_hash": "3454da05d6bd1f18b3e2472d36b4f480",
-    "semantic_hash": "3454da05d6bd1f18b3e2472d36b4f480"
+    "mtime": 1795799484.0771954,
+    "seen": 1795799871.8367293,
+    "ast_hash": "12986d50676b1422bfd8d34ba92d7cac",
+    "semantic_hash": "12986d50676b1422bfd8d34ba92d7cac"
   },
   "TeacherERP.Application/Features/Attendance/AdminScan/AdminScanCommand.cs": {
     "mtime": 1792766718.806119,
@@ -1194,10 +1194,10 @@
     "semantic_hash": "b53dc0411eba8b658a2e3f54f06536fa"
   },
   "TeacherERP.Application/Features/Users/Commands/Auth/ChangePassword/ChangePasswordCommandHandler.cs": {
-    "mtime": 1793043418.4748921,
-    "seen": 1793344083.7070599,
-    "ast_hash": "26c2ae15118ef3e0ed6516b216e3fd4e",
-    "semantic_hash": "26c2ae15118ef3e0ed6516b216e3fd4e"
+    "mtime": 1795799514.8693314,
+    "seen": 1795799871.8965623,
+    "ast_hash": "b6b57a624e2cc93413bc2780ab73b051",
+    "semantic_hash": "b6b57a624e2cc93413bc2780ab73b051"
   },
   "TeacherERP.Application/Features/Users/Commands/Auth/ChangePassword/ChangePasswordValidator.cs": {
     "mtime": 1793043403.1255553,
@@ -1296,10 +1296,10 @@
     "semantic_hash": "c7c332b6a6d7474d3147e261f08a346e"
   },
   "TeacherERP.Application/Features/Users/Commands/Auth/ResetPassword/ResetPasswordCommandHandler.cs": {
-    "mtime": 1795795888.3362572,
-    "seen": 1795796666.2185981,
-    "ast_hash": "a1c14cb50fe28198f7f1ab226a87cc24",
-    "semantic_hash": "a1c14cb50fe28198f7f1ab226a87cc24"
+    "mtime": 1795799551.500706,
+    "seen": 1795799871.8993776,
+    "ast_hash": "324c41e361f5acb55630be5585315140",
+    "semantic_hash": "324c41e361f5acb55630be5585315140"
   },
   "TeacherERP.Application/Features/Users/Commands/Auth/ResetPassword/ResetPasswordValidator.cs": {
     "mtime": 1791364905.3867326,
@@ -2701,10 +2701,10 @@
     "semantic_hash": "bf4c354d8a958b62f4a759121a1c7c1a"
   },
   "TeacherERP.Application/Features/Users/Commands/Auth/SetPassword/SetPasswordCommandHandler.cs": {
-    "mtime": 1794908127.908512,
-    "seen": 1795251545.5254931,
-    "ast_hash": "a0d360962fe7c91c03877f3cdf40c7a8",
-    "semantic_hash": "a0d360962fe7c91c03877f3cdf40c7a8"
+    "mtime": 1795799519.8916728,
+    "seen": 1795799871.8997068,
+    "ast_hash": "dd8808f681f603b386cae386f23d119a",
+    "semantic_hash": "dd8808f681f603b386cae386f23d119a"
   },
   "TeacherERP.Application/Features/Users/Commands/Auth/SetPassword/SetPasswordValidator.cs": {
     "mtime": 1794908043.2790442,
@@ -4183,10 +4183,10 @@
     "semantic_hash": "37dbf24ce942a5a9f43e1297b9dc3933"
   },
   "TeacherERP.Infrastructure/Services/Email/EmailTemplates.cs": {
-    "mtime": 1794841493.6478572,
-    "seen": 1795450201.2569041,
-    "ast_hash": "fa225dfc7ba8cc26ede5d43a63e3b960",
-    "semantic_hash": "fa225dfc7ba8cc26ede5d43a63e3b960"
+    "mtime": 1795799598.0330143,
+    "seen": 1795799871.9409323,
+    "ast_hash": "e13d3aafbef3c8469b7d4cca36f0fe98",
+    "semantic_hash": "e13d3aafbef3c8469b7d4cca36f0fe98"
   },
   "TeacherERP.Infrastructure/Services/Files/CloudinaryFileStorage.cs": {
     "mtime": 1793971179.1430006,
@@ -4501,10 +4501,10 @@
     "semantic_hash": "e4bb9c256f5a3387d9568d2ac0504126"
   },
   "TeacherERP.Tests/Unit/Identity/PasswordCommandTests.cs": {
-    "mtime": 1794908108.9747968,
-    "seen": 1795450201.2579641,
-    "ast_hash": "98c26f190c3196512923079c535d4f59",
-    "semantic_hash": "98c26f190c3196512923079c535d4f59"
+    "mtime": 1795799631.9749615,
+    "seen": 1795799871.9519715,
+    "ast_hash": "8ad9be11276eb5a8a73ece3e137902d8",
+    "semantic_hash": "8ad9be11276eb5a8a73ece3e137902d8"
   },
   "TeacherERP.Tests/Unit/Sessions/CancelSessionHandlersTests.cs": {
     "mtime": 1795442529.6973734,
@@ -4601,5 +4601,65 @@
     "seen": 1795796666.265931,
     "ast_hash": "bdffbe104425bf83803b73928bcb8dae",
     "semantic_hash": "bdffbe104425bf83803b73928bcb8dae"
+  },
+  "TeacherERP.API/HealthChecks/CoreConfigurationHealthCheck.cs": {
+    "mtime": 1795798651.7799358,
+    "seen": 1795799414.819444,
+    "ast_hash": "3e6ffe80d9c3d952e420f3e1741c48b8",
+    "semantic_hash": "3e6ffe80d9c3d952e420f3e1741c48b8"
+  },
+  "TeacherERP.API/HealthChecks/DatabaseHealthCheck.cs": {
+    "mtime": 1795798793.0335064,
+    "seen": 1795799414.8194478,
+    "ast_hash": "294115956b53780946362422a216b408",
+    "semantic_hash": "294115956b53780946362422a216b408"
+  },
+  "TeacherERP.API/HealthChecks/HangfireWorkerHealthCheck.cs": {
+    "mtime": 1795798651.616678,
+    "seen": 1795799414.81945,
+    "ast_hash": "a406c0076acf5bbf3da606736cb4fca4",
+    "semantic_hash": "a406c0076acf5bbf3da606736cb4fca4"
+  },
+  "TeacherERP.API/HealthChecks/OptionalIntegrationHealthChecks.cs": {
+    "mtime": 1795798959.8688767,
+    "seen": 1795799414.8194518,
+    "ast_hash": "0e708986b1b9ac860a49c1e17b86da67",
+    "semantic_hash": "0e708986b1b9ac860a49c1e17b86da67"
+  },
+  "TeacherERP.Tests/Integration/Common/HealthChecksIntegrationTests.cs": {
+    "mtime": 1795798822.5939958,
+    "seen": 1795799414.9522054,
+    "ast_hash": "ffeb1dd81954a2710b78a4cdb24c1f6e",
+    "semantic_hash": "ffeb1dd81954a2710b78a4cdb24c1f6e"
+  },
+  "TeacherERP.Tests/Integration/Sessions/SessionJwtRevocationIntegrationTests.cs": {
+    "mtime": 1795797272.0981703,
+    "seen": 1795799414.9557092,
+    "ast_hash": "cf4ee36c60ca901f28b460cd981843fc",
+    "semantic_hash": "cf4ee36c60ca901f28b460cd981843fc"
+  },
+  "TeacherERP.Application/Interfaces/Users/IPasswordChangedNotifier.cs": {
+    "mtime": 1795799483.7368782,
+    "seen": 1795799871.9122727,
+    "ast_hash": "339e657bfa5c7b11c20a303b71de8d58",
+    "semantic_hash": "339e657bfa5c7b11c20a303b71de8d58"
+  },
+  "TeacherERP.Application/Services/Users/PasswordChangedNotifier.cs": {
+    "mtime": 1795799660.0624795,
+    "seen": 1795799871.9194958,
+    "ast_hash": "83a012f9ab640145f1ab91782f5d3b8e",
+    "semantic_hash": "83a012f9ab640145f1ab91782f5d3b8e"
+  },
+  "TeacherERP.Tests/Unit/Identity/PasswordChangedNotifierTests.cs": {
+    "mtime": 1795799660.2315931,
+    "seen": 1795799871.9519682,
+    "ast_hash": "5738fd4d12d5fc310f5e450380cb1134",
+    "semantic_hash": "5738fd4d12d5fc310f5e450380cb1134"
+  },
+  "TeacherERP.Tests/Unit/Identity/ResetPasswordAlertTests.cs": {
+    "mtime": 1795799713.0031002,
+    "seen": 1795799871.9519737,
+    "ast_hash": "8a3e9d1930a06b0dbcb75b3e8a1ebc13",
+    "semantic_hash": "8a3e9d1930a06b0dbcb75b3e8a1ebc13"
   }
 }

@@ -11,17 +11,20 @@ public sealed class SetPasswordCommandHandler : IRequestHandler<SetPasswordComma
     private readonly IUserRepository _userRepository;
     private readonly ICredentialService _credentialService;
     private readonly ISessionManager _sessionManager;
+    private readonly IPasswordChangedNotifier _passwordChangedNotifier;
 
     public SetPasswordCommandHandler(
         ICurrentUserService currentUser,
         IUserRepository userRepository,
         ICredentialService credentialService,
-        ISessionManager sessionManager)
+        ISessionManager sessionManager,
+        IPasswordChangedNotifier passwordChangedNotifier)
     {
         _currentUser = currentUser;
         _userRepository = userRepository;
         _credentialService = credentialService;
         _sessionManager = sessionManager;
+        _passwordChangedNotifier = passwordChangedNotifier;
     }
 
     public async Task<Result<bool>> Handle(SetPasswordCommand request, CancellationToken cancellationToken)
@@ -45,6 +48,7 @@ public sealed class SetPasswordCommandHandler : IRequestHandler<SetPasswordComma
 
         await _sessionManager.RevokeOthersAsync(
             userId, sessionId, SessionRevokeReason.PasswordChanged, cancellationToken);
+        _passwordChangedNotifier.Enqueue(user);
 
         return Result<bool>.Success(true);
     }

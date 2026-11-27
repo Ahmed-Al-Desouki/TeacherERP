@@ -86,8 +86,8 @@ namespace TeacherERP.Infrastructure.Services
                 <p style="margin:0 0 6px 0;">Your password was changed successfully on <b>{{time}}</b>.</p>
                 <p dir="rtl" style="margin:0 0 18px 0;color:#6b7280;">تم تغيير كلمة المرور بنجاح بتاريخ <b dir="ltr">{{time}}</b>.</p>
                 <div style="background:#ecfdf5;border-radius:12px;padding:14px 16px;margin:0 0 18px 0;color:#065f46;font-size:14px;">
-                  For your security, you were signed out of all devices. Please log in again with your new password.
-                  <span dir="rtl" style="display:block;margin-top:6px;">حفاظاً على أمانك، تم تسجيل خروجك من جميع الأجهزة. يرجى تسجيل الدخول مرة أخرى بكلمة المرور الجديدة.</span>
+                  For your security, other signed-in sessions were revoked. You may need to log in again on those devices.
+                  <span dir="rtl" style="display:block;margin-top:6px;">حفاظاً على أمانك، تم تسجيل الخروج من الجلسات الأخرى. قد تحتاج إلى تسجيل الدخول مجدداً على أجهزتك الأخرى.</span>
                 </div>
                 <p style="margin:0 0 4px 0;color:#b91c1c;font-size:13px;"><b>Wasn't you?</b> Reset your password immediately and contact your center administrator.</p>
                 <p dir="rtl" style="margin:0;color:#b91c1c;font-size:13px;"><b>لست أنت؟</b> أعد تعيين كلمة المرور فوراً وتواصل مع إدارة السنتر.</p>
