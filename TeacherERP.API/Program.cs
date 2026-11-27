@@ -3,11 +3,14 @@ using Hangfire;
 using Hangfire.Dashboard;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using System.Text;
 using System.Text.Json.Serialization;
 using TeacherERP.API.Extensions;
+using TeacherERP.API.HealthChecks;
 using TeacherERP.API.Middlewares;
 using TeacherERP.API.Security;
 using TeacherERP.Application;
@@ -61,6 +64,15 @@ builder.Services.AddApiRateLimiting();
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
+var healthChecks = builder.Services.AddHealthChecks()
+    .AddCheck("process", () => HealthCheckResult.Healthy(), tags: new[] { "live" })
+    .AddCheck<DatabaseHealthCheck>("database", failureStatus: HealthStatus.Unhealthy, tags: new[] { "ready", "components" }, timeout: TimeSpan.FromSeconds(5))
+    .AddCheck<CoreConfigurationHealthCheck>("authentication-configuration", failureStatus: HealthStatus.Unhealthy, tags: new[] { "ready", "components" }, timeout: TimeSpan.FromSeconds(2))
+    .AddCheck<SmtpEndpointHealthCheck>("smtp", failureStatus: HealthStatus.Degraded, tags: new[] { "components" }, timeout: TimeSpan.FromSeconds(3))
+    .AddCheck<CloudinaryConfigurationHealthCheck>("cloudinary-configuration", failureStatus: HealthStatus.Degraded, tags: new[] { "components" })
+    .AddCheck<PaymobConfigurationHealthCheck>("paymob-configuration", failureStatus: HealthStatus.Degraded, tags: new[] { "components" })
+    .AddCheck<GoogleAuthConfigurationHealthCheck>("google-auth-configuration", failureStatus: HealthStatus.Degraded, tags: new[] { "components" });
+
 // Hangfire Configuration (استخدام قاعدة البيانات لتخزين الـ Jobs)
 if (!isTesting)
 {
@@ -71,6 +83,7 @@ if (!isTesting)
         .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
 
     builder.Services.AddHangfireServer(); // لتشغيل الـ Background Server
+    healthChecks.AddCheck<HangfireWorkerHealthCheck>("hangfire-worker", failureStatus: HealthStatus.Unhealthy, tags: new[] { "ready", "components" }, timeout: TimeSpan.FromSeconds(5));
 }
 
 // Global Exception Handler
@@ -209,6 +222,24 @@ app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllers();
+
+HealthCheckOptions HealthOptions(string tag) => new()
+{
+    Predicate = check => check.Tags.Contains(tag),
+    AllowCachingResponses = false,
+    ResponseWriter = WriteHealthReportAsync
+};
+
+app.MapHealthChecks("/health/live", HealthOptions("live")).AllowAnonymous();
+app.MapHealthChecks("/health/ready", HealthOptions("ready")).AllowAnonymous();
+app.MapHealthChecks("/health/components", HealthOptions("components")).AllowAnonymous();
+
+static Task WriteHealthReportAsync(HttpContext context, HealthReport report)
+    => context.Response.WriteAsJsonAsync(new
+    {
+        status = report.Status.ToString(),
+        checks = report.Entries.ToDictionary(entry => entry.Key, entry => entry.Value.Status.ToString())
+    }, cancellationToken: context.RequestAborted);
 
 app.Run();
 

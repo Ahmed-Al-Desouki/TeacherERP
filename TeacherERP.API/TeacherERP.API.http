@@ -1,5 +1,17 @@
 @TeacherERP.API_HostAddress = http://localhost:5210
 
+### Basic liveness probe (no authentication required)
+GET {{TeacherERP.API_HostAddress}}/health/live
+Accept: application/json
+
+### Readiness probe (database, core authentication configuration, and Hangfire worker in non-test environments)
+GET {{TeacherERP.API_HostAddress}}/health/ready
+Accept: application/json
+
+### Component diagnostics (includes SMTP reachability and optional integration configuration)
+GET {{TeacherERP.API_HostAddress}}/health/components
+Accept: application/json
+
 GET {{TeacherERP.API_HostAddress}}/weatherforecast/
 Accept: application/json
 

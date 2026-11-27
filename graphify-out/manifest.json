@@ -1416,10 +1416,10 @@
     "semantic_hash": "94d18044f0fdb5d0d0eb801ad78ed538"
   },
   "TeacherERP.Infrastructure/Data/AppDbContext.cs": {
-    "mtime": 1795795810.933941,
-    "seen": 1795796666.2427332,
-    "ast_hash": "13c2028487993e078c20a7a619c3ab95",
-    "semantic_hash": "13c2028487993e078c20a7a619c3ab95"
+    "mtime": 1795796702.171937,
+    "seen": 1795796988.5858262,
+    "ast_hash": "7cf80021e29179716073dba4f5c02aa8",
+    "semantic_hash": "7cf80021e29179716073dba4f5c02aa8"
   },
   "TeacherERP.Infrastructure/Data/AppDbContextFactory.cs": {
     "mtime": 1795451494.617308,
@@ -1608,10 +1608,10 @@
     "semantic_hash": "d821793ea912cb4113a7f46ff7f4b6d8"
   },
   "TeacherERP.Infrastructure/Migrations/AppDbContextModelSnapshot.cs": {
-    "mtime": 1795796484.5808678,
-    "seen": 1795796666.2537386,
-    "ast_hash": "cf214a35a45838da4cc2275a1e50f626",
-    "semantic_hash": "cf214a35a45838da4cc2275a1e50f626"
+    "mtime": 1795796702.363502,
+    "seen": 1795796988.5970342,
+    "ast_hash": "febf42d2c6d8fd77018d57dc9d38f179",
+    "semantic_hash": "febf42d2c6d8fd77018d57dc9d38f179"
   },
   "TeacherERP.Infrastructure/Settings/GoogleAuthSettings.cs": {
     "mtime": 1791358639.1214757,
@@ -4579,10 +4579,10 @@
     "semantic_hash": "f26d05ebf84dfc35de076ddbcda503b2"
   },
   "TeacherERP.Infrastructure/Migrations/20261127120000_AddTransientAuthState.cs": {
-    "mtime": 1795796484.7645836,
-    "seen": 1795796666.2537348,
-    "ast_hash": "a4c6cb7f4cdb87374ca1e824f6a9b5e1",
-    "semantic_hash": "a4c6cb7f4cdb87374ca1e824f6a9b5e1"
+    "mtime": 1795796702.5684612,
+    "seen": 1795796988.5970306,
+    "ast_hash": "d3ca4093c5cac48c159984c3c68fdab5",
+    "semantic_hash": "d3ca4093c5cac48c159984c3c68fdab5"
   },
   "TeacherERP.Infrastructure/Repositories/TransientAuthStateStore.cs": {
     "mtime": 1795795797.3689592,
