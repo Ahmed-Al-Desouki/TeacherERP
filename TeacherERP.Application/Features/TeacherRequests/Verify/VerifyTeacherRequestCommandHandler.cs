@@ -1,7 +1,6 @@
 // جديد — TeacherERP.Application/Features/TeacherRequests/Verify/VerifyTeacherRequestCommandHandler.cs
 using System.Data;
 using MediatR;
-using Microsoft.Extensions.Caching.Memory;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
@@ -10,20 +9,20 @@ namespace TeacherERP.Application.Features.TeacherRequests.Verify
 {
     public class VerifyTeacherRequestCommandHandler : IRequestHandler<VerifyTeacherRequestCommand, Result<TeacherRequestQrDto>>
     {
-        private readonly IMemoryCache _cache;
+        private readonly ITransientAuthStateStore _authStateStore;
         private readonly IOtpService _otpService;
         private readonly ITeacherAccessRequestRepository _requestRepository;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
 
         public VerifyTeacherRequestCommandHandler(
-            IMemoryCache cache,
+            ITransientAuthStateStore authStateStore,
             IOtpService otpService,
             ITeacherAccessRequestRepository requestRepository,
             IUnitOfWork unitOfWork,
             TimeProvider timeProvider)
         {
-            _cache = cache;
+            _authStateStore = authStateStore;
             _otpService = otpService;
             _requestRepository = requestRepository;
             _unitOfWork = unitOfWork;
@@ -33,10 +32,10 @@ namespace TeacherERP.Application.Features.TeacherRequests.Verify
         public async Task<Result<TeacherRequestQrDto>> Handle(VerifyTeacherRequestCommand request, CancellationToken cancellationToken)
         {
             var email = request.Email.Trim().ToLowerInvariant();
-            var cacheKey = TeacherRequestCacheKey.For(email);
 
             // 1. البيانات المعلقة أولاً (قبل الكود) حتى لا يُستهلك كود بلا داعٍ. غيابها = لم يُرسل أو إيميل غير مسموح
-            if (!_cache.TryGetValue(cacheKey, out CachedTeacherRequestData? data) || data is null)
+            var data = await _authStateStore.GetPayloadAsync<PendingTeacherRequestData>(OtpPurpose.TeacherRequest.ToString(), email, cancellationToken);
+            if (data is null)
             {
                 return Result<TeacherRequestQrDto>.Failure(TeacherRequestErrors.SubmissionExpired);
             }
@@ -76,7 +75,7 @@ namespace TeacherERP.Application.Features.TeacherRequests.Verify
                 return true;
             }, IsolationLevel.ReadCommitted, cancellationToken);
 
-            _cache.Remove(cacheKey);
+            await _authStateStore.RemovePayloadAsync(OtpPurpose.TeacherRequest.ToString(), email, cancellationToken);
 
             return Result<TeacherRequestQrDto>.Success(new TeacherRequestQrDto(token, expiresAt));
         }

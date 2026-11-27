@@ -62,6 +62,7 @@ namespace TeacherERP.Infrastructure.Data
         public DbSet<TeacherPaymentSettings> TeacherPaymentSettings { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<TeacherAccessRequest> TeacherAccessRequests { get; set; }
+        public DbSet<TransientAuthState> TransientAuthStates { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -85,6 +86,19 @@ namespace TeacherERP.Infrastructure.Data
 
                 // للبحث السريع عن جلسات المستخدم وجهازه
                 entity.HasIndex(s => new { s.UserId, s.DeviceId });
+            });
+
+            builder.Entity<TransientAuthState>(entity =>
+            {
+                entity.ToTable("TransientAuthStates");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Email).HasMaxLength(256).IsRequired();
+                entity.Property(x => x.Purpose).HasMaxLength(32).IsRequired();
+                entity.Property(x => x.OtpHash).HasMaxLength(64);
+                entity.Property(x => x.GrantHash).HasMaxLength(64);
+                entity.Property(x => x.PayloadJson).HasMaxLength(4000);
+                entity.HasIndex(x => new { x.Purpose, x.Email }).IsUnique();
+                entity.HasIndex(x => new { x.CodeExpiresAtUtc, x.IssueWindowEndsAtUtc, x.GrantExpiresAtUtc, x.PayloadExpiresAtUtc });
             });
 
 

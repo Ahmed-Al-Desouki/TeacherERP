@@ -168,6 +168,9 @@ if (!isTesting)
 
     app.Services.GetRequiredService<IRecurringJobManager>()
         .AddOrUpdate<ICenterMembershipCleanupJob>("cleanup-center-membership", job => job.RunAsync(), "0 4 * * 0");
+
+    app.Services.GetRequiredService<IRecurringJobManager>()
+        .AddOrUpdate<ITransientAuthStateCleanupJob>("cleanup-transient-auth-state", job => job.RunAsync(), Cron.Daily(4));
 }
 
 // الـ IP الحقيقي أولاً (لا يعمل إلا لو فُعّل من الإعدادات)، لأن كل ما بعده (Rate Limiting واللوجات) يعتمد عليه

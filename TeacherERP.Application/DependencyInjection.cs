@@ -15,6 +15,7 @@ using TeacherERP.Application.Sessions;
 using TeacherERP.Application.Teachers;
 using TeacherERP.Application.Centers;
 using TeacherERP.Application.Finance;
+using TeacherERP.Application.Services.Users;
 
 namespace TeacherERP.Application
 {
@@ -38,6 +39,7 @@ namespace TeacherERP.Application
 
             services.AddScoped<ISessionManager, SessionManager>();
             services.AddScoped<ISessionCleanupJob, SessionCleanupJob>();
+            services.AddScoped<ITransientAuthStateCleanupJob, TransientAuthStateCleanupJob>();
             services.AddScoped<IProfileCompletionChecker, ProfileCompletionChecker>();
             services.AddScoped<ISessionGenerator, SessionGenerator>();
             services.AddScoped<ISessionGenerationJob, SessionGenerationJob>();

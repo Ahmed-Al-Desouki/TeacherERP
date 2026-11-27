@@ -37,7 +37,7 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.VerifyResetOtp
             }
 
             // 3. إصدار التصريح لمرة واحدة
-            var grant = _resetGrantService.Issue(request.Email);
+            var grant = await _resetGrantService.IssueAsync(request.Email, cancellationToken);
             return Result<ResetTokenDto>.Success(new ResetTokenDto(grant.Token, grant.ExpiresInSeconds));
         }
     }

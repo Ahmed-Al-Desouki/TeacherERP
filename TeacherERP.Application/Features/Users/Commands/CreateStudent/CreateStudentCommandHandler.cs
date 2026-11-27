@@ -1,6 +1,5 @@
 using MediatR;
 using Hangfire;
-using Microsoft.Extensions.Caching.Memory;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Shared;
 
@@ -10,18 +9,18 @@ namespace TeacherERP.Application.Features.Users.Commands.CreateStudent
     {
         private readonly IUserAccountService _userAccountService;
         private readonly IOtpService _otpService;
-        private readonly IMemoryCache _cache; // استخدمنا الكاش لحفظ البيانات مؤقتاً
+        private readonly ITransientAuthStateStore _authStateStore;
         private readonly IBackgroundJobClient _backgroundJobClient;
 
         public CreateStudentCommandHandler(
             IUserAccountService userAccountService,
             IOtpService otpService,
-            IMemoryCache cache,
+            ITransientAuthStateStore authStateStore,
             IBackgroundJobClient backgroundJobClient)
         {
             _userAccountService = userAccountService;
             _otpService = otpService;
-            _cache = cache;
+            _authStateStore = authStateStore;
             _backgroundJobClient = backgroundJobClient;
         }
 
@@ -45,15 +44,18 @@ namespace TeacherERP.Application.Features.Users.Commands.CreateStudent
                 return Result<string>.Success(request.Email);
             }
 
-            // 4. تخزين بيانات التسجيل في الـ Cache لمدة 10 دقائق
-            var cacheData = new CachedRegistrationData
+            var candidate = TeacherERP.Domain.Entities.ApplicationUser.CreateStudent(request.FullName, request.Email);
+            var passwordHash = await _userAccountService.HashPasswordAsync(candidate, request.Password, cancellationToken);
+            if (passwordHash.IsFailure) return Result<string>.Failure(passwordHash.Error);
+
+            // 4. حفظ مسودة التسجيل عشر دقائق، مع تخزين بصمة كلمة المرور فقط
+            var pendingData = new PendingStudentRegistrationData
             {
                 FullName = request.FullName,
                 Email = request.Email,
-                Password = request.Password
+                PasswordHash = passwordHash.Value!
             };
-
-            _cache.Set(RegistrationCacheKey.For(request.Email), cacheData, TimeSpan.FromMinutes(10));
+            await _authStateStore.SavePayloadAsync(OtpPurpose.Registration.ToString(), request.Email, pendingData, TimeSpan.FromMinutes(10), cancellationToken);
 
             // 5. إرسال الإيميل في الخلفية
             var otpCode = otpResult.Value!.Code;

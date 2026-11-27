@@ -39,7 +39,7 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.ResetPassword
             var invalidSession = new Error("Auth.InvalidResetToken", "The reset session is invalid or has expired. Please start again.");
 
             // 1. التحقق من التصريح
-            if (!_resetGrantService.IsValid(request.Email, request.ResetToken))
+            if (!await _resetGrantService.IsValidAsync(request.Email, request.ResetToken, cancellationToken))
             {
                 return Result<bool>.Failure(invalidSession);
             }
@@ -63,7 +63,7 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.ResetPassword
             await _sessionManager.RevokeAllForUserAsync(user.Id, SessionRevokeReason.PasswordReset, cancellationToken);
 
             // 5. إبطال التصريح (بعد نجاح كل ما سبق، فتبقى إعادة المحاولة ممكنة عند أي خطأ)
-            _resetGrantService.Revoke(request.Email);
+            await _resetGrantService.RevokeAsync(request.Email, cancellationToken);
 
             // 6. إيميل التنبيه في الخلفية (الوقت UTC مع منطقة المستخدم)
             var toEmail = user.Email!;

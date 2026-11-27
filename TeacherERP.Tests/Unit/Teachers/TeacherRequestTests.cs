@@ -2,7 +2,6 @@ using System.Data;
 using Hangfire;
 using Hangfire.Common;
 using Hangfire.States;
-using Microsoft.Extensions.Caching.Memory;
 using NSubstitute;
 using TeacherERP.Application.Features.Administration;
 using TeacherERP.Application.Features.TeacherRequests;
@@ -22,7 +21,7 @@ public class SubmitTeacherRequestCommandHandlerTests
 {
     private readonly IUserAccountService _users = Substitute.For<IUserAccountService>();
     private readonly IOtpService _otp = Substitute.For<IOtpService>();
-    private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
+    private readonly ITransientAuthStateStore _store = Substitute.For<ITransientAuthStateStore>();
     private readonly IBackgroundJobClient _jobs = Substitute.For<IBackgroundJobClient>();
 
     public SubmitTeacherRequestCommandHandlerTests()
@@ -32,13 +31,13 @@ public class SubmitTeacherRequestCommandHandlerTests
             .Returns(Result<OtpIssueResult>.Success(new OtpIssueResult("123456", 600, 60)));
     }
 
-    private SubmitTeacherRequestCommandHandler CreateHandler() => new(_users, _otp, _cache, _jobs);
+    private SubmitTeacherRequestCommandHandler CreateHandler() => new(_users, _otp, _store, _jobs);
 
     private static SubmitTeacherRequestCommand Command(string email = " Ali@X.com ")
         => new(" Ali ", email, " Math ", "note");
 
     [Fact]
-    public async Task Handle_NewEmail_CachesNormalizedData_AndQueuesOtpEmail()
+    public async Task Handle_NewEmail_PersistsNormalizedData_AndQueuesOtpEmail()
     {
         var result = await CreateHandler().Handle(Command(), CancellationToken.None);
 
@@ -46,16 +45,16 @@ public class SubmitTeacherRequestCommandHandlerTests
         Assert.Equal("ali@x.com", result.Value!.Email);
         Assert.Equal(600, result.Value.ExpiresInSeconds);
 
-        Assert.True(_cache.TryGetValue(TeacherRequestCacheKey.For("ali@x.com"), out CachedTeacherRequestData? data));
-        Assert.Equal("Ali", data!.FullName);
-        Assert.Equal("Math", data.Subject);
-        Assert.Equal("Africa/Cairo", data.TimeZoneId);
+        await _store.Received(1).SavePayloadAsync(
+            OtpPurpose.TeacherRequest.ToString(), "ali@x.com",
+            Arg.Is<PendingTeacherRequestData>(data => data.FullName == "Ali" && data.Subject == "Math" && data.TimeZoneId == "Africa/Cairo"),
+            TeacherRequestPolicy.PendingDataLifetime, Arg.Any<CancellationToken>());
 
         _jobs.Received(1).Create(Arg.Any<Job>(), Arg.Any<IState>());
     }
 
     [Fact]
-    public async Task Handle_ExistingEmail_ReturnsSameSuccess_ButCachesNothingAndSendsNothing()
+    public async Task Handle_ExistingEmail_ReturnsSameSuccess_ButPersistsNothingAndSendsNothing()
     {
         _users.CheckEmailExistsAsync("ali@x.com", Arg.Any<CancellationToken>()).Returns(Result<bool>.Success(true));
 
@@ -63,14 +62,14 @@ public class SubmitTeacherRequestCommandHandlerTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(600, result.Value!.ExpiresInSeconds);
-        Assert.False(_cache.TryGetValue(TeacherRequestCacheKey.For("ali@x.com"), out _));
+        await _store.DidNotReceiveWithAnyArgs().SavePayloadAsync(default!, default!, default(PendingTeacherRequestData)!, default, default);
         _jobs.DidNotReceiveWithAnyArgs().Create(default!, default!);
         // الكود يُولَّد في الحالتين حتى لا يختلف سلوك الحدود بين إيميل مسجّل وغير مسجّل
         await _otp.Received(1).GenerateAsync(OtpPurpose.TeacherRequest, "ali@x.com", Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_WhenOtpIsRejected_ReturnsThatError_AndCachesNothing()
+    public async Task Handle_WhenOtpIsRejected_ReturnsThatError_AndPersistsNothing()
     {
         var error = new Error("Otp.ResendTooSoon", "wait");
         _otp.GenerateAsync(OtpPurpose.TeacherRequest, Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -79,7 +78,7 @@ public class SubmitTeacherRequestCommandHandlerTests
         var result = await CreateHandler().Handle(Command(), CancellationToken.None);
 
         Assert.Equal(error, result.Error);
-        Assert.False(_cache.TryGetValue(TeacherRequestCacheKey.For("ali@x.com"), out _));
+        await _store.DidNotReceiveWithAnyArgs().SavePayloadAsync(default!, default!, default(PendingTeacherRequestData)!, default, default);
     }
 }
 
@@ -88,7 +87,7 @@ public class VerifyTeacherRequestCommandHandlerTests
 {
     private static readonly DateTime Now = new(2026, 11, 16, 10, 0, 0, DateTimeKind.Utc);
 
-    private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
+    private readonly ITransientAuthStateStore _store = Substitute.For<ITransientAuthStateStore>();
     private readonly IOtpService _otp = Substitute.For<IOtpService>();
     private readonly ITeacherAccessRequestRepository _requests = Substitute.For<ITeacherAccessRequestRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
@@ -105,11 +104,12 @@ public class VerifyTeacherRequestCommandHandlerTests
     }
 
     private VerifyTeacherRequestCommandHandler CreateHandler()
-        => new(_cache, _otp, _requests, _unitOfWork, new FixedTimeProvider(Now));
+        => new(_store, _otp, _requests, _unitOfWork, new FixedTimeProvider(Now));
 
-    private void CacheData() => _cache.Set(
-        TeacherRequestCacheKey.For("ali@x.com"),
-        new CachedTeacherRequestData { FullName = "Ali", Email = "ali@x.com", Subject = "Math", TimeZoneId = "Africa/Cairo" });
+    private void SetPendingData() => _store.GetPayloadAsync<PendingTeacherRequestData>(
+        OtpPurpose.TeacherRequest.ToString(), "ali@x.com", Arg.Any<CancellationToken>())
+        .Returns(Task.FromResult<PendingTeacherRequestData?>(new PendingTeacherRequestData
+            { FullName = "Ali", Email = "ali@x.com", Subject = "Math", TimeZoneId = "Africa/Cairo" }));
 
     [Fact]
     public async Task Handle_WithoutPendingData_Fails_AndDoesNotConsumeTheCode()
@@ -123,7 +123,7 @@ public class VerifyTeacherRequestCommandHandlerTests
     [Fact]
     public async Task Handle_WhenCodeIsWrong_ReturnsOtpError_AndSavesNothing()
     {
-        CacheData();
+        SetPendingData();
         var error = new Error("Otp.Invalid", "invalid");
         _otp.VerifyAsync(OtpPurpose.TeacherRequest, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(Result<bool>.Failure(error));
@@ -135,9 +135,9 @@ public class VerifyTeacherRequestCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_Success_StoresOnlyTheHash_ReturnsToken_AndClearsCache()
+    public async Task Handle_Success_StoresOnlyTheHash_ReturnsToken_AndClearsDraft()
     {
-        CacheData();
+        SetPendingData();
         TeacherAccessRequest? saved = null;
         _requests.When(r => r.Add(Arg.Any<TeacherAccessRequest>())).Do(call => saved = call.Arg<TeacherAccessRequest>());
 
@@ -150,13 +150,13 @@ public class VerifyTeacherRequestCommandHandlerTests
         Assert.Equal(TeacherAccessRequestStatus.Pending, saved.Status);
         Assert.Equal(Now.Add(TeacherRequestPolicy.RequestLifetime), result.Value.ExpiresAtUtc);
         Assert.Equal(result.Value.ExpiresAtUtc, saved.ExpiresAtUtc);
-        Assert.False(_cache.TryGetValue(TeacherRequestCacheKey.For("ali@x.com"), out _));
+        await _store.Received(1).RemovePayloadAsync(OtpPurpose.TeacherRequest.ToString(), "ali@x.com", Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_Success_ExpiresPreviousPendingRequestOfTheSameEmail()
     {
-        CacheData();
+        SetPendingData();
         var old = TeacherAccessRequest.Create("Ali", "ali@x.com", "Math", null, "UTC", "hash-old", Now.AddHours(10));
         _requests.GetPendingByEmailAsync("ali@x.com", Arg.Any<CancellationToken>()).Returns(new List<TeacherAccessRequest> { old });
 

@@ -46,6 +46,28 @@ namespace TeacherERP.Infrastructure.Services
             return Result<Guid>.Success(user.Id);
         }
 
+        public async Task<Result<string>> HashPasswordAsync(ApplicationUser user, string password, CancellationToken cancellationToken)
+        {
+            foreach (var validator in _userManager.PasswordValidators)
+            {
+                var result = await validator.ValidateAsync(_userManager, user, password);
+                if (!result.Succeeded)
+                    return Result<string>.Failure(new Error("User.CreationFail", result.Errors.First().Description));
+            }
+            return Result<string>.Success(_userManager.PasswordHasher.HashPassword(user, password));
+        }
+
+        public async Task<Result<Guid>> CreateUserWithPasswordHashAsync(ApplicationUser user, string passwordHash, string role, CancellationToken cancellationToken)
+        {
+            if (IsAdministratorRole(role)) return Result<Guid>.Failure(AdministratorRoleNotAllowed);
+            user.PasswordHash = passwordHash;
+            var result = await _userManager.CreateAsync(user);
+            if (!result.Succeeded)
+                return Result<Guid>.Failure(new Error("User.CreationFail", result.Errors.First().Description));
+            await AssignRoleAsync(user, role);
+            return Result<Guid>.Success(user.Id);
+        }
+
         public async Task<Result<Guid>> CreateExternalUserAsync(ApplicationUser user, string role, CancellationToken cancellationToken)
         {
             if (IsAdministratorRole(role))

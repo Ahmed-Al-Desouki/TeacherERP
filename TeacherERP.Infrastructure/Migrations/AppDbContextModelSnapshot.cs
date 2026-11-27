@@ -1468,6 +1468,28 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.ToTable("TeacherAccessRequests");
                 });
 
+            modelBuilder.Entity("TeacherERP.Domain.Entities.TransientAuthState", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uniqueidentifier");
+                    b.Property<DateTime>("CodeExpiresAtUtc").HasColumnType("datetime2");
+                    b.Property<string>("Email").IsRequired().HasMaxLength(256).HasColumnType("nvarchar(256)");
+                    b.Property<int>("FailedAttempts").HasColumnType("int");
+                    b.Property<DateTime>("GrantExpiresAtUtc").HasColumnType("datetime2");
+                    b.Property<string>("GrantHash").HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<bool>("IsLocked").HasColumnType("bit");
+                    b.Property<int>("IssueCount").HasColumnType("int");
+                    b.Property<DateTime>("IssueWindowEndsAtUtc").HasColumnType("datetime2");
+                    b.Property<string>("OtpHash").HasMaxLength(64).HasColumnType("nvarchar(64)");
+                    b.Property<string>("PayloadJson").HasMaxLength(4000).HasColumnType("nvarchar(4000)");
+                    b.Property<DateTime>("PayloadExpiresAtUtc").HasColumnType("datetime2");
+                    b.Property<string>("Purpose").IsRequired().HasMaxLength(32).HasColumnType("nvarchar(32)");
+                    b.Property<DateTime>("ResendAvailableAtUtc").HasColumnType("datetime2");
+                    b.HasKey("Id");
+                    b.HasIndex("CodeExpiresAtUtc", "IssueWindowEndsAtUtc", "GrantExpiresAtUtc", "PayloadExpiresAtUtc");
+                    b.HasIndex("Purpose", "Email").IsUnique();
+                    b.ToTable("TransientAuthStates");
+                });
+
             modelBuilder.Entity("TeacherERP.Domain.Entities.TeacherPaymentSettings", b =>
                 {
                     b.Property<Guid>("Id")

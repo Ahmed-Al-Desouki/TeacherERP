@@ -13,7 +13,8 @@ namespace TeacherERP.Application.Features.Users.Commands.CreateStudent
 
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage("Email is required.")
-                .EmailAddress().WithMessage("A valid email is required.");
+                .EmailAddress().WithMessage("A valid email is required.")
+                .MaximumLength(256).WithMessage("Email must not exceed 256 characters.");
 
             // نفس سياسة Identity (6 أحرف على الأقل + رقم) حتى لا يُرفض الباسورد بعد التحقق من الـ OTP
             RuleFor(x => x.Password)

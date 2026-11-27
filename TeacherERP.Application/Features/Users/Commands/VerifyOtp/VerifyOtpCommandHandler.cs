@@ -1,6 +1,5 @@
 ﻿// موجود (تعديل) — TeacherERP.Application/Features/Users/Commands/VerifyOtp/VerifyOtpCommandHandler.cs
 using MediatR;
-using Microsoft.Extensions.Caching.Memory;
 using TeacherERP.Application.Features.Users.Commands.CreateStudent;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
@@ -10,21 +9,22 @@ namespace TeacherERP.Application.Features.Users.Commands.VerifyOtp
 {
     public class VerifyOtpCommandHandler : IRequestHandler<VerifyOtpCommand, Result<Guid>>
     {
-        private readonly IMemoryCache _cache;
+        private readonly ITransientAuthStateStore _authStateStore;
         private readonly IUserAccountService _userAccountService;
         private readonly IOtpService _otpService;
 
-        public VerifyOtpCommandHandler(IMemoryCache cache, IUserAccountService userAccountService, IOtpService otpService)
+        public VerifyOtpCommandHandler(ITransientAuthStateStore authStateStore, IUserAccountService userAccountService, IOtpService otpService)
         {
-            _cache = cache;
+            _authStateStore = authStateStore;
             _userAccountService = userAccountService;
             _otpService = otpService;
         }
 
         public async Task<Result<Guid>> Handle(VerifyOtpCommand request, CancellationToken cancellationToken)
         {
-            // 1. جلب البيانات المعلقة من الـ Cache (قبل التحقق من الكود، حتى لا يُستهلك الكود بلا داعٍ)
-            if (!_cache.TryGetValue(RegistrationCacheKey.For(request.Email), out CachedRegistrationData? cachedData) || cachedData == null)
+            // 1. جلب مسودة التسجيل قبل التحقق من الكود، حتى لا يُستهلك الكود بلا داعٍ
+            var pendingData = await _authStateStore.GetPayloadAsync<PendingStudentRegistrationData>(OtpPurpose.Registration.ToString(), request.Email, cancellationToken);
+            if (pendingData is null)
             {
                 return Result<Guid>.Failure(new Error("Otp.Expired", "OTP has expired or email is incorrect. Please register again."));
             }
@@ -37,21 +37,21 @@ namespace TeacherERP.Application.Features.Users.Commands.VerifyOtp
             }
 
             // 3. الرمز صحيح! الآن نقوم بإنشاء كيان الطالب
-            var student = ApplicationUser.CreateStudent(cachedData.FullName, cachedData.Email);
+            var student = ApplicationUser.CreateStudent(pendingData.FullName, pendingData.Email);
 
             // نجعل حسابه مفعلاً مسبقاً لأنه أثبت ملكية الإيميل للتو
             student.EmailConfirmed = true;
 
             // 4. حفظ المستخدم في قاعدة البيانات
-            var creationResult = await _userAccountService.CreateUserAsync(student, cachedData.Password, RoleNames.Student, cancellationToken);
+            var creationResult = await _userAccountService.CreateUserWithPasswordHashAsync(student, pendingData.PasswordHash, RoleNames.Student, cancellationToken);
 
             if (creationResult.IsFailure)
             {
                 return creationResult; // إرجاع الفشل إذا حدث خطأ أثناء الإنشاء (مثلاً باسورد ضعيف)
             }
 
-            // 5. مسح البيانات من الـ Cache
-            _cache.Remove(RegistrationCacheKey.For(request.Email));
+            // 5. حذف مسودة التسجيل بعد الإنشاء الناجح
+            await _authStateStore.RemovePayloadAsync(OtpPurpose.Registration.ToString(), request.Email, cancellationToken);
 
             // 6. إرجاع الـ ID الخاص بالمستخدم الجديد بنجاح
             return Result<Guid>.Success(student.Id);

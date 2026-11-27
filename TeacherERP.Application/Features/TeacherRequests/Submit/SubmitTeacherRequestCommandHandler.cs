@@ -1,7 +1,6 @@
 // جديد — TeacherERP.Application/Features/TeacherRequests/Submit/SubmitTeacherRequestCommandHandler.cs
 using Hangfire;
 using MediatR;
-using Microsoft.Extensions.Caching.Memory;
 using TeacherERP.Application.Features.Administration.CreateTeacher;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Shared;
@@ -12,18 +11,18 @@ namespace TeacherERP.Application.Features.TeacherRequests.Submit
     {
         private readonly IUserAccountService _userAccountService;
         private readonly IOtpService _otpService;
-        private readonly IMemoryCache _cache;
+        private readonly ITransientAuthStateStore _authStateStore;
         private readonly IBackgroundJobClient _backgroundJobClient;
 
         public SubmitTeacherRequestCommandHandler(
             IUserAccountService userAccountService,
             IOtpService otpService,
-            IMemoryCache cache,
+            ITransientAuthStateStore authStateStore,
             IBackgroundJobClient backgroundJobClient)
         {
             _userAccountService = userAccountService;
             _otpService = otpService;
-            _cache = cache;
+            _authStateStore = authStateStore;
             _backgroundJobClient = backgroundJobClient;
         }
 
@@ -50,9 +49,10 @@ namespace TeacherERP.Application.Features.TeacherRequests.Submit
                 return Result<TeacherRequestOtpDto>.Success(response);
             }
 
-            _cache.Set(
-                TeacherRequestCacheKey.For(email),
-                new CachedTeacherRequestData
+            await _authStateStore.SavePayloadAsync(
+                OtpPurpose.TeacherRequest.ToString(),
+                email,
+                new PendingTeacherRequestData
                 {
                     FullName = request.FullName.Trim(),
                     Email = email,
@@ -62,7 +62,8 @@ namespace TeacherERP.Application.Features.TeacherRequests.Submit
                         ? CreateTeacherCommandHandler.DefaultTimeZoneId
                         : request.TimeZoneId.Trim()
                 },
-                TeacherRequestPolicy.PendingDataLifetime);
+                TeacherRequestPolicy.PendingDataLifetime,
+                cancellationToken);
 
             var code = otp.Code;
             _backgroundJobClient.Enqueue<IEmailService>(emailService => emailService.SendOtpEmailAsync(email, code));

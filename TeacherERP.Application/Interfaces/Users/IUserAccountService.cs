@@ -13,6 +13,8 @@ namespace TeacherERP.Application.Interfaces
         Task<Result<ApplicationUser?>> FindByEmailAsync(string email, CancellationToken cancellationToken);
 
         Task<Result<Guid>> CreateUserAsync(ApplicationUser user, string password, string role, CancellationToken cancellationToken);
+        Task<Result<string>> HashPasswordAsync(ApplicationUser user, string password, CancellationToken cancellationToken);
+        Task<Result<Guid>> CreateUserWithPasswordHashAsync(ApplicationUser user, string passwordHash, string role, CancellationToken cancellationToken);
 
         // إنشاء بدون باسورد: الدخول يتم عبر مزود خارجي (Google)
         Task<Result<Guid>> CreateExternalUserAsync(ApplicationUser user, string role, CancellationToken cancellationToken);

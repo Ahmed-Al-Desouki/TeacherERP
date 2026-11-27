@@ -1,176 +1,135 @@
-﻿// موجود (تعديل) — TeacherERP.Infrastructure/Services/OtpService.cs
+using System.Data;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TeacherERP.Application.Interfaces;
+using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
+using TeacherERP.Infrastructure.Data;
+using TeacherERP.Infrastructure.Settings;
 
-namespace TeacherERP.Infrastructure.Services
+namespace TeacherERP.Infrastructure.Services;
+
+public sealed class OtpService : IOtpService
 {
-    public class OtpService : IOtpService
+    private const int MaxFailedAttempts = 5;
+    private const int MaxCodesPerWindow = 3;
+    private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan ResendCooldown = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan IssueWindow = TimeSpan.FromHours(1);
+    private readonly AppDbContext _context;
+    private readonly ILogger<OtpService> _logger;
+    private readonly TimeProvider _timeProvider;
+    private readonly byte[] _pepper;
+
+    public OtpService(AppDbContext context, ILogger<OtpService> logger, TimeProvider timeProvider, IOptions<JwtSettings> jwtSettings)
     {
-        private const int MaxFailedAttempts = 5;
-
-        // حد إصدار الأكواد لكل (غرض + إيميل) في الساعة، بغض النظر عن الـ IP
-        private const int MaxCodesPerWindow = 3;
-
-        private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(10);
-        private static readonly TimeSpan ResendCooldown = TimeSpan.FromSeconds(60);
-        private static readonly TimeSpan IssueWindow = TimeSpan.FromHours(1);
-        private static readonly object IssueCounterLock = new();
-
-        private readonly IMemoryCache _cache;
-        private readonly ILogger<OtpService> _logger;
-        private readonly TimeProvider _timeProvider;
-
-        public OtpService(IMemoryCache cache, ILogger<OtpService> logger, TimeProvider timeProvider)
-        {
-            _cache = cache;
-            _logger = logger;
-            _timeProvider = timeProvider;
-        }
-
-        public Task<Result<OtpIssueResult>> GenerateAsync(OtpPurpose purpose, string identifier, CancellationToken cancellationToken)
-        {
-            var key = BuildKey(purpose, identifier);
-            var now = _timeProvider.GetUtcNow().UtcDateTime;
-
-            if (_cache.TryGetValue(key, out OtpEntry? existing) && existing is not null)
-            {
-                lock (existing)
-                {
-                    // بعد استنفاد المحاولات لا نسمح بإصدار كود جديد حتى انتهاء مدة القفل
-                    if (existing.IsLocked)
-                    {
-                        return Task.FromResult(Result<OtpIssueResult>.Failure(
-                            new Error("Otp.Locked", "Too many failed attempts. Please try again later.")));
-                    }
-
-                    if (existing.ResendAvailableAtUtc > now)
-                    {
-                        var wait = (int)Math.Ceiling((existing.ResendAvailableAtUtc - now).TotalSeconds);
-                        return Task.FromResult(Result<OtpIssueResult>.Failure(
-                            new Error("Otp.ResendTooSoon", $"Please wait {wait} seconds before requesting a new code.")));
-                    }
-                }
-            }
-
-            // حد الساعة: يمنع إغراق صندوق ضحية بأكواد حتى لو المهاجم بيغيّر الـ IP (ينطبق على أي إيميل فلا يكشف وجوده)
-            if (!TryCountIssue(purpose, identifier))
-            {
-                _logger.LogWarning("OTP hourly issue limit reached. Purpose {Purpose}", purpose);
-
-                return Task.FromResult(Result<OtpIssueResult>.Failure(
-                    new Error("Otp.HourlyLimit", "Too many verification codes were requested for this email. Please try again later.")));
-            }
-
-            // كود عشوائي آمن تشفيرياً من 6 أرقام (يسمح بالأصفار في البداية)
-            var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
-
-            _cache.Set(key, new OtpEntry(code, now + ResendCooldown), CodeLifetime);
-
-            return Task.FromResult(Result<OtpIssueResult>.Success(
-                new OtpIssueResult(code, (int)CodeLifetime.TotalSeconds, (int)ResendCooldown.TotalSeconds)));
-        }
-
-        public Task<Result<bool>> VerifyAsync(OtpPurpose purpose, string identifier, string code, CancellationToken cancellationToken)
-        {
-            var key = BuildKey(purpose, identifier);
-
-            if (!_cache.TryGetValue(key, out OtpEntry? entry) || entry is null)
-            {
-                return Task.FromResult(Result<bool>.Failure(
-                    new Error("Otp.Expired", "The code has expired or was not requested. Please request a new one.")));
-            }
-
-            lock (entry)
-            {
-                if (entry.IsLocked)
-                {
-                    return Task.FromResult(Result<bool>.Failure(
-                        new Error("Otp.TooManyAttempts", "Too many failed attempts. Please try again later.")));
-                }
-
-                if (!IsMatch(entry.Code, code))
-                {
-                    entry.FailedAttempts++;
-
-                    if (entry.FailedAttempts >= MaxFailedAttempts)
-                    {
-                        // نبقي الكيان مقفولاً (ولا نحذفه) حتى لا يستطيع المهاجم طلب كود جديد فوراً
-                        entry.IsLocked = true;
-                        _cache.Set(key, entry, CodeLifetime);
-
-                        return Task.FromResult(Result<bool>.Failure(
-                            new Error("Otp.TooManyAttempts", "Too many failed attempts. Please try again later.")));
-                    }
-
-                    var remaining = MaxFailedAttempts - entry.FailedAttempts;
-                    return Task.FromResult(Result<bool>.Failure(
-                        new Error("Otp.Invalid", $"The verification code is invalid. {remaining} attempt(s) remaining.")));
-                }
-
-                // الكود صحيح: يُحذف فوراً لمنع إعادة استخدامه
-                _cache.Remove(key);
-                return Task.FromResult(Result<bool>.Success(true));
-            }
-        }
-
-        // يعدّ إصداراً جديداً داخل نافذة الساعة، ويرجّع false لو الحد اتعدّى
-        private bool TryCountIssue(OtpPurpose purpose, string identifier)
-        {
-            var windowKey = BuildIssueWindowKey(purpose, identifier);
-
-            IssueCounter counter;
-            lock (IssueCounterLock)
-            {
-                counter = _cache.GetOrCreate(windowKey, entry =>
-                {
-                    entry.AbsoluteExpirationRelativeToNow = IssueWindow;
-                    return new IssueCounter();
-                })!;
-            }
-
-            lock (counter)
-            {
-                if (counter.Count >= MaxCodesPerWindow)
-                {
-                    return false;
-                }
-
-                counter.Count++;
-                return true;
-            }
-        }
-
-        private static string BuildKey(OtpPurpose purpose, string identifier)
-            => $"otp:{purpose}:{identifier.Trim().ToLowerInvariant()}";
-
-        private static string BuildIssueWindowKey(OtpPurpose purpose, string identifier)
-            => $"otp-issued:{purpose}:{identifier.Trim().ToLowerInvariant()}";
-
-        // مقارنة بزمن ثابت لمنع هجمات قياس الزمن (Timing Attacks)
-        private static bool IsMatch(string expected, string actual)
-            => CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expected), Encoding.UTF8.GetBytes(actual));
-
-        private sealed class OtpEntry
-        {
-            public OtpEntry(string code, DateTime resendAvailableAtUtc)
-            {
-                Code = code;
-                ResendAvailableAtUtc = resendAvailableAtUtc;
-            }
-
-            public string Code { get; }
-            public DateTime ResendAvailableAtUtc { get; }
-            public int FailedAttempts { get; set; }
-            public bool IsLocked { get; set; }
-        }
-
-        private sealed class IssueCounter
-        {
-            public int Count { get; set; }
-        }
+        _context = context;
+        _logger = logger;
+        _timeProvider = timeProvider;
+        // اشتقاق مفتاح منفصل للـ OTP؛ تدوير مفتاح JWT يبطل التحديات القصيرة فقط.
+        _pepper = HMACSHA256.HashData(Encoding.UTF8.GetBytes(jwtSettings.Value.Secret), Encoding.UTF8.GetBytes("TeacherERP:Otp:v1"));
     }
+
+    public async Task<Result<OtpIssueResult>> GenerateAsync(OtpPurpose purpose, string identifier, CancellationToken cancellationToken)
+    {
+        var email = Normalize(identifier);
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        var state = await FindOrCreateAsync(purpose, email, cancellationToken);
+
+        if (state.CodeExpiresAtUtc > now)
+        {
+            if (state.IsLocked)
+                return await RollbackFailure<OtpIssueResult>(transaction, "Otp.Locked", "Too many failed attempts. Please try again later.");
+            if (state.ResendAvailableAtUtc > now)
+            {
+                var wait = (int)Math.Ceiling((state.ResendAvailableAtUtc - now).TotalSeconds);
+                return await RollbackFailure<OtpIssueResult>(transaction, "Otp.ResendTooSoon", $"Please wait {wait} seconds before requesting a new code.");
+            }
+        }
+
+        if (state.IssueWindowEndsAtUtc <= now)
+        {
+            state.IssueCount = 0;
+            state.IssueWindowEndsAtUtc = now.Add(IssueWindow);
+        }
+        if (state.IssueCount >= MaxCodesPerWindow)
+        {
+            _logger.LogWarning("OTP hourly issue limit reached. Purpose {Purpose}", purpose);
+            return await RollbackFailure<OtpIssueResult>(transaction, "Otp.HourlyLimit", "Too many verification codes were requested for this email. Please try again later.");
+        }
+
+        var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
+        state.OtpHash = HashCode(purpose, email, code);
+        state.CodeExpiresAtUtc = now.Add(CodeLifetime);
+        state.ResendAvailableAtUtc = now.Add(ResendCooldown);
+        state.FailedAttempts = 0;
+        state.IsLocked = false;
+        state.IssueCount++;
+        await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Result<OtpIssueResult>.Success(new OtpIssueResult(code, (int)CodeLifetime.TotalSeconds, (int)ResendCooldown.TotalSeconds));
+    }
+
+    public async Task<Result<bool>> VerifyAsync(OtpPurpose purpose, string identifier, string code, CancellationToken cancellationToken)
+    {
+        var email = Normalize(identifier);
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        await using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        var state = await _context.TransientAuthStates.SingleOrDefaultAsync(x => x.Purpose == purpose.ToString() && x.Email == email, cancellationToken);
+        if (state is null || state.OtpHash is null || state.CodeExpiresAtUtc <= now)
+            return await RollbackFailure<bool>(transaction, "Otp.Expired", "The code has expired or was not requested. Please request a new one.");
+        if (state.IsLocked)
+            return await RollbackFailure<bool>(transaction, "Otp.TooManyAttempts", "Too many failed attempts. Please try again later.");
+
+        var expected = Convert.FromHexString(state.OtpHash);
+        var actual = Convert.FromHexString(HashCode(purpose, email, code));
+        if (expected.Length != actual.Length || !CryptographicOperations.FixedTimeEquals(expected, actual))
+        {
+            state.FailedAttempts++;
+            if (state.FailedAttempts >= MaxFailedAttempts)
+            {
+                state.IsLocked = true;
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return Result<bool>.Failure(new Error("Otp.TooManyAttempts", "Too many failed attempts. Please try again later."));
+            }
+            var remaining = MaxFailedAttempts - state.FailedAttempts;
+            await _context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return Result<bool>.Failure(new Error("Otp.Invalid", $"The verification code is invalid. {remaining} attempt(s) remaining."));
+        }
+
+        state.OtpHash = null;
+        state.CodeExpiresAtUtc = default;
+        state.ResendAvailableAtUtc = default;
+        state.FailedAttempts = 0;
+        state.IsLocked = false;
+        await _context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Result<bool>.Success(true);
+    }
+
+    private async Task<TransientAuthState> FindOrCreateAsync(OtpPurpose purpose, string email, CancellationToken cancellationToken)
+    {
+        var state = await _context.TransientAuthStates.SingleOrDefaultAsync(x => x.Purpose == purpose.ToString() && x.Email == email, cancellationToken);
+        if (state is not null) return state;
+        state = new TransientAuthState { Purpose = purpose.ToString(), Email = email };
+        _context.TransientAuthStates.Add(state);
+        return state;
+    }
+
+    private async Task<Result<T>> RollbackFailure<T>(Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction transaction, string code, string message)
+    {
+        await transaction.RollbackAsync();
+        return Result<T>.Failure(new Error(code, message));
+    }
+
+    private string HashCode(OtpPurpose purpose, string email, string code)
+        => Convert.ToHexString(HMACSHA256.HashData(_pepper, Encoding.UTF8.GetBytes($"{purpose}:{email}:{code}")));
+
+    private static string Normalize(string identifier) => identifier.Trim().ToLowerInvariant();
 }
