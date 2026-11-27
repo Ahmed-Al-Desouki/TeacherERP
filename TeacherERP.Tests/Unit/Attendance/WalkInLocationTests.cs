@@ -1,4 +1,5 @@
 using NSubstitute;
+using Microsoft.Extensions.Logging;
 using TeacherERP.Application.Attendance;
 using TeacherERP.Application.Features.Enrollment.ApproveRequest;
 using TeacherERP.Application.Interfaces;
@@ -30,7 +31,7 @@ public class WalkInLocationRecorderTests
 
     private AttendanceRecorder CreateRecorder()
         => new(_attendance, _enrollment, _enrollmentService, _notifications, _users, _unitOfWork,
-            new FixedTimeProvider(Now), _financialLedger);
+            new FixedTimeProvider(Now), _financialLedger, Substitute.For<ILogger<AttendanceRecorder>>());
 
     public WalkInLocationRecorderTests()
     {

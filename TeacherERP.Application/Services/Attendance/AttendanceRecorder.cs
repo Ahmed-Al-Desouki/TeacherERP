@@ -4,6 +4,7 @@ using TeacherERP.Application.Features.Enrollment;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Domain.Shared;
+using Microsoft.Extensions.Logging;
 
 namespace TeacherERP.Application.Attendance
 {
@@ -17,6 +18,7 @@ namespace TeacherERP.Application.Attendance
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
         private readonly IFinancialLedgerService _financialLedger;
+        private readonly ILogger<AttendanceRecorder> _logger;
 
         public AttendanceRecorder(
             IAttendanceRepository attendanceRepository,
@@ -26,7 +28,8 @@ namespace TeacherERP.Application.Attendance
             IUserRepository userRepository,
             IUnitOfWork unitOfWork,
             TimeProvider timeProvider,
-            IFinancialLedgerService financialLedger)
+            IFinancialLedgerService financialLedger,
+            ILogger<AttendanceRecorder> logger)
         {
             _attendanceRepository = attendanceRepository;
             _enrollmentRepository = enrollmentRepository;
@@ -36,6 +39,7 @@ namespace TeacherERP.Application.Attendance
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
             _financialLedger = financialLedger;
+            _logger = logger;
         }
 
         public Task RecordFinancialAttendanceAsync(Guid tenantId, Guid studentId, Guid sessionId,
@@ -50,19 +54,19 @@ namespace TeacherERP.Application.Attendance
                 request.TenantId, now, AttendancePolicy.EarlyCheckInMinutes, request.RestrictToGroupId, cancellationToken);
             if (running.Count == 0)
             {
-                return Result<AttendanceResultDto>.Failure(AttendanceErrors.NoSessionNow);
+                return Reject(request, AttendanceErrors.NoSessionNow);
             }
 
             // حالة الطالب عند هذا المدرس: المحظور مرفوض، والموقوف (غياب) لا يحضر حتى يفك المدرس إيقافه
             var member = await _enrollmentRepository.GetMemberAsync(request.TenantId, request.StudentId, cancellationToken);
             if (member is { Status: MembershipStatus.Blacklisted })
             {
-                return Result<AttendanceResultDto>.Failure(EnrollmentErrors.NotAllowed);
+                return Reject(request, EnrollmentErrors.NotAllowed);
             }
 
             if (member is { Status: MembershipStatus.Suspended })
             {
-                return Result<AttendanceResultDto>.Failure(AttendanceErrors.Suspended);
+                return Reject(request, AttendanceErrors.Suspended);
             }
 
             var active = await _enrollmentRepository.GetActiveEnrollmentAsync(request.TenantId, request.StudentId, cancellationToken);
@@ -78,7 +82,7 @@ namespace TeacherERP.Application.Attendance
                     session = running.FirstOrDefault(s => s.GroupId == preferred);
                     if (session is null)
                     {
-                        return Result<AttendanceResultDto>.Failure(AttendanceErrors.NoSessionNow);
+                        return Reject(request, AttendanceErrors.NoSessionNow, request.PreferredGroupId);
                     }
                 }
                 else if (running.Count == 1)
@@ -87,7 +91,7 @@ namespace TeacherERP.Application.Attendance
                 }
                 else
                 {
-                    return Result<AttendanceResultDto>.Failure(AttendanceErrors.ChooseGroup);
+                    return Reject(request, AttendanceErrors.ChooseGroup);
                 }
             }
 
@@ -96,23 +100,23 @@ namespace TeacherERP.Application.Attendance
             {
                 if (session.Latitude is not { } centerLat || session.Longitude is not { } centerLon)
                 {
-                    return Result<AttendanceResultDto>.Failure(AttendanceErrors.CenterLocationNotSet);
+                    return Reject(request, AttendanceErrors.CenterLocationNotSet, session.GroupId, session.SessionId);
                 }
 
                 if (request.Latitude is not { } lat || request.Longitude is not { } lon)
                 {
-                    return Result<AttendanceResultDto>.Failure(AttendanceErrors.LocationRequired);
+                    return Reject(request, AttendanceErrors.LocationRequired, session.GroupId, session.SessionId);
                 }
 
                 if (request.AccuracyMeters is { } accuracy
                     && accuracy > AttendancePolicy.MaximumLocationAccuracyMeters)
                 {
-                    return Result<AttendanceResultDto>.Failure(AttendanceErrors.LocationAccuracyInsufficient);
+                    return Reject(request, AttendanceErrors.LocationAccuracyInsufficient, session.GroupId, session.SessionId);
                 }
 
                 if (GeoDistance.Meters(lat, lon, centerLat, centerLon) > session.GeofenceRadiusMeters)
                 {
-                    return Result<AttendanceResultDto>.Failure(AttendanceErrors.OutOfRange);
+                    return Reject(request, AttendanceErrors.OutOfRange, session.GroupId, session.SessionId);
                 }
             }
 
@@ -120,6 +124,7 @@ namespace TeacherERP.Application.Attendance
             var existing = await _attendanceRepository.GetRecordAsync(session.SessionId, request.StudentId, cancellationToken);
             if (existing is not null)
             {
+                LogCompleted(request, session.GroupId, session.SessionId, AttendanceOutcome.AlreadyRecorded);
                 return Result<AttendanceResultDto>.Success(
                     new AttendanceResultDto(AttendanceOutcome.AlreadyRecorded, session.SessionId, session.GroupName, existing.Status, request.StudentId));
             }
@@ -148,6 +153,7 @@ namespace TeacherERP.Application.Attendance
                         await _unitOfWork.SaveChangesAsync(cancellationToken);
                     }
 
+                    LogCompleted(request, session.GroupId, session.SessionId, AttendanceOutcome.PendingApproval);
                     return Result<AttendanceResultDto>.Success(
                         new AttendanceResultDto(AttendanceOutcome.PendingApproval, session.SessionId, session.GroupName, null, request.StudentId));
                 }
@@ -158,7 +164,7 @@ namespace TeacherERP.Application.Attendance
                 var approved = await _enrollmentService.ApproveAsync(joinRequest, request.RecordedByUserId, cancellationToken);
                 if (approved.IsFailure)
                 {
-                    return Result<AttendanceResultDto>.Failure(approved.Error);
+                    return Reject(request, approved.Error, session.GroupId, session.SessionId);
                 }
 
                 if (request.Method == ScanMethod.SelfScan)
@@ -204,10 +210,32 @@ namespace TeacherERP.Application.Attendance
                     $"{studentName} attended {session.GroupName} as a compensation session.", record.Id, cancellationToken);
             }
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            var concurrentRecord = await _attendanceRepository.SaveChangesForAttendanceAsync(record, cancellationToken);
+            if (concurrentRecord is not null)
+            {
+                LogCompleted(request, session.GroupId, session.SessionId, AttendanceOutcome.AlreadyRecorded);
+                return Result<AttendanceResultDto>.Success(
+                    new AttendanceResultDto(AttendanceOutcome.AlreadyRecorded, session.SessionId,
+                        session.GroupName, concurrentRecord.Status, request.StudentId));
+            }
 
             var outcome = status == AttendanceStatus.Present ? AttendanceOutcome.Recorded : AttendanceOutcome.PendingCompensation;
+            LogCompleted(request, session.GroupId, session.SessionId, outcome);
             return Result<AttendanceResultDto>.Success(new AttendanceResultDto(outcome, session.SessionId, session.GroupName, status, request.StudentId));
         }
+
+        private Result<AttendanceResultDto> Reject(
+            AttendanceRequest request, Error error, Guid? groupId = null, Guid? sessionId = null)
+        {
+            AttendanceScanLogging.Rejected(
+                _logger, error, request.TenantId, request.RecordedByUserId ?? request.StudentId,
+                request.StudentId, groupId ?? request.PreferredGroupId ?? request.RestrictToGroupId,
+                sessionId, request.Method);
+            return Result<AttendanceResultDto>.Failure(error);
+        }
+
+        private void LogCompleted(
+            AttendanceRequest request, Guid groupId, Guid sessionId, AttendanceOutcome outcome) =>
+            AttendanceScanLogging.Completed(_logger, request, groupId, sessionId, outcome);
     }
 }

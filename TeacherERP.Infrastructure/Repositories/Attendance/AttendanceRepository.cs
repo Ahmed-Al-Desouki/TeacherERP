@@ -57,6 +57,28 @@ namespace TeacherERP.Infrastructure.Repositories
                 .FirstOrDefaultAsync(a => a.SessionId == sessionId && a.StudentId == studentId, cancellationToken);
         }
 
+        public async Task<AttendanceRecord?> SaveChangesForAttendanceAsync(
+            AttendanceRecord attemptedRecord, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+                return null;
+            }
+            catch (DbUpdateException)
+            {
+                // EF rolls back the failed SaveChanges transaction. Only treat the failure as
+                // a duplicate scan when the unique attendance row now exists in the database.
+                _context.Entry(attemptedRecord).State = EntityState.Detached;
+                var winner = await GetRecordAsync(
+                    attemptedRecord.SessionId, attemptedRecord.StudentId, cancellationToken);
+                if (winner is null)
+                    throw;
+
+                return winner;
+            }
+        }
+
         public async Task<Guid?> FindCompensableSessionAsync(
             Guid tenantId, Guid groupId, Guid studentId, DateTime nowUtc, int windowDays, CancellationToken cancellationToken)
         {

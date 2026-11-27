@@ -95,12 +95,12 @@ public class AdministrationIntegrationTests : IClassFixture<CustomWebApplication
     }
 
     [Fact]
-    public async Task CreateCenter_WhenOwnerIsNotATeacher_ReturnsBadRequest()
+    public async Task CreateCenter_WhenOwnerIsNotATeacher_ReturnsNotFound()
     {
         var response = await AdministratorClient()
             .PostAsJsonAsync("api/Administration/centers", new { name = "Ghost Center", ownerUserId = Guid.NewGuid(), latitude = 30.1, longitude = 31.5 });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Contains("Administration.TeacherNotFound", await response.Content.ReadAsStringAsync());
     }
 
@@ -127,7 +127,7 @@ public class AdministrationIntegrationTests : IClassFixture<CustomWebApplication
         var second = await client.PostAsJsonAsync(url, new { teacherUserId = otherTeacher.OwnerId });
 
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
         Assert.Contains("Administration.AlreadyLinked", await second.Content.ReadAsStringAsync());
 
         var link = await _factory.QueryAsync(db => db.CenterTeachers
@@ -140,14 +140,14 @@ public class AdministrationIntegrationTests : IClassFixture<CustomWebApplication
     }
 
     [Fact]
-    public async Task LinkTeacher_WhenCenterMissing_ReturnsBadRequest()
+    public async Task LinkTeacher_WhenCenterMissing_ReturnsNotFound()
     {
         var teacher = await SeedTeacherAsync();
 
         var response = await AdministratorClient()
             .PostAsJsonAsync($"api/Administration/centers/{Guid.NewGuid()}/teachers", new { teacherUserId = teacher.OwnerId });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Contains("Administration.CenterNotFound", await response.Content.ReadAsStringAsync());
     }
 

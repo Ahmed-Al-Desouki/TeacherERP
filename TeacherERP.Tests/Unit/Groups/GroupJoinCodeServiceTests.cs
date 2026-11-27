@@ -42,7 +42,6 @@ public sealed class GroupJoinCodeServiceTests
     [Fact]
     public void JoinUrl_EncodesCodeAndStaticNormalizationIgnoresFormatting()
     {
-        const string staticCode = "A1B2C3D4E5F607182930";
         var dynamicCode = _service.CreateDynamicCode(GroupId, Secret, WindowStart);
 
         Assert.Equal("A1B2C3D4E5F607182930", _service.NormalizeStaticCode(" a1b2-c3d4 e5f6-0718 2930 "));

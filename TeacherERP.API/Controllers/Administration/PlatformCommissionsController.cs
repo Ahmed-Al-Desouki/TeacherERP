@@ -30,7 +30,7 @@ public sealed class PlatformCommissionsController : BaseApiController
         CancellationToken cancellationToken)
     {
         var actor = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(actor, out var administratorId)) return Unauthorized();
+        if (!Guid.TryParse(actor, out var administratorId)) return ToErrorResponse("Auth.Unauthorized", "You must be logged in.");
         var result = await _commissions.RequestMonthlyCollectionAsync(administratorId,
             request.TenantId, request.Year, request.Month, cancellationToken);
         return ToResponse(result);
@@ -41,7 +41,7 @@ public sealed class PlatformCommissionsController : BaseApiController
         CancellationToken cancellationToken)
     {
         var actor = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(actor, out var administratorId)) return Unauthorized();
+        if (!Guid.TryParse(actor, out var administratorId)) return ToErrorResponse("Auth.Unauthorized", "You must be logged in.");
         var result = await _settings.UpdateAsync(administratorId, request.PerSessionAmount,
             request.MonthlySubscriptionAmount, cancellationToken);
         return ToResponse(result);
@@ -52,7 +52,7 @@ public sealed class PlatformCommissionsController : BaseApiController
         CancellationToken cancellationToken)
     {
         if (year is < 2000 or > 9999 || month is < 1 or > 12)
-            return BadRequest(new { errorCode = "Finance.InvalidCommissionPeriod", errorMessage = "A valid year and month are required." });
+            return ToErrorResponse("Finance.InvalidCommissionPeriod", "A valid year and month are required.");
         return Ok(await _commissions.GetSummariesAsync(year, month, cancellationToken));
     }
 
@@ -63,7 +63,7 @@ public sealed class PlatformCommissionsController : BaseApiController
     {
         if (year is < 2000 or > 9999 || month is < 1 or > 12 || page < 1
             || pageSize is < 1 or > PageRequest.MaxPageSize)
-            return BadRequest(new { errorCode = "Finance.InvalidCommissionPeriod", errorMessage = "A valid month and page are required." });
+            return ToErrorResponse("Finance.InvalidCommissionPeriod", "A valid month and page are required.");
 
         var result = await _commissions.GetPageAsync(year, month, unsettledOnly,
             new PageRequest(page, pageSize), cancellationToken);
@@ -75,7 +75,7 @@ public sealed class PlatformCommissionsController : BaseApiController
         CancellationToken cancellationToken)
     {
         var actor = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (!Guid.TryParse(actor, out var administratorId)) return Unauthorized();
+        if (!Guid.TryParse(actor, out var administratorId)) return ToErrorResponse("Auth.Unauthorized", "You must be logged in.");
         var result = await _commissions.SettleMonthAsync(administratorId, request.TenantId,
             request.Year, request.Month, request.SettlementReference ?? string.Empty, cancellationToken);
         return ToResponse(result);

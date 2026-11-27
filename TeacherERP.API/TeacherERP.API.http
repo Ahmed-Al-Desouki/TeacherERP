@@ -49,6 +49,10 @@ X-Time-Zone: {{timeZoneId}}
   "deviceInfo": "Local development client"
 }
 
+# Result errors share { errorCode, errorMessage } across controllers.
+# Status families: 401 authentication, 403 permission, 404 missing resource,
+# 409 conflicting state, 400 invalid request; external Paymob outages remain 503.
+
 ### F3: إعدادات الحضور (المدرس): الكود الثابت يظهر في الوضع الثابت فقط
 GET {{TeacherERP.API_HostAddress}}/api/Attendance/settings
 Authorization: Bearer {{token}}

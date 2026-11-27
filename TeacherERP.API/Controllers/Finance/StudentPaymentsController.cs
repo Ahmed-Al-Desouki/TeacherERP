@@ -33,7 +33,7 @@ public sealed class StudentPaymentsController : BaseApiController
         [FromForm] SubmitInstaPayReceiptForm form, CancellationToken cancellationToken)
     {
         if (form.Receipt is null)
-            return BadRequest(new { errorCode = FinanceErrors.PaymentReceiptRequired.Code, errorMessage = FinanceErrors.PaymentReceiptRequired.Message });
+            return ToErrorResponse(FinanceErrors.PaymentReceiptRequired.Code, FinanceErrors.PaymentReceiptRequired.Message);
 
         await using var stream = form.Receipt.OpenReadStream();
         var result = await _mediator.Send(new SubmitInstaPayReceiptCommand(

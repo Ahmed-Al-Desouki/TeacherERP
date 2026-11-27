@@ -36,9 +36,9 @@ public sealed class FinanceAuthorizationIntegrationTests : IClassFixture<CustomW
         var assistant = await _factory.CreateClientFor(assistantId, teacher.TenantId, "Assistant").GetAsync(path);
         var delegatedAssistant = await _factory.CreateClientFor(delegatedAssistantId, teacher.TenantId, "Assistant").GetAsync(path);
 
-        Assert.Equal(HttpStatusCode.BadRequest, owner.StatusCode); // نجح التفويض وفشل فقط لأن الطالب والحصة غير موجودين
+        Assert.Equal(HttpStatusCode.NotFound, owner.StatusCode); // نجح التفويض وفشل فقط لأن الطالب والحصة غير موجودين
         Assert.Equal(HttpStatusCode.Forbidden, assistant.StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, delegatedAssistant.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, delegatedAssistant.StatusCode);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public sealed class FinanceAuthorizationIntegrationTests : IClassFixture<CustomW
 
         Assert.Equal(HttpStatusCode.OK, (await owner.PutAsJsonAsync(delegationPath,
             new { granted = true })).StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await assistantClient.GetAsync(financeOptionsPath)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await assistantClient.GetAsync(financeOptionsPath)).StatusCode);
 
         Assert.Equal(HttpStatusCode.OK, (await owner.PutAsJsonAsync(delegationPath,
             new { granted = true })).StatusCode);
@@ -167,7 +167,7 @@ public sealed class FinanceAuthorizationIntegrationTests : IClassFixture<CustomW
         Assert.NotNull(persisted.Audit.Reason);
         Assert.Contains(persisted.Transaction.Id.ToString(), persisted.Audit.Reason!);
 
-        Assert.Equal(HttpStatusCode.BadRequest, (await delegatedAssistantClient.PostAsJsonAsync("api/Finance/cash-payments", new
+        Assert.Equal(HttpStatusCode.Conflict, (await delegatedAssistantClient.PostAsJsonAsync("api/Finance/cash-payments", new
         {
             studentId,
             sessionId,
@@ -210,6 +210,6 @@ public sealed class FinanceAuthorizationIntegrationTests : IClassFixture<CustomW
         var response = await _factory.CreateClientFor(firstTeacher.OwnerId, firstTeacher.TenantId)
             .GetAsync($"api/Finance/students/{studentId}/sessions/{sessionId}/payment-options");
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }

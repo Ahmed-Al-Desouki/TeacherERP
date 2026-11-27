@@ -65,15 +65,6 @@ namespace TeacherERP.API.Controllers
         public async Task<IActionResult> GetStudentDetails(Guid studentId, CancellationToken cancellationToken)
         {
             var result = await _mediator.Send(new GetStudentDetailsQuery(studentId), cancellationToken);
-            if (!result.IsSuccess && result.Error.Code == StudentErrors.NotFound.Code)
-            {
-                return NotFound(new
-                {
-                    errorCode = result.Error.Code,
-                    errorMessage = result.Error.Message
-                });
-            }
-
             return ToResponse(result);
         }
 

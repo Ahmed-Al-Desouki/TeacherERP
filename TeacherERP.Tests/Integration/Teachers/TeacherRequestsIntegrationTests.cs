@@ -122,7 +122,7 @@ public class TeacherRequestsIntegrationTests : IClassFixture<CustomWebApplicatio
         var unknown = await client.PostAsJsonAsync("api/TeacherRequests/status", new { token = "nope" });
         var known = await client.PostAsJsonAsync("api/TeacherRequests/status", new { token });
 
-        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
         Assert.Contains("TeacherRequest.NotFound", await unknown.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.OK, known.StatusCode);
         Assert.Contains("Pending", await known.Content.ReadAsStringAsync());
@@ -197,7 +197,7 @@ public class TeacherRequestsIntegrationTests : IClassFixture<CustomWebApplicatio
         var response = await ClientFor(teacher.OwnerId, "SuperAdmin")
             .PostAsJsonAsync("api/TeacherRequests/preview", new { token });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Contains("TeacherRequest.Expired", await response.Content.ReadAsStringAsync());
     }
 
@@ -212,7 +212,7 @@ public class TeacherRequestsIntegrationTests : IClassFixture<CustomWebApplicatio
         var second = await client.PostAsJsonAsync("api/TeacherRequests/approve", new { token });
 
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
         Assert.Contains("TeacherRequest.NotPending", await second.Content.ReadAsStringAsync());
 
         await _email.Received(1).SendTeacherWelcomeAsync(email, "Applicant", Arg.Any<string>());
@@ -248,7 +248,7 @@ public class TeacherRequestsIntegrationTests : IClassFixture<CustomWebApplicatio
         var second = await client.PostAsJsonAsync("api/TeacherRequests/approve", new { token = secondToken });
 
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
         Assert.Contains("TeacherRequest.QuotaReached", await second.Content.ReadAsStringAsync());
         Assert.False(await _factory.QueryAsync(db => db.Users.AnyAsync(u => u.Email == secondEmail)));
 

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TeacherERP.Application.Common;
 using TeacherERP.Application.Features.Centers;
+using TeacherERP.Application.Features.DataRetention;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Infrastructure.Data;
@@ -85,22 +86,35 @@ namespace TeacherERP.Infrastructure.Repositories
 
         public void Add(CenterInvitation invitation) => _context.CenterInvitations.Add(invitation);
 
-        public async Task<int> PurgeClosedDataBeforeAsync(DateTime cutoffUtc, CancellationToken cancellationToken)
+        public async Task<int> PurgeClosedDataBeforeAsync(DateTime cutoffUtc, int batchSize, CancellationToken cancellationToken)
         {
             // الطلبات المعلقة تبقى حتى يقرر صاحب السنتر أو يلغيها المدرس.
-            var requests = await _context.CenterJoinRequests
+            var take = Math.Clamp(batchSize, 1, DataRetentionPolicy.DatabaseBatchSize);
+            var requestIds = await _context.CenterJoinRequests
+                .IgnoreQueryFilters()
                 .Where(r => r.Status != CenterJoinRequestStatus.Pending
                     && (r.UpdatedAt ?? r.CreatedAt) <= cutoffUtc)
+                .OrderBy(r => r.Id).Select(r => r.Id).Take(take)
                 .ToListAsync(cancellationToken);
-            _context.CenterJoinRequests.RemoveRange(requests);
+            var deletedRequests = requestIds.Count == 0 ? 0 : await _context.CenterJoinRequests.IgnoreQueryFilters()
+                .Where(r => requestIds.Contains(r.Id)
+                    && r.Status != CenterJoinRequestStatus.Pending
+                    && (r.UpdatedAt ?? r.CreatedAt) <= cutoffUtc)
+                .ExecuteDeleteAsync(cancellationToken);
 
-            var invitations = await _context.CenterInvitations
+            var invitationIds = await _context.CenterInvitations
+                .IgnoreQueryFilters()
                 .Where(i => (i.Status == CenterInvitationStatus.Pending && i.ExpiresAtUtc <= cutoffUtc)
                     || (i.Status != CenterInvitationStatus.Pending && (i.UpdatedAt ?? i.ExpiresAtUtc) <= cutoffUtc))
+                .OrderBy(i => i.Id).Select(i => i.Id).Take(take)
                 .ToListAsync(cancellationToken);
-            _context.CenterInvitations.RemoveRange(invitations);
+            var deletedInvitations = invitationIds.Count == 0 ? 0 : await _context.CenterInvitations.IgnoreQueryFilters()
+                .Where(i => invitationIds.Contains(i.Id)
+                    && ((i.Status == CenterInvitationStatus.Pending && i.ExpiresAtUtc <= cutoffUtc)
+                        || (i.Status != CenterInvitationStatus.Pending && (i.UpdatedAt ?? i.ExpiresAtUtc) <= cutoffUtc)))
+                .ExecuteDeleteAsync(cancellationToken);
 
-            return requests.Count + invitations.Count;
+            return deletedRequests + deletedInvitations;
         }
     }
 }

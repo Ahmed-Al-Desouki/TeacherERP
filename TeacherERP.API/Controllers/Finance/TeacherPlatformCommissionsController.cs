@@ -27,7 +27,7 @@ public sealed class TeacherPlatformCommissionsController : BaseApiController
     {
         if (year is < 2000 or > 9999 || month is < 1 or > 12 || page < 1
             || pageSize is < 1 or > PageRequest.MaxPageSize)
-            return BadRequest(new { errorCode = "Finance.InvalidCommissionPeriod", errorMessage = "A valid month and page are required." });
+            return ToErrorResponse("Finance.InvalidCommissionPeriod", "A valid month and page are required.");
 
         var result = await _commissions.GetTeacherPageAsync(_tenant.TenantId, year, month,
             unsettledOnly, new PageRequest(page, pageSize), cancellationToken);
@@ -39,7 +39,7 @@ public sealed class TeacherPlatformCommissionsController : BaseApiController
         CancellationToken cancellationToken)
     {
         if (year is < 2000 or > 9999 || month is < 1 or > 12)
-            return BadRequest(new { errorCode = "Finance.InvalidCommissionPeriod", errorMessage = "A valid month is required." });
+            return ToErrorResponse("Finance.InvalidCommissionPeriod", "A valid month is required.");
 
         var summary = (await _commissions.GetSummariesAsync(year, month, cancellationToken, _tenant.TenantId))
             .SingleOrDefault();

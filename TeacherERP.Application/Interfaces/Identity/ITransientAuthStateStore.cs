@@ -10,5 +10,5 @@ public interface ITransientAuthStateStore
     Task SaveGrantAsync(string purpose, string email, string grantHash, DateTime expiresAtUtc, CancellationToken cancellationToken);
     Task<bool> ValidateGrantAsync(string purpose, string email, string grantHash, CancellationToken cancellationToken);
     Task RemoveGrantAsync(string purpose, string email, CancellationToken cancellationToken);
-    Task<int> DeleteExpiredAsync(DateTime nowUtc, CancellationToken cancellationToken);
+    Task<int> DeleteExpiredAsync(DateTime nowUtc, int batchSize, CancellationToken cancellationToken);
 }

@@ -14,6 +14,8 @@ namespace TeacherERP.Application.Features.Schedule.CancelSession
         private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
+        private readonly ICurrentUserService _currentUser;
+        private readonly IAuditRepository _auditRepository;
 
         public CancelSessionCommandHandler(
             ICurrentTenantAccessor currentTenant,
@@ -21,7 +23,9 @@ namespace TeacherERP.Application.Features.Schedule.CancelSession
             IAttendanceRepository attendanceRepository,
             INotificationService notificationService,
             IUnitOfWork unitOfWork,
-            TimeProvider timeProvider)
+            TimeProvider timeProvider,
+            ICurrentUserService currentUser,
+            IAuditRepository auditRepository)
         {
             _currentTenant = currentTenant;
             _sessionRepository = sessionRepository;
@@ -29,6 +33,8 @@ namespace TeacherERP.Application.Features.Schedule.CancelSession
             _notificationService = notificationService;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
+            _currentUser = currentUser;
+            _auditRepository = auditRepository;
         }
 
         public async Task<Result<SessionTimeDto>> Handle(CancelSessionCommand request, CancellationToken cancellationToken)
@@ -61,6 +67,9 @@ namespace TeacherERP.Application.Features.Schedule.CancelSession
                 }
 
                 session.Cancel(request.Reason);
+                _auditRepository.Add(AuditLog.Create(
+                    session.TenantId, _currentUser.UserId, AuditAction.SessionCancelled, null,
+                    $"SessionId={session.Id}; GroupId={session.GroupId}; Reason={request.Reason?.Trim()}"));
                 var message = string.IsNullOrWhiteSpace(request.Reason)
                     ? "Your group session was cancelled."
                     : $"Your group session was cancelled. Reason: {request.Reason.Trim()}";

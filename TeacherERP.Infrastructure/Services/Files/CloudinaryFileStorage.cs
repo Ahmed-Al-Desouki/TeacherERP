@@ -95,5 +95,39 @@ namespace TeacherERP.Infrastructure.Services
                 return Result<bool>.Failure(FileStorageErrors.DeleteFailed);
             }
         }
+
+        public async Task<FileStorageResourcePage> ListApplicationFilesAsync(
+            string? nextCursor, int pageSize, CancellationToken cancellationToken)
+        {
+            var client = _client.Value;
+            if (client is null)
+                throw new InvalidOperationException("Cloudinary file listing is unavailable because storage is not configured.");
+
+            // ListResourcesByPrefix only covers legacy public-ID folder paths. Listing a page
+            // and filtering both asset_folder and public_id also supports Cloudinary dynamic folders.
+            var parameters = new ListResourcesParams
+            {
+                Type = "upload",
+                ResourceType = ResourceType.Image,
+                MaxResults = Math.Clamp(pageSize, 1, 100),
+                NextCursor = nextCursor,
+                Fields = new[] { "asset_folder" }
+            };
+
+            var result = await client.ListResourcesAsync(parameters, cancellationToken);
+            if (result.Error is not null)
+            {
+                _logger.LogError("Cloudinary resource listing failed for application assets: {Message}", result.Error.Message);
+                throw new InvalidOperationException("Cloudinary resource listing failed.");
+            }
+
+            var resources = result.Resources
+                .Where(resource => !string.IsNullOrWhiteSpace(resource.PublicId)
+                    && (resource.AssetFolder?.StartsWith("teacher-erp/", StringComparison.Ordinal) == true
+                        || resource.PublicId.StartsWith("teacher-erp/", StringComparison.Ordinal)))
+                .Select(resource => new FileStorageResource(resource.PublicId))
+                .ToArray();
+            return new FileStorageResourcePage(resources, result.NextCursor);
+        }
     }
 }

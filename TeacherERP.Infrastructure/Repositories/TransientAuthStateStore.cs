@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using TeacherERP.Application.Features.DataRetention;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Infrastructure.Data;
@@ -61,13 +62,23 @@ public sealed class TransientAuthStateStore(AppDbContext context, TimeProvider t
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<int> DeleteExpiredAsync(DateTime nowUtc, CancellationToken cancellationToken)
-        => await context.TransientAuthStates
+    public async Task<int> DeleteExpiredAsync(DateTime nowUtc, int batchSize, CancellationToken cancellationToken)
+    {
+        var ids = await context.TransientAuthStates
             .Where(x => (x.CodeExpiresAtUtc == default || x.CodeExpiresAtUtc <= nowUtc)
                 && (x.IssueWindowEndsAtUtc == default || x.IssueWindowEndsAtUtc <= nowUtc)
                 && (x.GrantExpiresAtUtc == default || x.GrantExpiresAtUtc <= nowUtc)
                 && (x.PayloadExpiresAtUtc == default || x.PayloadExpiresAtUtc <= nowUtc))
+            .OrderBy(x => x.Id).Select(x => x.Id).Take(Math.Clamp(batchSize, 1, DataRetentionPolicy.DatabaseBatchSize))
+            .ToListAsync(cancellationToken);
+        if (ids.Count == 0) return 0;
+        return await context.TransientAuthStates.Where(x => ids.Contains(x.Id)
+            && (x.CodeExpiresAtUtc == default || x.CodeExpiresAtUtc <= nowUtc)
+            && (x.IssueWindowEndsAtUtc == default || x.IssueWindowEndsAtUtc <= nowUtc)
+            && (x.GrantExpiresAtUtc == default || x.GrantExpiresAtUtc <= nowUtc)
+            && (x.PayloadExpiresAtUtc == default || x.PayloadExpiresAtUtc <= nowUtc))
             .ExecuteDeleteAsync(cancellationToken);
+    }
 
     private Task<TransientAuthState?> FindAsync(string purpose, string email, CancellationToken cancellationToken)
         => context.TransientAuthStates.SingleOrDefaultAsync(x => x.Purpose == purpose && x.Email == Normalize(email), cancellationToken);

@@ -15,6 +15,8 @@ namespace TeacherERP.Application.Features.Schedule.BulkShiftSessions
         private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
+        private readonly ICurrentUserService _currentUser;
+        private readonly IAuditRepository _auditRepository;
 
         public BulkShiftSessionsCommandHandler(
             ICurrentTenantAccessor currentTenant,
@@ -22,7 +24,9 @@ namespace TeacherERP.Application.Features.Schedule.BulkShiftSessions
             IGroupRepository groupRepository,
             INotificationService notificationService,
             IUnitOfWork unitOfWork,
-            TimeProvider timeProvider)
+            TimeProvider timeProvider,
+            ICurrentUserService currentUser,
+            IAuditRepository auditRepository)
         {
             _currentTenant = currentTenant;
             _sessionRepository = sessionRepository;
@@ -30,6 +34,8 @@ namespace TeacherERP.Application.Features.Schedule.BulkShiftSessions
             _notificationService = notificationService;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
+            _currentUser = currentUser;
+            _auditRepository = auditRepository;
         }
 
         public async Task<Result<BulkResultDto>> Handle(BulkShiftSessionsCommand request, CancellationToken cancellationToken)
@@ -109,7 +115,12 @@ namespace TeacherERP.Application.Features.Schedule.BulkShiftSessions
 
             foreach (var session in movable)
             {
-                session.Reschedule(session.StartTime.AddMinutes(request.ShiftMinutes), session.EndTime.AddMinutes(request.ShiftMinutes));
+                var previousStart = session.StartTime;
+                var previousEnd = session.EndTime;
+                session.Reschedule(previousStart.AddMinutes(request.ShiftMinutes), previousEnd.AddMinutes(request.ShiftMinutes));
+                _auditRepository.Add(AuditLog.Create(
+                    session.TenantId, _currentUser.UserId, AuditAction.SessionBulkShifted, null,
+                    $"SessionId={session.Id}; GroupId={session.GroupId}; From={previousStart:O}/{previousEnd:O}; To={session.StartTime:O}/{session.EndTime:O}; ShiftMinutes={request.ShiftMinutes}"));
             }
 
             if (movable.Count > 0)

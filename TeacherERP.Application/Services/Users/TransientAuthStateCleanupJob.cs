@@ -10,7 +10,8 @@ public sealed class TransientAuthStateCleanupJob(
 {
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
-        var deleted = await store.DeleteExpiredAsync(timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
-        logger.LogInformation("Removed {Count} expired transient authentication records", deleted);
+        const int batchSize = 250;
+        var deleted = await store.DeleteExpiredAsync(timeProvider.GetUtcNow().UtcDateTime, batchSize, cancellationToken);
+        logger.LogInformation("Removed {Count} expired transient authentication records in a batch capped at {BatchSize}", deleted, batchSize);
     }
 }

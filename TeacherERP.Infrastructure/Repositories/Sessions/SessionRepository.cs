@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using TeacherERP.Application.Features.DataRetention;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Domain.Entities;
 using TeacherERP.Infrastructure.Data;
@@ -59,13 +60,22 @@ namespace TeacherERP.Infrastructure.Repositories
             return affectedRows == 1;
         }
 
-        public Task<int> DeleteEndedBeforeAsync(DateTime cutoffUtc, CancellationToken cancellationToken)
+        public async Task<int> DeleteEndedBeforeAsync(DateTime cutoffUtc, int batchSize, CancellationToken cancellationToken)
         {
-            // الجلسة "انتهت" قبل cutoff إذا أُلغيت أو انتهى أي من أجليها قبله
-            return _context.LoginSessions
+            // الجلسة "انتهت" قبل cutoff إذا أُلغيت أو انتهى أي من أجليها قبله.
+            var ids = await _context.LoginSessions.IgnoreQueryFilters()
                 .Where(s => s.RevokedAt < cutoffUtc
                             || s.RefreshExpiresAt < cutoffUtc
                             || s.AbsoluteExpiresAt < cutoffUtc)
+                .OrderBy(s => s.Id)
+                .Select(s => s.Id)
+                .Take(Math.Clamp(batchSize, 1, DataRetentionPolicy.DatabaseBatchSize))
+                .ToListAsync(cancellationToken);
+
+            if (ids.Count == 0) return 0;
+            return await _context.LoginSessions.IgnoreQueryFilters()
+                .Where(s => ids.Contains(s.Id)
+                    && (s.RevokedAt < cutoffUtc || s.RefreshExpiresAt < cutoffUtc || s.AbsoluteExpiresAt < cutoffUtc))
                 .ExecuteDeleteAsync(cancellationToken);
         }
     }

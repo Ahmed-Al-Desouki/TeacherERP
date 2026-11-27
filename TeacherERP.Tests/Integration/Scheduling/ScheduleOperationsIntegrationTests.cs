@@ -50,7 +50,7 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
             newStartTime = baseStart.AddHours(2),
             durationMinutes = 60
         });
-        Assert.Equal(HttpStatusCode.BadRequest, conflict.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
         Assert.Equal("Session.TimeConflict", await ErrorCodeAsync(conflict));
         Assert.Equal(baseStart, await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
             .Where(s => s.Id == sessionId).Select(s => s.StartTime).SingleAsync()));
@@ -84,6 +84,14 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
         Assert.Equal(HttpStatusCode.OK, cancelled.StatusCode);
         var repeatedCancellation = await client.PostAsJsonAsync($"/api/Schedule/sessions/{sessionId}/cancel", new { reason = "change" });
         Assert.Equal(HttpStatusCode.OK, repeatedCancellation.StatusCode);
+        var cancelAudit = await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters()
+            .Where(log => log.TenantId == teacher.TenantId && log.Action == AuditAction.SessionCancelled
+                && log.Reason!.Contains(sessionId.ToString()))
+            .Select(log => new { log.ActorUserId, log.TargetUserId, log.Reason }).SingleAsync());
+        Assert.Equal(teacher.OwnerId, cancelAudit.ActorUserId);
+        Assert.Null(cancelAudit.TargetUserId);
+        Assert.Contains($"GroupId={teacher.GroupId}", cancelAudit.Reason!);
+        Assert.Contains("Reason=change", cancelAudit.Reason!);
         Assert.True(await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
             .Where(s => s.Id == sessionId).Select(s => s.IsCancelled).SingleAsync()));
         var studentNotificationsAfterCancel = await GetNotificationTypesAsync(teacher.TenantId, studentId);
@@ -97,6 +105,12 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
 
         var restored = await client.PostAsync($"/api/Schedule/sessions/{sessionId}/restore", null);
         Assert.Equal(HttpStatusCode.OK, restored.StatusCode);
+        var restoreAudit = await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters()
+            .Where(log => log.TenantId == teacher.TenantId && log.Action == AuditAction.SessionRestored
+                && log.Reason!.Contains(sessionId.ToString()))
+            .Select(log => new { log.ActorUserId, log.Reason }).SingleAsync());
+        Assert.Equal(teacher.OwnerId, restoreAudit.ActorUserId);
+        Assert.Contains($"GroupId={teacher.GroupId}", restoreAudit.Reason!);
         Assert.False(await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
             .Where(s => s.Id == sessionId).Select(s => s.IsCancelled).SingleAsync()));
         Assert.False(await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
@@ -128,7 +142,7 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
             newStartTime = start,
             durationMinutes = 180
         });
-        Assert.Equal(HttpStatusCode.BadRequest, overlap.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, overlap.StatusCode);
         Assert.Equal("Session.TimeConflict", await ErrorCodeAsync(overlap));
         var unchanged = await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
             .Where(s => s.Id == sessionId).Select(s => new { s.StartTime, s.EndTime }).SingleAsync());
@@ -180,6 +194,21 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
             .Where(s => s.Id == second).Select(s => s.StartTime).SingleAsync()));
         Assert.Equal(new[] { NotificationType.BulkSessionsRescheduled },
             await GetNotificationTypesAsync(teacher.TenantId, studentId));
+        var shiftAudits = await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters()
+            .Where(log => log.TenantId == teacher.TenantId && log.Action == AuditAction.SessionBulkShifted)
+            .Select(log => new { log.ActorUserId, log.TargetUserId, log.Reason }).ToListAsync());
+        Assert.Equal(2, shiftAudits.Count);
+        Assert.All(shiftAudits, audit =>
+        {
+            Assert.Equal(teacher.OwnerId, audit.ActorUserId);
+            Assert.Null(audit.TargetUserId);
+            Assert.Contains($"GroupId={teacher.GroupId}", audit.Reason!);
+            Assert.Contains("From=", audit.Reason!);
+            Assert.Contains("To=", audit.Reason!);
+            Assert.Contains("ShiftMinutes=30", audit.Reason!);
+        });
+        Assert.Contains(shiftAudits, audit => audit.Reason!.Contains($"SessionId={first}"));
+        Assert.Contains(shiftAudits, audit => audit.Reason!.Contains($"SessionId={second}"));
 
         var conflict = await client.PostAsJsonAsync("/api/Schedule/sessions/bulk-shift", new
         {
@@ -188,7 +217,7 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
             groupIds = new[] { teacher.GroupId },
             shiftMinutes = 60
         });
-        Assert.Equal(HttpStatusCode.BadRequest, conflict.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
         Assert.Equal("Session.TimeConflict", await ErrorCodeAsync(conflict));
         Assert.Equal(baseStart.AddDays(3), await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
             .Where(s => s.Id == selectedConflict).Select(s => s.StartTime).SingleAsync()));
@@ -196,6 +225,8 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
             .Where(s => s.Id == blocker).Select(s => s.StartTime).SingleAsync()));
         Assert.Equal(new[] { NotificationType.BulkSessionsRescheduled },
             await GetNotificationTypesAsync(teacher.TenantId, studentId));
+        Assert.Equal(2, await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters()
+            .CountAsync(log => log.TenantId == teacher.TenantId && log.Action == AuditAction.SessionBulkShifted)));
     }
 
     [Fact]
@@ -225,11 +256,20 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
         Assert.Equal(new[] { NotificationType.BulkSessionsCancelled },
             await GetNotificationTypesAsync(teacher.TenantId, studentId));
+        var firstAuditCount = await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters()
+            .CountAsync(log => log.TenantId == teacher.TenantId && log.Action == AuditAction.SessionBulkCancelled));
+        Assert.Equal(2, firstAuditCount);
+        Assert.Equal(2, await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters()
+            .CountAsync(log => log.TenantId == teacher.TenantId && log.Action == AuditAction.SessionBulkCancelled
+                && log.ActorUserId == teacher.OwnerId && log.Reason!.Contains("BulkCancel;")
+                && log.Reason!.Contains("Reason=Teacher unavailable"))));
 
         var repeated = await client.PostAsJsonAsync("/api/Schedule/sessions/bulk-cancel", request);
         Assert.Equal(HttpStatusCode.OK, repeated.StatusCode);
         Assert.Equal(new[] { NotificationType.BulkSessionsCancelled },
             await GetNotificationTypesAsync(teacher.TenantId, studentId));
+        Assert.Equal(firstAuditCount, await _factory.QueryAsync(db => db.AuditLogs.IgnoreQueryFilters()
+            .CountAsync(log => log.TenantId == teacher.TenantId && log.Action == AuditAction.SessionBulkCancelled)));
     }
 
     [Fact]
@@ -255,7 +295,7 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
         {
             newStartTime = start.AddHours(2), durationMinutes = 60
         });
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal("Session.TimeConflict", await ErrorCodeAsync(response));
         Assert.Equal(start, await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()
             .Where(s => s.Id == movingSession).Select(s => s.StartTime).SingleAsync()));
@@ -321,7 +361,7 @@ public sealed class ScheduleOperationsIntegrationTests : IClassFixture<CustomWeb
             slots = new[] { new { day = "Monday", startTime = "10:30:00", durationMinutes = 60 } }
         });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal("Session.TimeConflict", await ErrorCodeAsync(response));
         Assert.Equal(1, await _factory.QueryAsync(db => db.Groups.IgnoreQueryFilters()
             .CountAsync(g => g.TenantId == teacher.TenantId)));

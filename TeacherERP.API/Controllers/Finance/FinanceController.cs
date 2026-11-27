@@ -79,7 +79,7 @@ namespace TeacherERP.API.Controllers
         public async Task<IActionResult> CollectCash([FromBody] CollectCashPaymentCommand command, CancellationToken cancellationToken)
         {
             if (command.Method != TeacherERP.Domain.Entities.PaymentProvider.Cash)
-                return BadRequest(new { errorCode = "Finance.InvalidPaymentMethod", errorMessage = "Use this endpoint for cash payments." });
+                return ToErrorResponse("Finance.InvalidPaymentMethod", "Use this endpoint for cash payments.");
             var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result);
         }
@@ -89,7 +89,7 @@ namespace TeacherERP.API.Controllers
             [FromBody] CollectCashPaymentCommand command, CancellationToken cancellationToken)
         {
             if (command.Method != TeacherERP.Domain.Entities.PaymentProvider.Other)
-                return BadRequest(new { errorCode = "Finance.InvalidPaymentMethod", errorMessage = "Set method to Other for this endpoint." });
+                return ToErrorResponse("Finance.InvalidPaymentMethod", "Set method to Other for this endpoint.");
             var result = await _mediator.Send(command, cancellationToken);
             return ToResponse(result);
         }

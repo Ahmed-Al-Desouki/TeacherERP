@@ -84,7 +84,7 @@ public sealed class GroupJoinCodeIntegrationTests : IClassFixture<CustomWebAppli
         var joinResponse = await studentClient.PostAsJsonAsync(
             "/api/Enrollment/requests/by-code", new { code = codes!.StaticCode });
 
-        Assert.Equal(HttpStatusCode.BadRequest, joinResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, joinResponse.StatusCode);
         Assert.False(await _factory.QueryAsync(db => db.EnrollmentRequests.IgnoreQueryFilters()
             .AnyAsync(request => request.TenantId == teacher.TenantId && request.StudentId == studentId)));
     }
@@ -116,7 +116,7 @@ public sealed class GroupJoinCodeIntegrationTests : IClassFixture<CustomWebAppli
         using var studentClient = _factory.CreateClientFor(studentId, role: "Student");
         var oldCodeResponse = await studentClient.PostAsJsonAsync(
             "/api/Enrollment/requests/by-code", new { code = before.DynamicCode });
-        Assert.Equal(HttpStatusCode.BadRequest, oldCodeResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, oldCodeResponse.StatusCode);
         Assert.False(await _factory.QueryAsync(db => db.EnrollmentRequests.IgnoreQueryFilters()
             .AnyAsync(request => request.TenantId == teacher.TenantId && request.StudentId == studentId)));
     }

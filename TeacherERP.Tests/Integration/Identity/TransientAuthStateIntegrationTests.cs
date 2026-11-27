@@ -107,6 +107,40 @@ public sealed class TransientAuthStateIntegrationTests
         Assert.False(await service.IsValidAsync("student@example.test", grant.Token, CancellationToken.None));
     }
 
+    [Fact]
+    public async Task Cleanup_RemovesOnlyOneBoundedBatchAndPreservesAnyStateWithAnActivePayload()
+    {
+        await using var connection = await CreateDatabaseAsync();
+        var options = OptionsFor(connection);
+        await using (var seedContext = new AppDbContext(options))
+        {
+            for (var index = 0; index < 251; index++)
+            {
+                seedContext.TransientAuthStates.Add(new TransientAuthState
+                {
+                    Purpose = "expired",
+                    Email = $"expired{index}@example.test"
+                });
+            }
+            seedContext.TransientAuthStates.Add(new TransientAuthState
+            {
+                Purpose = "active",
+                Email = "active@example.test",
+                PayloadJson = "{}",
+                PayloadExpiresAtUtc = Now.AddMinutes(5)
+            });
+            await seedContext.SaveChangesAsync();
+        }
+
+        await using var context = new AppDbContext(options);
+        var store = new TransientAuthStateStore(context, new FrozenTimeProvider(Now));
+
+        Assert.Equal(250, await store.DeleteExpiredAsync(Now, 250, CancellationToken.None));
+        Assert.Equal(2, await context.TransientAuthStates.CountAsync());
+        Assert.Equal(1, await store.DeleteExpiredAsync(Now, 250, CancellationToken.None));
+        Assert.Equal("active@example.test", await context.TransientAuthStates.Select(x => x.Email).SingleAsync());
+    }
+
     private static async Task<SqliteConnection> CreateDatabaseAsync()
     {
         var connection = new SqliteConnection("Data Source=:memory:");

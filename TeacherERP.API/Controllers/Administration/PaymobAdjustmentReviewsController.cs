@@ -21,7 +21,7 @@ public sealed class PaymobAdjustmentReviewsController : BaseApiController
         CancellationToken cancellationToken = default)
     {
         if (page < 1 || pageSize is < 1 or > PageRequest.MaxPageSize)
-            return BadRequest(new { errorCode = "Finance.InvalidPaymobAdjustmentPage", errorMessage = "A valid page is required." });
+            return ToErrorResponse("Finance.InvalidPaymobAdjustmentPage", "A valid page is required.");
         return Ok(await _reviews.GetPendingPageAsync(new PageRequest(page, pageSize), cancellationToken));
     }
 
@@ -30,7 +30,7 @@ public sealed class PaymobAdjustmentReviewsController : BaseApiController
         [FromBody] ResolvePaymobAdjustmentBody body, CancellationToken cancellationToken)
     {
         if (!Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var administratorId))
-            return Unauthorized();
+            return ToErrorResponse("Auth.Unauthorized", "You must be logged in.");
 
         var result = await _reviews.ResolveAsync(administratorId, reviewId,
             new ResolvePaymobAdjustmentRequest(body.Approved, body.StudentDebtAdjustmentAmount,

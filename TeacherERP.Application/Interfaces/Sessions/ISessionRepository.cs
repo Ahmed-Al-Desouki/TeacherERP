@@ -20,6 +20,6 @@ namespace TeacherERP.Application.Interfaces
             CancellationToken cancellationToken);
 
         // حذف مباشر (بدون تحميل) لكل جلسة انتهت أو أُلغيت قبل cutoffUtc، ويرجع عدد المحذوف
-        Task<int> DeleteEndedBeforeAsync(DateTime cutoffUtc, CancellationToken cancellationToken);
+        Task<int> DeleteEndedBeforeAsync(DateTime cutoffUtc, int batchSize, CancellationToken cancellationToken);
     }
 }

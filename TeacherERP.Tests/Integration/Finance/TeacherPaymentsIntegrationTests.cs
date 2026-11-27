@@ -111,7 +111,7 @@ public sealed class TeacherPaymentsIntegrationTests : IClassFixture<CustomWebApp
         var submittedId = await ReceiptIdAsync(submitted);
         var duplicate = await Student(s).PostAsync("/api/StudentPayments/receipts", ReceiptForm(s, PaymentType.PerSession, 40m));
         Assert.Equal(HttpStatusCode.OK, submitted.StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, duplicate.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
         Assert.Equal(initialUploads + 2, _factory.FileStorage.UploadCount);
         Assert.Equal(0m, await _factory.QueryAsync(db => db.FinancialObligations.IgnoreQueryFilters()
             .Where(x => x.Id == s.ObligationId).Select(x => x.PaidAmount).SingleAsync()));
@@ -157,9 +157,9 @@ public sealed class TeacherPaymentsIntegrationTests : IClassFixture<CustomWebApp
         var repeated = await Owner(s).PostAsync($"/api/Finance/instapay-receipts/{body}/approve", null);
 
         Assert.Equal(HttpStatusCode.OK, approved.StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, repeated.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, repeated.StatusCode);
         var otherTeacher = await SeedAsync();
-        Assert.Equal(HttpStatusCode.BadRequest, (await Owner(otherTeacher).PostAsync(
+        Assert.Equal(HttpStatusCode.NotFound, (await Owner(otherTeacher).PostAsync(
             $"/api/Finance/instapay-receipts/{body}/approve", null)).StatusCode);
         Assert.Equal(TransactionStatus.Successful, await _factory.QueryAsync(db => db.Transactions.IgnoreQueryFilters()
             .Where(x => x.Id == body).Select(x => x.Status).SingleAsync()));
@@ -244,7 +244,7 @@ public sealed class TeacherPaymentsIntegrationTests : IClassFixture<CustomWebApp
             teacherItems.GetProperty("items")[0].GetProperty("collectionRequestedAtUtc").ValueKind);
         var duplicateRequest = await admin.PostAsJsonAsync("/api/administration/platform-commissions/request-month",
             new { tenantId = s.Teacher.TenantId, year = now.Year, month = now.Month });
-        Assert.Equal(HttpStatusCode.BadRequest, duplicateRequest.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, duplicateRequest.StatusCode);
 
         var settled = await admin.PostAsJsonAsync("/api/administration/platform-commissions/settle-month",
             new { tenantId = s.Teacher.TenantId, year = now.Year, month = now.Month, settlementReference = "TEST-TRANSFER-001" });
@@ -353,7 +353,7 @@ public sealed class TeacherPaymentsIntegrationTests : IClassFixture<CustomWebApp
             paymentType = PaymentType.PerSession,
             amount = 75m
         });
-        Assert.Equal(HttpStatusCode.BadRequest, payment.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, payment.StatusCode);
         Assert.False(await _factory.QueryAsync(db => db.FinancialObligations.IgnoreQueryFilters()
             .AnyAsync(x => x.TenantId == absent.Teacher.TenantId && x.SessionId == absent.SessionId)));
 

@@ -89,10 +89,10 @@ public sealed class GroupAdminAttendanceIntegrationTests : IClassFixture<CustomW
         };
 
         var notAdmin = await member.PostAsJsonAsync("/api/Attendance/group-scan", payload);
-        Assert.Equal(HttpStatusCode.BadRequest, notAdmin.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, notAdmin.StatusCode);
         Assert.Equal("GroupAdmin.NotAllowed", await ErrorCodeAsync(notAdmin));
         var hiddenAttendance = await member.GetAsync("/api/Attendance/group-session");
-        Assert.Equal(HttpStatusCode.BadRequest, hiddenAttendance.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, hiddenAttendance.StatusCode);
 
         var teacher = _factory.CreateClientFor(s.Teacher.OwnerId, s.Teacher.TenantId);
         Assert.Equal(HttpStatusCode.OK, (await teacher.PutAsync(
@@ -112,7 +112,7 @@ public sealed class GroupAdminAttendanceIntegrationTests : IClassFixture<CustomW
             longitude = 31.3301,
             isMockLocation = true
         });
-        Assert.Equal(HttpStatusCode.BadRequest, mocked.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, mocked.StatusCode);
         Assert.Equal("Attendance.MockLocation", await ErrorCodeAsync(mocked));
 
         var self = await member.PostAsJsonAsync("/api/Attendance/group-scan", new
@@ -122,7 +122,7 @@ public sealed class GroupAdminAttendanceIntegrationTests : IClassFixture<CustomW
             longitude = 31.3301,
             isMockLocation = false
         });
-        Assert.Equal(HttpStatusCode.BadRequest, self.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, self.StatusCode);
         Assert.Equal("GroupAdmin.CannotRecordSelf", await ErrorCodeAsync(self));
     }
 
@@ -206,7 +206,7 @@ public sealed class GroupAdminAttendanceIntegrationTests : IClassFixture<CustomW
 
         var third = await teacher.PutAsync($"/api/Groups/{s.Teacher.GroupId}/admins/{thirdStudent}", null);
 
-        Assert.Equal(HttpStatusCode.BadRequest, third.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, third.StatusCode);
         Assert.Equal("GroupAdmin.LimitReached", await ErrorCodeAsync(third));
         Assert.Equal(2, await _factory.QueryAsync(db => db.GroupEnrollments.IgnoreQueryFilters()
             .CountAsync(e => e.TenantId == s.Teacher.TenantId && e.GroupId == s.Teacher.GroupId && e.IsGroupAdmin)));

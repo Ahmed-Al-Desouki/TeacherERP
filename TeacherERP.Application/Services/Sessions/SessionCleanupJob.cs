@@ -24,11 +24,12 @@ namespace TeacherERP.Application.Sessions
         {
             var cutoff = _timeProvider.GetUtcNow().UtcDateTime - SessionPolicy.EndedSessionRetention;
 
-            var deleted = await _sessionRepository.DeleteEndedBeforeAsync(cutoff, CancellationToken.None);
+            const int batchSize = 250;
+            var deleted = await _sessionRepository.DeleteEndedBeforeAsync(cutoff, batchSize, CancellationToken.None);
 
             _logger.LogInformation(
-                "Session cleanup removed {DeletedCount} sessions that ended before {Cutoff:u}.",
-                deleted, cutoff);
+                "Login session cleanup removed {DeletedCount} records in a bounded batch of {BatchSize} before {Cutoff:u}.",
+                deleted, batchSize, cutoff);
         }
     }
 }

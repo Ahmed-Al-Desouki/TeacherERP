@@ -17,6 +17,6 @@ namespace TeacherERP.Application.Interfaces
         Task<CenterInvitation?> GetInvitationByHashAsync(string tokenHash, CancellationToken cancellationToken);
         void Add(CenterJoinRequest request);
         void Add(CenterInvitation invitation);
-        Task<int> PurgeClosedDataBeforeAsync(DateTime cutoffUtc, CancellationToken cancellationToken);
+        Task<int> PurgeClosedDataBeforeAsync(DateTime cutoffUtc, int batchSize, CancellationToken cancellationToken);
     }
 }

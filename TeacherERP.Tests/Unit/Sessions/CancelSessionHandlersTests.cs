@@ -12,20 +12,24 @@ public class CancelSessionCommandHandlerTests
 {
     private static readonly DateTime Now = new(2026, 11, 14, 10, 0, 0, DateTimeKind.Utc);
     private static readonly Guid TenantId = Guid.NewGuid();
+    private static readonly Guid ActorId = Guid.NewGuid();
 
     private readonly ICurrentTenantAccessor _tenant = Substitute.For<ICurrentTenantAccessor>();
+    private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
     private readonly IGroupSessionRepository _sessions = Substitute.For<IGroupSessionRepository>();
     private readonly IAttendanceRepository _attendance = Substitute.For<IAttendanceRepository>();
     private readonly INotificationService _notifications = Substitute.For<INotificationService>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly IAuditRepository _audit = Substitute.For<IAuditRepository>();
 
     public CancelSessionCommandHandlerTests()
     {
         _tenant.Current.Returns(new TenantContext(TenantId, TenantRole.Owner, MembershipStatus.Active));
+        _currentUser.UserId.Returns(ActorId);
     }
 
     private CancelSessionCommandHandler CreateHandler()
-        => new(_tenant, _sessions, _attendance, _notifications, _unitOfWork, new FixedTimeProvider(Now));
+        => new(_tenant, _sessions, _attendance, _notifications, _unitOfWork, new FixedTimeProvider(Now), _currentUser, _audit);
 
     private Session UpcomingSession()
     {
@@ -52,6 +56,7 @@ public class CancelSessionCommandHandlerTests
         Assert.True(result.IsFailure);
         Assert.Equal(ScheduleErrors.HasPendingCompensations.Code, result.Error.Code);
         Assert.False(session.IsCancelled);
+        _audit.DidNotReceive().Add(Arg.Any<AuditLog>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -69,6 +74,10 @@ public class CancelSessionCommandHandlerTests
         Assert.True(result.Value!.IsCancelled);
         Assert.Equal("holiday", result.Value.CancelReason);
         Assert.True(session.IsCancelled);
+        _audit.Received(1).Add(Arg.Is<AuditLog>(log => log.TenantId == TenantId
+            && log.ActorUserId == ActorId && log.Action == AuditAction.SessionCancelled
+            && log.Reason!.Contains(session.Id.ToString()) && log.Reason!.Contains(session.GroupId.ToString())
+            && log.Reason!.Contains("Reason=holiday")));
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -85,6 +94,7 @@ public class CancelSessionCommandHandlerTests
         await _attendance.DidNotReceive().GetSessionIdsWithPendingCompensationAsync(
             Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+        _audit.DidNotReceive().Add(Arg.Any<AuditLog>());
     }
 
     [Fact]
@@ -116,20 +126,24 @@ public class BulkCancelSessionsCommandHandlerTests
 {
     private static readonly DateTime Now = new(2026, 11, 14, 10, 0, 0, DateTimeKind.Utc);
     private static readonly Guid TenantId = Guid.NewGuid();
+    private static readonly Guid ActorId = Guid.NewGuid();
 
     private readonly ICurrentTenantAccessor _tenant = Substitute.For<ICurrentTenantAccessor>();
+    private readonly ICurrentUserService _currentUser = Substitute.For<ICurrentUserService>();
     private readonly IGroupSessionRepository _sessions = Substitute.For<IGroupSessionRepository>();
     private readonly IAttendanceRepository _attendance = Substitute.For<IAttendanceRepository>();
     private readonly INotificationService _notifications = Substitute.For<INotificationService>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly IAuditRepository _audit = Substitute.For<IAuditRepository>();
 
     public BulkCancelSessionsCommandHandlerTests()
     {
         _tenant.Current.Returns(new TenantContext(TenantId, TenantRole.Owner, MembershipStatus.Active));
+        _currentUser.UserId.Returns(ActorId);
     }
 
     private BulkCancelSessionsCommandHandler CreateHandler()
-        => new(_tenant, _sessions, _attendance, _notifications, _unitOfWork, new FixedTimeProvider(Now));
+        => new(_tenant, _sessions, _attendance, _notifications, _unitOfWork, new FixedTimeProvider(Now), _currentUser, _audit);
 
     private static Session Upcoming(int daysAhead)
         => Session.Create(TenantId, Guid.NewGuid(), Now.AddDays(daysAhead), Now.AddDays(daysAhead).AddHours(1));
@@ -159,6 +173,7 @@ public class BulkCancelSessionsCommandHandlerTests
         Assert.Equal(ScheduleErrors.HasPendingCompensations.Code, result.Error.Code);
         Assert.False(blocked.IsCancelled);
         Assert.False(free.IsCancelled);
+        _audit.DidNotReceive().Add(Arg.Any<AuditLog>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -179,6 +194,12 @@ public class BulkCancelSessionsCommandHandlerTests
         Assert.Equal(0, result.Value.Skipped);
         Assert.True(first.IsCancelled);
         Assert.True(second.IsCancelled);
+        _audit.Received(1).Add(Arg.Is<AuditLog>(log => log.TenantId == TenantId
+            && log.ActorUserId == ActorId && log.Action == AuditAction.SessionBulkCancelled
+            && log.Reason!.Contains(first.Id.ToString()) && log.Reason!.Contains("BulkCancel;")));
+        _audit.Received(1).Add(Arg.Is<AuditLog>(log => log.TenantId == TenantId
+            && log.ActorUserId == ActorId && log.Action == AuditAction.SessionBulkCancelled
+            && log.Reason!.Contains(second.Id.ToString()) && log.Reason!.Contains("BulkCancel;")));
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -198,6 +219,8 @@ public class BulkCancelSessionsCommandHandlerTests
         Assert.True(result.IsSuccess);
         Assert.Equal(1, result.Value!.Affected);
         Assert.Equal(1, result.Value.Skipped);
+        _audit.Received(1).Add(Arg.Is<AuditLog>(log => log.Action == AuditAction.SessionBulkCancelled
+            && log.Reason!.Contains(active.Id.ToString())));
         // الفحص يتم على الحصص غير الملغاة فقط
         await _attendance.Received(1).GetSessionIdsWithPendingCompensationAsync(
             Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 1 && ids.Contains(active.Id)),
@@ -216,5 +239,6 @@ public class BulkCancelSessionsCommandHandlerTests
         await _attendance.DidNotReceive().GetSessionIdsWithPendingCompensationAsync(
             Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+        _audit.DidNotReceive().Add(Arg.Any<AuditLog>());
     }
 }

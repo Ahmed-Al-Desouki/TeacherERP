@@ -148,7 +148,7 @@ public sealed class SessionMoveIntegrationTests : IClassFixture<CustomWebApplica
                 newStartTime = start.AddHours(2),
                 durationMinutes = 60
             });
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
         Assert.Equal("Session.TimeConflict", body.GetProperty("errorCode").GetString());
         Assert.Equal(teacher.GroupId, await _factory.QueryAsync(db => db.Sessions.IgnoreQueryFilters()

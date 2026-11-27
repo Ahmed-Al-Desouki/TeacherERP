@@ -56,7 +56,7 @@ public sealed class PasswordIntegrationTests : IClassFixture<CustomWebApplicatio
         var response = await AuthenticatedClient(user.Id).PostAsJsonAsync(
             "api/Users/me/set-password", new { newPassword = "Google1" });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Contains("Auth.PasswordAlreadySet", await response.Content.ReadAsStringAsync());
     }
 

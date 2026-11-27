@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using TeacherERP.Application.Interfaces;
 
@@ -26,7 +27,7 @@ public sealed class PaymobWebhookController : ControllerBase
         }
         catch (JsonException)
         {
-            return BadRequest(new { errorCode = "Paymob.InvalidPayload", errorMessage = "The callback payload is invalid." });
+            return BaseApiController.CreateErrorResponse("Paymob.InvalidPayload", "The callback payload is invalid.");
         }
 
         using (document)
@@ -35,16 +36,10 @@ public sealed class PaymobWebhookController : ControllerBase
                 document.RootElement, Request.Query["hmac"].FirstOrDefault(), cancellationToken);
             return outcome switch
             {
-                PaymobWebhookOutcome.InvalidSignature => Unauthorized(new
-                {
-                    errorCode = "Paymob.InvalidSignature",
-                    errorMessage = "The callback signature is invalid."
-                }),
-                PaymobWebhookOutcome.InvalidPayload => BadRequest(new
-                {
-                    errorCode = "Paymob.InvalidPayload",
-                    errorMessage = "The callback payload is invalid."
-                }),
+                PaymobWebhookOutcome.InvalidSignature => BaseApiController.CreateErrorResponse(
+                    "Paymob.InvalidSignature", "The callback signature is invalid.", StatusCodes.Status401Unauthorized),
+                PaymobWebhookOutcome.InvalidPayload => BaseApiController.CreateErrorResponse(
+                    "Paymob.InvalidPayload", "The callback payload is invalid."),
                 _ => Ok(new { received = true, duplicate = outcome == PaymobWebhookOutcome.Duplicate })
             };
         }

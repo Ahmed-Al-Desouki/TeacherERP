@@ -34,6 +34,10 @@ namespace TeacherERP.Application.Interfaces
 
         Task<AttendanceRecord?> GetRecordAsync(Guid sessionId, Guid studentId, CancellationToken cancellationToken);
 
+        // يحفظ التغييرات المعلقة؛ يعيد سجل الفائز إذا سبق طلب متزامن لنفس الطالب والحصة.
+        Task<AttendanceRecord?> SaveChangesForAttendanceAsync(
+            AttendanceRecord attemptedRecord, CancellationToken cancellationToken);
+
         // أقرب حصة لمجموعة الطالب الأصلية لم يحضرها (ماضية أو قادمة داخل النافذة)، ليعوّضها
         Task<Guid?> FindCompensableSessionAsync(
             Guid tenantId, Guid groupId, Guid studentId, DateTime nowUtc, int windowDays, CancellationToken cancellationToken);

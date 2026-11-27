@@ -202,7 +202,7 @@ public sealed class StudentTransferIntegrationTests : IClassFixture<CustomWebApp
         var response = await _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId)
             .PostAsJsonAsync($"api/Enrollment/students/{studentId}/move", new { targetGroupId });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Contains("Enrollment.GroupFull", await response.Content.ReadAsStringAsync());
         Assert.True(await _factory.QueryAsync(db => db.GroupEnrollments.IgnoreQueryFilters().AnyAsync(e =>
             e.TenantId == teacher.TenantId && e.StudentId == studentId && e.GroupId == teacher.GroupId && e.Status == EnrollmentStatus.Active)));
@@ -224,7 +224,7 @@ public sealed class StudentTransferIntegrationTests : IClassFixture<CustomWebApp
         var response = await _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId)
             .PostAsJsonAsync($"api/Enrollment/students/{studentId}/move", new { targetGroupId = otherTeacher.GroupId });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Contains("Enrollment.GroupNotFound", await response.Content.ReadAsStringAsync());
     }
 
@@ -248,7 +248,7 @@ public sealed class StudentTransferIntegrationTests : IClassFixture<CustomWebApp
         var response = await _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId)
             .PostAsJsonAsync($"api/Enrollment/students/{studentId}/move", new { targetGroupId });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Contains("Enrollment.GroupNotFound", await response.Content.ReadAsStringAsync());
     }
 
@@ -272,7 +272,7 @@ public sealed class StudentTransferIntegrationTests : IClassFixture<CustomWebApp
         var response = await _factory.CreateClientFor(teacher.OwnerId, teacher.TenantId)
             .PostAsJsonAsync($"api/Enrollment/students/{studentId}/move", new { targetGroupId });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         Assert.Contains("Enrollment.NotAllowed", await response.Content.ReadAsStringAsync());
     }
 
@@ -297,7 +297,7 @@ public sealed class StudentTransferIntegrationTests : IClassFixture<CustomWebApp
 
         Assert.Equal(HttpStatusCode.BadRequest, sameGroup.StatusCode);
         Assert.Contains("Enrollment.SameGroup", await sameGroup.Content.ReadAsStringAsync());
-        Assert.Equal(HttpStatusCode.BadRequest, notEnrolled.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, notEnrolled.StatusCode);
         Assert.Contains("Enrollment.NotEnrolled", await notEnrolled.Content.ReadAsStringAsync());
     }
 

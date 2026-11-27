@@ -76,7 +76,7 @@ public sealed class PaymobPaymentIntegrationTests : IClassFixture<CustomWebAppli
         var initialGatewayCount = _factory.PaymobGateway.CreateCount;
         var ownerClient = _factory.CreateClientFor(scenario.Teacher.OwnerId, scenario.Teacher.TenantId);
         using var ownerRequest = IntentRequest("owner-idempotency-001", scenario, 75m, "VpcOnlineNonShopify");
-        Assert.Equal(HttpStatusCode.BadRequest, (await ownerClient.SendAsync(ownerRequest)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await ownerClient.SendAsync(ownerRequest)).StatusCode);
 
         var student = _factory.CreateClientFor(scenario.StudentId, scenario.Teacher.TenantId, "Student");
         using var shopifyRequest = IntentRequest("shopify-idempotency-01", scenario, 75m, "VpcShopify");

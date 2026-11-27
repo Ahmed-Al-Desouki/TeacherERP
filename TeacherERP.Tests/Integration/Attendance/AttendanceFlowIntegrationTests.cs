@@ -82,6 +82,43 @@ public sealed class AttendanceFlowIntegrationTests : IClassFixture<CustomWebAppl
     }
 
     [Fact]
+    public async Task ConcurrentSelfScansForSameStudentAndSession_RecordOnceAndReturnStableOutcomes()
+    {
+        var scenario = await SeedScanAsync();
+        using var client = StudentClient(scenario);
+        var payload = ScanBody(scenario);
+
+        var responses = await Task.WhenAll(
+            client.PostAsJsonAsync("/api/Attendance/scan", payload),
+            client.PostAsJsonAsync("/api/Attendance/scan", payload));
+
+        try
+        {
+            Assert.All(responses, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
+
+            var outcomes = new List<AttendanceOutcome>();
+            foreach (var response in responses)
+            {
+                using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+                var outcome = body.RootElement.GetProperty("outcome");
+                outcomes.Add(outcome.ValueKind == JsonValueKind.String
+                    ? Enum.Parse<AttendanceOutcome>(outcome.GetString()!, ignoreCase: true)
+                    : (AttendanceOutcome)outcome.GetInt32());
+            }
+
+            Assert.Contains(AttendanceOutcome.Recorded, outcomes);
+            Assert.Contains(AttendanceOutcome.AlreadyRecorded, outcomes);
+            Assert.Equal(1, await _factory.QueryAsync(db => db.AttendanceRecords.IgnoreQueryFilters()
+                .CountAsync(record => record.SessionId == scenario.SessionId && record.StudentId == scenario.StudentId)));
+        }
+        finally
+        {
+            foreach (var response in responses)
+                response.Dispose();
+        }
+    }
+
+    [Fact]
     public async Task SelfScan_RejectsWrongCodeMockLocationAndOutOfRangeLocation()
     {
         var s = await SeedScanAsync();
@@ -104,9 +141,9 @@ public sealed class AttendanceFlowIntegrationTests : IClassFixture<CustomWebAppl
         Assert.Equal(HttpStatusCode.BadRequest, invalidAccuracy.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, wrongCode.StatusCode);
         Assert.Equal("Attendance.InvalidCode", await ErrorCodeAsync(wrongCode));
-        Assert.Equal(HttpStatusCode.BadRequest, mock.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, mock.StatusCode);
         Assert.Equal("Attendance.MockLocation", await ErrorCodeAsync(mock));
-        Assert.Equal(HttpStatusCode.BadRequest, outside.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, outside.StatusCode);
         Assert.Equal("Attendance.OutOfRange", await ErrorCodeAsync(outside));
         Assert.False(await _factory.QueryAsync(db => db.AttendanceRecords.IgnoreQueryFilters()
             .AnyAsync(a => a.StudentId == s.StudentId)));
@@ -158,7 +195,7 @@ public sealed class AttendanceFlowIntegrationTests : IClassFixture<CustomWebAppl
         var s = await SeedScanAsync(withSession: false);
         var response = await StudentClient(s).PostAsJsonAsync("/api/Attendance/scan", ScanBody(s));
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal("Attendance.NoSessionNow", await ErrorCodeAsync(response));
     }
 
@@ -176,7 +213,7 @@ public sealed class AttendanceFlowIntegrationTests : IClassFixture<CustomWebAppl
 
         var response = await StudentClient(s).PostAsJsonAsync("/api/Attendance/scan", ScanBody(s));
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         Assert.Equal("Attendance.SelfScanDisabled", await ErrorCodeAsync(response));
     }
 
@@ -433,7 +470,7 @@ public sealed class AttendanceFlowIntegrationTests : IClassFixture<CustomWebAppl
         Assert.Equal(0, rows.GetProperty("totalCount").GetInt32());
         Assert.Equal(HttpStatusCode.OK, schedule.StatusCode);
         Assert.DoesNotContain(foreignSession.ToString(), await schedule.Content.ReadAsStringAsync());
-        Assert.Equal(HttpStatusCode.BadRequest, manual.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, manual.StatusCode);
         Assert.Equal("Session.NotFound", await ErrorCodeAsync(manual));
     }
 }

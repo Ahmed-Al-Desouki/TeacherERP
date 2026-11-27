@@ -27,7 +27,7 @@ public sealed class TeacherMonthlyCollectionReportsController : BaseApiControlle
         CancellationToken cancellationToken = default)
     {
         if (!ValidPage(page, pageSize) || !ValidPage(debtPage, debtPageSize))
-            return BadRequest(new { errorCode = "Finance.InvalidCollectionReportRequest", errorMessage = "Page values are invalid." });
+            return ToErrorResponse("Finance.InvalidCollectionReportRequest", "Page values are invalid.");
 
         var report = await _reports.GetAsync(year, month, new PageRequest(page, pageSize),
             new PageRequest(debtPage, debtPageSize), cancellationToken, _tenant.TenantId);

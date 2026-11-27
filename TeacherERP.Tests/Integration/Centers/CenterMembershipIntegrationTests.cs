@@ -185,7 +185,7 @@ public sealed class CenterMembershipIntegrationTests : IClassFixture<CustomWebAp
             name = "Duplicate Location", latitude = 30.0561, longitude = 31.3301,
             geofenceRadiusMeters = 50
         });
-        Assert.Equal(HttpStatusCode.BadRequest, sameLocation.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, sameLocation.StatusCode);
         Assert.Contains("Center.LocationAlreadyOwned", await sameLocation.Content.ReadAsStringAsync());
 
         var created = await client.PostAsJsonAsync("api/Centers", new
@@ -210,7 +210,7 @@ public sealed class CenterMembershipIntegrationTests : IClassFixture<CustomWebAp
             name = "Second Center", address = "Nasr City", latitude = 30.0561, longitude = 31.3301,
             geofenceRadiusMeters = 50
         });
-        Assert.Equal(HttpStatusCode.BadRequest, updateToOwnCenterLocation.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, updateToOwnCenterLocation.StatusCode);
         Assert.Contains("Center.LocationAlreadyOwned", await updateToOwnCenterLocation.Content.ReadAsStringAsync());
         Assert.True(await _factory.QueryAsync(db => db.Centers.AnyAsync(c =>
             c.Id == centerId && c.Latitude == 30.2 && c.Longitude == 31.6)));
@@ -273,7 +273,7 @@ public sealed class CenterMembershipIntegrationTests : IClassFixture<CustomWebAp
         var second = await client.PostAsync($"api/Centers/join-requests/{requestId}/resend", null);
 
         Assert.Equal(HttpStatusCode.OK, first.StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
         Assert.Contains("Center.JoinRequestResendTooSoon", await second.Content.ReadAsStringAsync());
     }
 
@@ -302,6 +302,6 @@ public sealed class CenterMembershipIntegrationTests : IClassFixture<CustomWebAp
             && link.Status == CenterTeacherStatus.Active && link.Origin == CenterTeacherOrigin.Invitation)));
 
         var replay = await applicantClient.PostAsJsonAsync("api/Centers/invitations/accept", new { token });
-        Assert.Equal(HttpStatusCode.BadRequest, replay.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, replay.StatusCode);
     }
 }

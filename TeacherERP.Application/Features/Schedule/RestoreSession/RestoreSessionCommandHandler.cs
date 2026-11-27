@@ -14,6 +14,8 @@ namespace TeacherERP.Application.Features.Schedule.RestoreSession
         private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
+        private readonly ICurrentUserService _currentUser;
+        private readonly IAuditRepository _auditRepository;
 
         public RestoreSessionCommandHandler(
             ICurrentTenantAccessor currentTenant,
@@ -21,7 +23,9 @@ namespace TeacherERP.Application.Features.Schedule.RestoreSession
             IGroupRepository groupRepository,
             INotificationService notificationService,
             IUnitOfWork unitOfWork,
-            TimeProvider timeProvider)
+            TimeProvider timeProvider,
+            ICurrentUserService currentUser,
+            IAuditRepository auditRepository)
         {
             _currentTenant = currentTenant;
             _sessionRepository = sessionRepository;
@@ -29,6 +33,8 @@ namespace TeacherERP.Application.Features.Schedule.RestoreSession
             _notificationService = notificationService;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
+            _currentUser = currentUser;
+            _auditRepository = auditRepository;
         }
 
         public async Task<Result<SessionTimeDto>> Handle(RestoreSessionCommand request, CancellationToken cancellationToken)
@@ -72,6 +78,9 @@ namespace TeacherERP.Application.Features.Schedule.RestoreSession
                 }
 
                 session.Restore();
+                _auditRepository.Add(AuditLog.Create(
+                    session.TenantId, _currentUser.UserId, AuditAction.SessionRestored, null,
+                    $"SessionId={session.Id}; GroupId={session.GroupId}; Restored after cancellation."));
                 const string notificationMessage = "A cancelled group session has been restored. Check the updated schedule.";
                 await _notificationService.NotifyGroupStudentsAsync(
                     session.TenantId, session.GroupId, NotificationType.SessionRestored,

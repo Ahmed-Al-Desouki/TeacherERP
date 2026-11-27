@@ -38,12 +38,12 @@ namespace TeacherERP.API.Controllers
         {
             if (form.File is null)
             {
-                return BadRequest(new { errorCode = SessionContentErrors.FileRequired.Code, errorMessage = SessionContentErrors.FileRequired.Message });
+                return ToErrorResponse(SessionContentErrors.FileRequired.Code, SessionContentErrors.FileRequired.Message);
             }
 
             if (form.Kind is null)
             {
-                return BadRequest(new { errorCode = SessionContentErrors.KindRequired.Code, errorMessage = SessionContentErrors.KindRequired.Message });
+                return ToErrorResponse(SessionContentErrors.KindRequired.Code, SessionContentErrors.KindRequired.Message);
             }
 
             await using var stream = form.File.OpenReadStream();

@@ -69,6 +69,10 @@ namespace TeacherERP.Domain.Entities
         PlatformCommissionCollectionRequested,
         AssistantSuspended,
         AssistantUnsuspended,
-        AssistantRemoved
+        AssistantRemoved,
+        SessionCancelled,
+        SessionRestored,
+        SessionBulkCancelled,
+        SessionBulkShifted
     }
 }

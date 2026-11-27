@@ -15,6 +15,8 @@ namespace TeacherERP.Application.Features.Schedule.BulkCancelSessions
         private readonly INotificationService _notificationService;
         private readonly IUnitOfWork _unitOfWork;
         private readonly TimeProvider _timeProvider;
+        private readonly ICurrentUserService _currentUser;
+        private readonly IAuditRepository _auditRepository;
 
         public BulkCancelSessionsCommandHandler(
             ICurrentTenantAccessor currentTenant,
@@ -22,7 +24,9 @@ namespace TeacherERP.Application.Features.Schedule.BulkCancelSessions
             IAttendanceRepository attendanceRepository,
             INotificationService notificationService,
             IUnitOfWork unitOfWork,
-            TimeProvider timeProvider)
+            TimeProvider timeProvider,
+            ICurrentUserService currentUser,
+            IAuditRepository auditRepository)
         {
             _currentTenant = currentTenant;
             _sessionRepository = sessionRepository;
@@ -30,6 +34,8 @@ namespace TeacherERP.Application.Features.Schedule.BulkCancelSessions
             _notificationService = notificationService;
             _unitOfWork = unitOfWork;
             _timeProvider = timeProvider;
+            _currentUser = currentUser;
+            _auditRepository = auditRepository;
         }
 
         public async Task<Result<BulkResultDto>> Handle(BulkCancelSessionsCommand request, CancellationToken cancellationToken)
@@ -71,6 +77,9 @@ namespace TeacherERP.Application.Features.Schedule.BulkCancelSessions
             foreach (var session in cancellable)
             {
                 session.Cancel(request.Reason);
+                _auditRepository.Add(AuditLog.Create(
+                    session.TenantId, _currentUser.UserId, AuditAction.SessionBulkCancelled, null,
+                    $"BulkCancel; SessionId={session.Id}; GroupId={session.GroupId}; Reason={request.Reason?.Trim()}"));
                 affected++;
             }
 

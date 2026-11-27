@@ -166,6 +166,9 @@ public sealed class TestFileStorage : IFileStorage
         DeletedPublicIds.Add(publicId);
         return Task.FromResult(Result<bool>.Success(true));
     }
+
+    public Task<FileStorageResourcePage> ListApplicationFilesAsync(string? nextCursor, int pageSize, CancellationToken cancellationToken)
+        => Task.FromResult(new FileStorageResourcePage(Array.Empty<FileStorageResource>(), null));
 }
 
 public sealed class TestPaymobGateway : IPaymobGateway

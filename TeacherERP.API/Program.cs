@@ -167,7 +167,8 @@ using (var scope = app.Services.CreateScope())
 
 if (!isTesting)
 {
-    // مهمة دورية يومياً (3 صباحاً UTC) لحذف الجلسات المنتهية منذ أكثر من 30 يوم
+    // Hangfire يزيل تلقائياً المهام الناجحة/المحذوفة المنتهية؛ نحتفظ بالفاشلة لمراجعتها ولا نحذف جداول Hangfire يدوياً.
+    // مهمة دورية يومياً (3 صباحاً UTC) لحذف جلسات الدخول المنتهية منذ أكثر من 30 يوم
     app.Services.GetRequiredService<IRecurringJobManager>()
         .AddOrUpdate<ISessionCleanupJob>("cleanup-ended-sessions", job => job.RunAsync(), Cron.Daily(3));
 
@@ -180,10 +181,25 @@ if (!isTesting)
         .AddOrUpdate<IAbsenceProcessingJob>("process-absences", job => job.RunAsync(), "*/10 * * * *");
 
     app.Services.GetRequiredService<IRecurringJobManager>()
-        .AddOrUpdate<ICenterMembershipCleanupJob>("cleanup-center-membership", job => job.RunAsync(), "0 4 * * 0");
+        .AddOrUpdate<ICenterMembershipCleanupJob>("cleanup-center-membership", job => job.RunAsync(), "30 4 * * 0");
 
     app.Services.GetRequiredService<IRecurringJobManager>()
         .AddOrUpdate<ITransientAuthStateCleanupJob>("cleanup-transient-auth-state", job => job.RunAsync(), Cron.Daily(4));
+
+    app.Services.GetRequiredService<IRecurringJobManager>()
+        .AddOrUpdate<IApplicationDataRetentionCleanupJob>("cleanup-read-notifications", job => job.PurgeReadNotificationsAsync(), Cron.Daily(5));
+
+    app.Services.GetRequiredService<IRecurringJobManager>()
+        .AddOrUpdate<IApplicationDataRetentionCleanupJob>("cleanup-closed-teacher-requests", job => job.PurgeClosedTeacherRequestsAsync(), "15 4 * * 1");
+
+    app.Services.GetRequiredService<IRecurringJobManager>()
+        .AddOrUpdate<IApplicationDataRetentionCleanupJob>("cleanup-closed-enrollment-requests", job => job.PurgeClosedEnrollmentRequestsAsync(), "30 4 * * 2");
+
+    app.Services.GetRequiredService<IRecurringJobManager>()
+        .AddOrUpdate<IApplicationDataRetentionCleanupJob>("cleanup-closed-group-admin-requests", job => job.PurgeClosedGroupAdminRequestsAsync(), "45 4 * * 4");
+
+    app.Services.GetRequiredService<IRecurringJobManager>()
+        .AddOrUpdate<IOrphanedFileCleanupJob>("cleanup-orphaned-application-files", job => job.RunPageAsync(null), "0 6 1 * *");
 }
 
 // الـ IP الحقيقي أولاً (لا يعمل إلا لو فُعّل من الإعدادات)، لأن كل ما بعده (Rate Limiting واللوجات) يعتمد عليه
