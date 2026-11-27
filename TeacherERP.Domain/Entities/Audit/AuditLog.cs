@@ -4,7 +4,7 @@ using System;
 namespace TeacherERP.Domain.Entities
 {
     /// <summary>
-    /// سجل تدقيق للإجراءات الحساسة داخل مساحة المدرس (إيقاف وفك إيقاف وحظر الطلاب وتصحيح الحضور والطلاب المسؤولين ومحتوى الحصص). للإضافة فقط ولا يُعدَّل.
+    /// سجل تدقيق للإجراءات الحساسة داخل مساحة المدرس، ومنها إجراءات المساعدين والطلاب والحضور ومحتوى الحصص. للإضافة فقط ولا يُعدَّل.
     /// المنفّذ والهدف بلا Foreign Keys عمداً: سجل تاريخي لا يتأثر بحذف حساب لاحقاً.
     /// </summary>
     public class AuditLog : BaseEntity, ITenantOwned
@@ -66,6 +66,9 @@ namespace TeacherERP.Domain.Entities
         PaymobAdjustmentNeedsReview,
         PaymobAdjustmentReviewed,
         PlatformCommissionSettled,
-        PlatformCommissionCollectionRequested
+        PlatformCommissionCollectionRequested,
+        AssistantSuspended,
+        AssistantUnsuspended,
+        AssistantRemoved
     }
 }

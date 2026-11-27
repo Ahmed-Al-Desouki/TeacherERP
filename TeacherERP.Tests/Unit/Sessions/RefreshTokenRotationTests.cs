@@ -34,6 +34,7 @@ public sealed class RefreshTokenRotationTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal($"{session.Id:N}.rotated-secret", result.Value!.RefreshToken);
+        Assert.Equal("UTC", result.Value.TimeZoneId);
         await repository.Received(1).TryRotateRefreshTokenAsync(
             Arg.Any<LoginSession>(),
             TokenHasher.Hash("known-secret"),

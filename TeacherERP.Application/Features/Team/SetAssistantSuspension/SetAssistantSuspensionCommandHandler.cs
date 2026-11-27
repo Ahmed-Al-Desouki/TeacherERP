@@ -10,24 +10,35 @@ namespace TeacherERP.Application.Features.Team.SetAssistantSuspension
     public class SetAssistantSuspensionCommandHandler : IRequestHandler<SetAssistantSuspensionCommand, Result<bool>>
     {
         private readonly ICurrentTenantAccessor _currentTenant;
+        private readonly ICurrentUserService _currentUser;
         private readonly ITeamRepository _teamRepository;
+        private readonly IAuditRepository _auditRepository;
         private readonly IUnitOfWork _unitOfWork;
 
         public SetAssistantSuspensionCommandHandler(
             ICurrentTenantAccessor currentTenant,
+            ICurrentUserService currentUser,
             ITeamRepository teamRepository,
+            IAuditRepository auditRepository,
             IUnitOfWork unitOfWork)
         {
             _currentTenant = currentTenant;
+            _currentUser = currentUser;
             _teamRepository = teamRepository;
+            _auditRepository = auditRepository;
             _unitOfWork = unitOfWork;
         }
 
         public async Task<Result<bool>> Handle(SetAssistantSuspensionCommand request, CancellationToken cancellationToken)
         {
-            if (_currentTenant.Current is null)
+            if (_currentTenant.Current is not { } tenant)
             {
                 return Result<bool>.Failure(TenantErrors.Required);
+            }
+
+            if (_currentUser.UserId is not { } actorId)
+            {
+                return Result<bool>.Failure(new Error("Auth.Unauthorized", "You must be logged in."));
             }
 
             var member = await _teamRepository.GetTrackedAssistantAsync(request.UserId, cancellationToken);
@@ -42,11 +53,13 @@ namespace TeacherERP.Application.Features.Team.SetAssistantSuspension
             if (request.IsSuspended && member.Status == MembershipStatus.Active)
             {
                 member.Suspend();
+                _auditRepository.Add(AuditLog.Create(tenant.TenantId, actorId, AuditAction.AssistantSuspended, member.UserId, null));
                 changed = true;
             }
             else if (!request.IsSuspended && member.Status == MembershipStatus.Suspended)
             {
                 member.Activate();
+                _auditRepository.Add(AuditLog.Create(tenant.TenantId, actorId, AuditAction.AssistantUnsuspended, member.UserId, null));
                 changed = true;
             }
 

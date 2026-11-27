@@ -2,7 +2,7 @@
 {
     public interface IUserTimeZoneAccessor
     {
-        // المنطقة الزمنية للطلب الحالي (IANA مثل Africa/Cairo)، أو null إن لم تُرسل أو كانت غير صالحة
+        // منطقة الطلب من X-Time-Zone، أو تفضيل المستخدم من JWT عند غياب الترويسة، أو null عند عدم توفرهما.
         string? TimeZoneId { get; }
     }
 }

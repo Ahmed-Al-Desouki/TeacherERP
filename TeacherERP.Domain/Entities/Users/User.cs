@@ -22,6 +22,9 @@ namespace TeacherERP.Domain.Entities
         /// <summary>الاسم الرباعي أو الكامل للمستخدم</summary>
         public string FullName { get; private set; }
 
+        /// <summary>منطقة المستخدم الزمنية لتنسيق الرسائل التي تعمل في الخلفية</summary>
+        public string TimeZoneId { get; private set; } = "UTC";
+
         // خصائص خاصة بالطلاب (Student Specific)
         /// <summary>
         /// حالة الحساب ككل (تمنع الدخول): لا يغيّرها إلا الإدارة العليا.
@@ -202,6 +205,36 @@ namespace TeacherERP.Domain.Entities
 
         /// <summary>إعادة تفعيل الحساب</summary>
         public void Activate() => Status = StudentStatus.Active;
+
+        /// <summary>تحديث المنطقة الزمنية بعد التحقق منها عند حدّ التطبيق</summary>
+        public void SetTimeZoneId(string? timeZoneId)
+        {
+            if (string.IsNullOrWhiteSpace(timeZoneId)) return;
+
+            var normalized = timeZoneId.Trim();
+            if (normalized.Length > 64) return;
+
+            if (string.Equals(normalized, "UTC", StringComparison.OrdinalIgnoreCase))
+            {
+                TimeZoneId = "UTC";
+                return;
+            }
+
+            try
+            {
+                _ = TimeZoneInfo.FindSystemTimeZoneById(normalized);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                return;
+            }
+            catch (InvalidTimeZoneException)
+            {
+                return;
+            }
+
+            TimeZoneId = normalized;
+        }
     }
 
     public enum StudentStatus { Active, Suspended, Blacklisted }

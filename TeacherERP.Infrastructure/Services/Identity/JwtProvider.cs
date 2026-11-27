@@ -34,7 +34,8 @@ namespace TeacherERP.Infrastructure.Services
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new(ClaimTypes.Name, user.FullName),
-                new(AuthClaimTypes.SessionId, sessionId.ToString())
+                new(AuthClaimTypes.SessionId, sessionId.ToString()),
+                new(AuthClaimTypes.TimeZoneId, user.TimeZoneId)
             };
 
             // إضافة الأدوار (Roles) الخاصة بالمستخدم

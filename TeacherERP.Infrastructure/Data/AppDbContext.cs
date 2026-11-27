@@ -105,6 +105,7 @@ namespace TeacherERP.Infrastructure.Data
             // بروفايل الطالب: الجنس وبيانات ولي الأمر (في نفس جدول المستخدمين) وفرادة موبايل الطالب
             builder.Entity<ApplicationUser>(entity =>
             {
+                entity.Property(u => u.TimeZoneId).HasMaxLength(64).HasDefaultValue("UTC").IsRequired();
                 entity.Property(u => u.Gender).HasConversion<string>().HasMaxLength(16);
 
                 entity.OwnsOne(u => u.Guardian, guardian =>

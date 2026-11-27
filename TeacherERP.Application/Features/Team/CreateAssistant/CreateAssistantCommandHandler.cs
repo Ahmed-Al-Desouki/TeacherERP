@@ -64,13 +64,13 @@ namespace TeacherERP.Application.Features.Team.CreateAssistant
             var existing = (await _userAccountService.FindByEmailAsync(email, cancellationToken)).Value;
 
             return existing is null
-                ? await CreateNewAccountAsync(current.TenantId, tenant.Name, fullName, email, cancellationToken)
+                ? await CreateNewAccountAsync(current.TenantId, tenant.Name, tenant.TimeZoneId, fullName, email, cancellationToken)
                 : await AddExistingAssistantAsync(current.TenantId, tenant.Name, existing, cancellationToken);
         }
 
         // حساب جديد: باسورد مؤقت يُرسل للمساعد نفسه داخل الـ Transaction (فشل الإيميل = لا حساب)
         private async Task<Result<AssistantDto>> CreateNewAccountAsync(
-            Guid tenantId, string teacherName, string fullName, string email, CancellationToken cancellationToken)
+            Guid tenantId, string teacherName, string timeZoneId, string fullName, string email, CancellationToken cancellationToken)
         {
             if (await _teamRepository.CountAssistantsAsync(cancellationToken) >= TeamPolicy.MaxAssistants)
             {
@@ -84,6 +84,7 @@ namespace TeacherERP.Application.Features.Team.CreateAssistant
                 return await _unitOfWork.ExecuteInTransactionAsync(async () =>
                 {
                     var user = ApplicationUser.CreateAssistant(fullName, email);
+                    user.SetTimeZoneId(timeZoneId);
 
                     var created = await _userAccountService.CreateUserAsync(user, password, RoleNames.Assistant, cancellationToken);
                     if (created.IsFailure)

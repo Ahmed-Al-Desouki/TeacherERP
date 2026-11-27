@@ -30,8 +30,24 @@ Accept: application/json
 @requestId = 00000000-0000-0000-0000-000000000000
 @notificationId = 00000000-0000-0000-0000-000000000000
 @studentToken = PASTE_STUDENT_ACCESS_TOKEN
+@timeZoneId = Africa/Cairo
+@loginEmail = REPLACE_WITH_EMAIL
+@loginPassword = REPLACE_WITH_PASSWORD
+@deviceId = local-device-id
 @centerId = 00000000-0000-0000-0000-000000000000
 @compensationId = FA8907C8-350F-4363-A0B4-3C4D361CA050
+
+### Login returns TimeZoneId for consistent client-side formatting of UTC timestamps
+POST {{TeacherERP.API_HostAddress}}/api/Auth/login
+Content-Type: application/json
+X-Time-Zone: {{timeZoneId}}
+
+{
+  "email": "{{loginEmail}}",
+  "password": "{{loginPassword}}",
+  "deviceId": "{{deviceId}}",
+  "deviceInfo": "Local development client"
+}
 
 ### F3: إعدادات الحضور (المدرس): الكود الثابت يظهر في الوضع الثابت فقط
 GET {{TeacherERP.API_HostAddress}}/api/Attendance/settings

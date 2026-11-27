@@ -1014,10 +1014,10 @@
     "semantic_hash": "95687453a449c13bc38a1b0a43dd7838"
   },
   "TeacherERP.Application/Features/Team/RemoveAssistant/RemoveAssistantCommandHandler.cs": {
-    "mtime": 1793082565.0590959,
-    "seen": 1793344083.7070231,
-    "ast_hash": "4d566b75f3ecbb5275d733affb44c0b4",
-    "semantic_hash": "4d566b75f3ecbb5275d733affb44c0b4"
+    "mtime": 1795800216.232777,
+    "seen": 1795800351.5832179,
+    "ast_hash": "42b4fb53b5da33a7c332ce208ddabd95",
+    "semantic_hash": "42b4fb53b5da33a7c332ce208ddabd95"
   },
   "TeacherERP.Application/Features/Team/RemoveAssistant/RemoveAssistantValidator.cs": {
     "mtime": 1793082552.6495674,
@@ -1050,10 +1050,10 @@
     "semantic_hash": "dbf4ecefe4326f73a4feb7739cc419e5"
   },
   "TeacherERP.Application/Features/Team/SetAssistantSuspension/SetAssistantSuspensionCommandHandler.cs": {
-    "mtime": 1793082509.3539512,
-    "seen": 1793344083.7070305,
-    "ast_hash": "09f8fb163612ce7b274061882d82ec3a",
-    "semantic_hash": "09f8fb163612ce7b274061882d82ec3a"
+    "mtime": 1795800065.366014,
+    "seen": 1795800351.584018,
+    "ast_hash": "2e0a8d3d3778a88a18e3b4a8b45586d2",
+    "semantic_hash": "2e0a8d3d3778a88a18e3b4a8b45586d2"
   },
   "TeacherERP.Application/Features/Team/SetAssistantSuspension/SetAssistantSuspensionValidator.cs": {
     "mtime": 1793082497.292963,
@@ -3865,10 +3865,10 @@
     "semantic_hash": "263c8d3b8af6a5775c9b2df2b3aee192"
   },
   "TeacherERP.Domain/Entities/Audit/AuditLog.cs": {
-    "mtime": 1795254248.4458232,
-    "seen": 1795450201.2449894,
-    "ast_hash": "47b32814abbbb581c3626dbc41d5c738",
-    "semantic_hash": "47b32814abbbb581c3626dbc41d5c738"
+    "mtime": 1795800166.5593479,
+    "seen": 1795800351.6133087,
+    "ast_hash": "1fc4c0272922a8f4f2c478e8cc165ba4",
+    "semantic_hash": "1fc4c0272922a8f4f2c478e8cc165ba4"
   },
   "TeacherERP.Domain/Entities/Centers/Center.cs": {
     "mtime": 1794842096.1694763,
@@ -4661,5 +4661,11 @@
     "seen": 1795799871.9519737,
     "ast_hash": "8a3e9d1930a06b0dbcb75b3e8a1ebc13",
     "semantic_hash": "8a3e9d1930a06b0dbcb75b3e8a1ebc13"
+  },
+  "TeacherERP.Tests/Unit/Team/AssistantAuditTests.cs": {
+    "mtime": 1795800166.7253847,
+    "seen": 1795800351.6488645,
+    "ast_hash": "f8c9ed8190b64bcf7cfbe45166f3c3bb",
+    "semantic_hash": "f8c9ed8190b64bcf7cfbe45166f3c3bb"
   }
 }

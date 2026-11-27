@@ -11,17 +11,20 @@ namespace TeacherERP.Application.Features.Users.Commands.CreateStudent
         private readonly IOtpService _otpService;
         private readonly ITransientAuthStateStore _authStateStore;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IUserTimeZoneAccessor _userTimeZoneAccessor;
 
         public CreateStudentCommandHandler(
             IUserAccountService userAccountService,
             IOtpService otpService,
             ITransientAuthStateStore authStateStore,
-            IBackgroundJobClient backgroundJobClient)
+            IBackgroundJobClient backgroundJobClient,
+            IUserTimeZoneAccessor userTimeZoneAccessor)
         {
             _userAccountService = userAccountService;
             _otpService = otpService;
             _authStateStore = authStateStore;
             _backgroundJobClient = backgroundJobClient;
+            _userTimeZoneAccessor = userTimeZoneAccessor;
         }
 
         public async Task<Result<string>> Handle(CreateStudentCommand request, CancellationToken cancellationToken)
@@ -49,11 +52,15 @@ namespace TeacherERP.Application.Features.Users.Commands.CreateStudent
             if (passwordHash.IsFailure) return Result<string>.Failure(passwordHash.Error);
 
             // 4. حفظ مسودة التسجيل عشر دقائق، مع تخزين بصمة كلمة المرور فقط
+            var requestedTimeZoneId = _userTimeZoneAccessor.TimeZoneId;
             var pendingData = new PendingStudentRegistrationData
             {
                 FullName = request.FullName,
                 Email = request.Email,
-                PasswordHash = passwordHash.Value!
+                PasswordHash = passwordHash.Value!,
+                TimeZoneId = string.IsNullOrWhiteSpace(requestedTimeZoneId)
+                    ? "UTC"
+                    : requestedTimeZoneId
             };
             await _authStateStore.SavePayloadAsync(OtpPurpose.Registration.ToString(), request.Email, pendingData, TimeSpan.FromMinutes(10), cancellationToken);
 

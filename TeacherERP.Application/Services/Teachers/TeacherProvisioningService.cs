@@ -49,6 +49,7 @@ namespace TeacherERP.Application.Teachers
                 return await _unitOfWork.ExecuteInTransactionAsync(async () =>
                 {
                     var user = ApplicationUser.CreateTeacher(fullName, email);
+                    user.SetTimeZoneId(timeZoneId);
 
                     var created = await _userAccountService.CreateUserAsync(user, password, RoleNames.SuperAdmin, cancellationToken);
                     if (created.IsFailure)

@@ -4,6 +4,7 @@ using TeacherERP.Domain.Entities;
 
 namespace TeacherERP.Application.Interfaces
 {
+    // CreatedAt remains UTC; authenticated clients can format it with the TimeZoneId claim.
     public record NotificationItem(Guid Id, Guid TenantId, NotificationType Type, string Message, Guid? RelatedId, bool IsRead, DateTime CreatedAt);
     public record NotificationShareItem(
         SessionAttachmentKind Kind, string GroupName, string FileName, string? Caption,

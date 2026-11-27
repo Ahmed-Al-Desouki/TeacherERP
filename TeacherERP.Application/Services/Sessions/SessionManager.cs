@@ -43,6 +43,12 @@ namespace TeacherERP.Application.Sessions
         public async Task<AuthResponseDto> IssueAsync(ApplicationUser user, string deviceId, string deviceName, CancellationToken cancellationToken)
         {
             var now = _timeProvider.GetUtcNow().UtcDateTime;
+            var requestedTimeZoneId = _userTimeZoneAccessor.TimeZoneId;
+            if (!string.IsNullOrWhiteSpace(requestedTimeZoneId))
+            {
+                user.SetTimeZoneId(requestedTimeZoneId);
+            }
+
             var activeSessions = await _sessionRepository.GetActiveByUserAsync(user.Id, now, cancellationToken);
 
             // 1. جلسة الجهاز نفسه السابقة تُستبدل، فلا يستهلك الجهاز أكثر من خانة
@@ -85,7 +91,7 @@ namespace TeacherERP.Application.Sessions
 
             // 6. الإيميلات في الخلفية (الوقت UTC مع منطقة المستخدم ليُحوَّل عند الصياغة)
             var toEmail = user.Email!;
-            var timeZoneId = _userTimeZoneAccessor.TimeZoneId;
+            var timeZoneId = user.TimeZoneId;
 
             _backgroundJobClient.Enqueue<IEmailService>(emailService =>
                 emailService.SendNewLoginAlertAsync(toEmail, deviceName, now, timeZoneId));
@@ -101,7 +107,8 @@ namespace TeacherERP.Application.Sessions
                 accessToken.Token,
                 $"{session.Id:N}.{secret}",
                 session.RefreshExpiresAt,
-                RequiresProfileCompletion(user, accessToken));
+                RequiresProfileCompletion(user, accessToken),
+                TimeZoneId: user.TimeZoneId);
         }
 
         public async Task<Result<AuthResponseDto>> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
@@ -174,7 +181,8 @@ namespace TeacherERP.Application.Sessions
                 accessToken.Token,
                 $"{session.Id:N}.{newSecret}",
                 session.RefreshExpiresAt,
-                RequiresProfileCompletion(user, accessToken)));
+                RequiresProfileCompletion(user, accessToken),
+                TimeZoneId: user.TimeZoneId));
         }
 
         public async Task<Result<bool>> RevokeByRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken)

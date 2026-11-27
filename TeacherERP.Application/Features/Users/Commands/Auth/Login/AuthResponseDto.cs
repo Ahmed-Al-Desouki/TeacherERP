@@ -1,6 +1,7 @@
 ﻿// موجود (تعديل) — TeacherERP.Application/Features/Users/Commands/Auth/Login/AuthResponseDto.cs
 namespace TeacherERP.Application.Features.Users.Commands.Auth.Login
 {
+    // TimeZoneId متاح للعميل لتنسيق كل أوقات API المعادة كـ UTC، دون تغيير عقد التوقيت الداخلي.
     // RequiresProfileCompletion: true فقط لطالب بروفايله ناقص (يوجّه التطبيق لشاشة الإكمال)
     // RequiresPasswordSetup: true فقط بعد تفعيل حساب مساعد لأول مرة (التطبيق يعرض "تغيير الباسورد؟" مع Skip)
     public record AuthResponseDto(
@@ -8,5 +9,6 @@ namespace TeacherERP.Application.Features.Users.Commands.Auth.Login
         string RefreshToken,
         DateTime ExpiryDate,
         bool RequiresProfileCompletion,
-        bool RequiresPasswordSetup = false);
+        bool RequiresPasswordSetup = false,
+        string TimeZoneId = "UTC");
 }

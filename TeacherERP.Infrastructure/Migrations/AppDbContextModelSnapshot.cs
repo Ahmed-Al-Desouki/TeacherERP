@@ -218,6 +218,12 @@ namespace TeacherERP.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasDefaultValue("UTC")
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit");
 

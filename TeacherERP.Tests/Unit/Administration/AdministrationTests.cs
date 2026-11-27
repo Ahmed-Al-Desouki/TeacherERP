@@ -62,7 +62,7 @@ public class TeacherProvisioningServiceTests
         Assert.Equal("t@x.com", result.Value.Email);
 
         await _users.Received(1).CreateUserAsync(
-            Arg.Is<ApplicationUser>(u => u.Email == "t@x.com" && !u.EmailConfirmed),
+            Arg.Is<ApplicationUser>(u => u.Email == "t@x.com" && !u.EmailConfirmed && u.TimeZoneId == "Africa/Cairo"),
             "Temp#Pass1",
             RoleNames.SuperAdmin,
             Arg.Any<CancellationToken>());

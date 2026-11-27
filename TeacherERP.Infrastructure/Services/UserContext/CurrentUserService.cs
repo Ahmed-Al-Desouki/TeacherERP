@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
+using TeacherERP.Application.Common;
 using TeacherERP.Application.Interfaces;
 using TeacherERP.Application.Sessions;
 
@@ -18,6 +19,17 @@ namespace TeacherERP.Infrastructure.Services
         public Guid? UserId => ReadGuidClaim(ClaimTypes.NameIdentifier);
 
         public Guid? SessionId => ReadGuidClaim(AuthClaimTypes.SessionId);
+
+        public string? TimeZoneId
+        {
+            get
+            {
+                var value = _httpContextAccessor.HttpContext?.User.FindFirst(AuthClaimTypes.TimeZoneId)?.Value;
+                return string.Equals(value, "UTC", StringComparison.OrdinalIgnoreCase) || UserTime.IsValid(value)
+                    ? value
+                    : null;
+            }
+        }
 
         private Guid? ReadGuidClaim(string claimType)
         {

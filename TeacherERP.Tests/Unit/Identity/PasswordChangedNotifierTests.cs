@@ -33,6 +33,26 @@ public sealed class PasswordChangedNotifierTests
         Assert.Equal("Africa/Cairo", scheduledJob.Args[2]);
     }
 
+    [Fact]
+    public void Enqueue_UsesPersistedUserTimeZoneWhenRequestHeaderIsUnavailable()
+    {
+        var jobs = Substitute.For<IBackgroundJobClient>();
+        var timeZone = Substitute.For<IUserTimeZoneAccessor>();
+        timeZone.TimeZoneId.Returns(string.Empty);
+        var user = ApplicationUser.CreateStudent("Password test", "password-alert@example.test");
+        user.SetTimeZoneId("Asia/Riyadh");
+        Job? scheduledJob = null;
+        jobs.When(client => client.Create(Arg.Any<Job>(), Arg.Any<IState>()))
+            .Do(call => scheduledJob = call.Arg<Job>());
+        var notifier = new PasswordChangedNotifier(
+            jobs, timeZone, TimeProvider.System, NullLogger<PasswordChangedNotifier>.Instance);
+
+        notifier.Enqueue(user);
+
+        Assert.NotNull(scheduledJob);
+        Assert.Equal("Asia/Riyadh", scheduledJob!.Args[2]);
+    }
+
     private sealed class FixedTimeProvider(DateTime utcNow) : TimeProvider
     {
         private readonly DateTimeOffset _now = new(DateTime.SpecifyKind(utcNow, DateTimeKind.Utc));

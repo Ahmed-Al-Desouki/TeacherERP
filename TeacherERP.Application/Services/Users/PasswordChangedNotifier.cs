@@ -17,7 +17,8 @@ public sealed class PasswordChangedNotifier(
         if (string.IsNullOrWhiteSpace(email)) return;
 
         var changedAtUtc = timeProvider.GetUtcNow().UtcDateTime;
-        var timeZoneId = userTimeZoneAccessor.TimeZoneId;
+        var requestTimeZoneId = userTimeZoneAccessor.TimeZoneId;
+        var timeZoneId = string.IsNullOrWhiteSpace(requestTimeZoneId) ? user.TimeZoneId : requestTimeZoneId;
         try
         {
             backgroundJobClient.Enqueue<IEmailService>(emailService =>

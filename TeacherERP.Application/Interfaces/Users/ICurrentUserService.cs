@@ -5,5 +5,6 @@
     {
         Guid? UserId { get; }
         Guid? SessionId { get; }
+        string? TimeZoneId { get; }
     }
 }
