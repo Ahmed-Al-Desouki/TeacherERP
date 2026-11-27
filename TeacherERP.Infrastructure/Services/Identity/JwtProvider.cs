@@ -16,11 +16,13 @@ namespace TeacherERP.Infrastructure.Services
     {
         private readonly JwtSettings _jwtSettings;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly TimeProvider _timeProvider;
 
-        public JwtProvider(IOptions<JwtSettings> jwtSettings, UserManager<ApplicationUser> userManager)
+        public JwtProvider(IOptions<JwtSettings> jwtSettings, UserManager<ApplicationUser> userManager, TimeProvider timeProvider)
         {
             _jwtSettings = jwtSettings.Value;
             _userManager = userManager;
+            _timeProvider = timeProvider;
         }
 
         public async Task<AccessTokenResult> GenerateAccessTokenAsync(ApplicationUser user, Guid sessionId)
@@ -48,7 +50,7 @@ namespace TeacherERP.Infrastructure.Services
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes),
+                Expires = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(_jwtSettings.ExpiryMinutes),
                 Issuer = _jwtSettings.Issuer,
                 Audience = _jwtSettings.Audience,
                 SigningCredentials = credentials

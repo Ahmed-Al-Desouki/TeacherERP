@@ -87,6 +87,7 @@ namespace TeacherERP.Infrastructure.Data
                 entity.HasIndex(s => new { s.UserId, s.DeviceId });
             });
 
+
             // بروفايل الطالب: الجنس وبيانات ولي الأمر (في نفس جدول المستخدمين) وفرادة موبايل الطالب
             builder.Entity<ApplicationUser>(entity =>
             {

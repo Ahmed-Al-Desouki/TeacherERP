@@ -156,11 +156,19 @@ namespace TeacherERP.Application.Sessions
             }
 
             // 5. تبديل الـ Refresh Token وإصدار Access Token جديد (بالأدوار الحالية من الداتابيز)
+            var expectedCurrentHash = session.RefreshTokenHash;
             var newSecret = _jwtProvider.GenerateRefreshToken();
             session.Rotate(TokenHasher.Hash(newSecret), now, SessionPolicy.RefreshLifetime);
 
             var accessToken = await _jwtProvider.GenerateAccessTokenAsync(user, session.Id);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            var rotationApplied = await _sessionRepository.TryRotateRefreshTokenAsync(
+                session, expectedCurrentHash, now, cancellationToken);
+
+            // لو طلب متزامن سبق وبدّل الـ hash، لا نرجع توكنًا لن يُقبل لاحقًا.
+            if (!rotationApplied)
+            {
+                return invalidToken;
+            }
 
             return Result<AuthResponseDto>.Success(new AuthResponseDto(
                 accessToken.Token,

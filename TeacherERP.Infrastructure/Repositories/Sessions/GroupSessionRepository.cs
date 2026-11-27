@@ -11,10 +11,12 @@ namespace TeacherERP.Infrastructure.Repositories
     public class GroupSessionRepository : IGroupSessionRepository
     {
         private readonly AppDbContext _context;
+        private readonly TimeProvider _timeProvider;
 
-        public GroupSessionRepository(AppDbContext context)
+        public GroupSessionRepository(AppDbContext context, TimeProvider timeProvider)
         {
             _context = context;
+            _timeProvider = timeProvider;
         }
 
         public void AddRange(IEnumerable<Session> sessions)
@@ -174,7 +176,7 @@ namespace TeacherERP.Infrastructure.Repositories
 
             var homeZone = ResolveTimeZone(timeZoneId);
             var homeToday = effectiveFrom?.ToDateTime(TimeOnly.MinValue)
-                ?? TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, homeZone).Date;
+                ?? TimeZoneInfo.ConvertTimeFromUtc(_timeProvider.GetUtcNow().UtcDateTime, homeZone).Date;
             var conflicts = new Dictionary<(Guid GroupId, DateTime Start), ScheduleConflictItem>();
             var occurrences = new List<(DateTime Start, DateTime End)>();
             foreach (var slot in slots)

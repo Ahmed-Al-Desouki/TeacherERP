@@ -22,17 +22,19 @@ namespace TeacherERP.Infrastructure.Services
 
         private readonly IMemoryCache _cache;
         private readonly ILogger<OtpService> _logger;
+        private readonly TimeProvider _timeProvider;
 
-        public OtpService(IMemoryCache cache, ILogger<OtpService> logger)
+        public OtpService(IMemoryCache cache, ILogger<OtpService> logger, TimeProvider timeProvider)
         {
             _cache = cache;
             _logger = logger;
+            _timeProvider = timeProvider;
         }
 
         public Task<Result<OtpIssueResult>> GenerateAsync(OtpPurpose purpose, string identifier, CancellationToken cancellationToken)
         {
             var key = BuildKey(purpose, identifier);
-            var now = DateTime.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
 
             if (_cache.TryGetValue(key, out OtpEntry? existing) && existing is not null)
             {

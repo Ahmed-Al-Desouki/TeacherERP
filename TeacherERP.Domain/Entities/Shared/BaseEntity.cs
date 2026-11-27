@@ -10,6 +10,8 @@ namespace TeacherERP.Domain.Entities
     /// </summary>
     public abstract class BaseEntity
     {
+        private readonly TimeProvider _timeProvider;
+
         /// <summary>المعرف الفريد للكيان (Primary Key)</summary>
         public Guid Id { get; protected set; }
 
@@ -21,11 +23,12 @@ namespace TeacherERP.Domain.Entities
 
         // يمكن إضافة خصائص أخرى مثل IsDeleted لتطبيق الـ Soft Delete لاحقاً إذا رغبت.
 
-        protected BaseEntity()
+        protected BaseEntity(TimeProvider? timeProvider = null)
         {
+            _timeProvider = timeProvider ?? TimeProvider.System;
             // توليد آلي لتوفير الكود في الـ Factory Methods
             Id = Guid.NewGuid();
-            CreatedAt = DateTime.UtcNow;
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
         /// <summary>
@@ -34,7 +37,7 @@ namespace TeacherERP.Domain.Entities
         /// </summary>
         public void MarkAsUpdated()
         {
-            UpdatedAt = DateTime.UtcNow;
+            UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
     }
 }

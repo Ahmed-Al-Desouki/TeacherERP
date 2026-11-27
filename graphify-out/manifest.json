@@ -96,10 +96,10 @@
     "semantic_hash": "e9d94cfc81a106cfa9d234e5f7a182b4"
   },
   "TeacherERP.API/TeacherERP.API.csproj": {
-    "mtime": 1793970881.6561077,
-    "seen": 1795251545.4099147,
-    "ast_hash": "0cfc59a557fc9c315e927d67d65bd621",
-    "semantic_hash": "0cfc59a557fc9c315e927d67d65bd621"
+    "mtime": 1795451466.0517452,
+    "seen": 1795452751.9491026,
+    "ast_hash": "84e74d263ff0b5543dbb8010eee2abab",
+    "semantic_hash": "84e74d263ff0b5543dbb8010eee2abab"
   },
   "TeacherERP.Application/Behaviors/LoggingBehavior.cs": {
     "mtime": 1791267542.189067,
@@ -1428,10 +1428,10 @@
     "semantic_hash": "5db2536934af007385502e1302c132da"
   },
   "TeacherERP.Infrastructure/Data/AppDbContextFactory.cs": {
-    "mtime": 1791220764.9254925,
-    "seen": 1793344083.7071974,
-    "ast_hash": "765f5a7857236a4e443d7503ce46a0a0",
-    "semantic_hash": "765f5a7857236a4e443d7503ce46a0a0"
+    "mtime": 1795451494.617308,
+    "seen": 1795452752.0624652,
+    "ast_hash": "c94f42a99b6dc1ac328e490af1d08acb",
+    "semantic_hash": "c94f42a99b6dc1ac328e490af1d08acb"
   },
   "TeacherERP.Infrastructure/Data/ApplicationDbSeeder.cs": {
     "mtime": 1794841636.5219455,
@@ -1638,10 +1638,10 @@
     "semantic_hash": "d8e26cf77a9981a3a0012f3799032f41"
   },
   "TeacherERP.Infrastructure/TeacherERP.Infrastructure.csproj": {
-    "mtime": 1793970877.7614076,
-    "seen": 1795251545.6034467,
-    "ast_hash": "0670ac4617ca06a2e377210bf1fd742b",
-    "semantic_hash": "0670ac4617ca06a2e377210bf1fd742b"
+    "mtime": 1795451466.2752209,
+    "seen": 1795452752.0896704,
+    "ast_hash": "68ffe02d8d7bb39fc4648c39c5945c0e",
+    "semantic_hash": "68ffe02d8d7bb39fc4648c39c5945c0e"
   },
   "TeacherERP.slnx": {
     "mtime": 1794666269.2974763,
@@ -2964,13 +2964,6 @@
     "ast_hash": "cef49cba380369e970cacf4dcdd0d664",
     "semantic_hash": "cef49cba380369e970cacf4dcdd0d664"
   },
-  "TeacherERP.API/TeacherERP-E3-Notifications.postman_collection.json": {
-    "mtime": 1795443163.5433047,
-    "seen": 1795444908.2629724,
-    "ast_hash": "40a4db1306287c5015b4dc3abf6426ed",
-    "semantic_hash": "40a4db1306287c5015b4dc3abf6426ed",
-    "ast_empty": true
-  },
   "TeacherERP.Application/Features/Enrollment/RequestGroupByCode/RequestGroupByCodeCommand.cs": {
     "mtime": 1795446002.5963728,
     "seen": 1795446943.0293567,
@@ -3560,10 +3553,10 @@
     "semantic_hash": "2169bd7296df805ec1294f1859dee9a4"
   },
   "TeacherERP.Application/Interfaces/Sessions/ISessionRepository.cs": {
-    "mtime": 1791543993.866005,
-    "seen": 1795450201.2447388,
-    "ast_hash": "706682b67cd253244bd29b015c3ba74c",
-    "semantic_hash": "706682b67cd253244bd29b015c3ba74c"
+    "mtime": 1795469050.269677,
+    "seen": 1795794568.9934852,
+    "ast_hash": "c260feee9ab624d09c6c86f2f504be95",
+    "semantic_hash": "c260feee9ab624d09c6c86f2f504be95"
   },
   "TeacherERP.Application/Interfaces/Students/IStudentRepository.cs": {
     "mtime": 1795437868.229682,
@@ -3860,10 +3853,10 @@
     "semantic_hash": "4af57e478b00c469f490a081f2205398"
   },
   "TeacherERP.Application/Services/Sessions/SessionManager.cs": {
-    "mtime": 1793042940.5144267,
-    "seen": 1795450201.24482,
-    "ast_hash": "ab91ddb430027a1bea2091f040f7337d",
-    "semantic_hash": "ab91ddb430027a1bea2091f040f7337d"
+    "mtime": 1795469050.7317536,
+    "seen": 1795794569.0032973,
+    "ast_hash": "6822b9d17d9c080e8176dce52c26aa0e",
+    "semantic_hash": "6822b9d17d9c080e8176dce52c26aa0e"
   },
   "TeacherERP.Application/Services/Sessions/SessionPolicy.cs": {
     "mtime": 1791544033.687186,
@@ -4160,10 +4153,10 @@
     "semantic_hash": "f9d43d4d35ad7f47819e1b8ed5fda337"
   },
   "TeacherERP.Infrastructure/Repositories/Sessions/SessionRepository.cs": {
-    "mtime": 1791544354.1006298,
-    "seen": 1795450201.256889,
-    "ast_hash": "a43e43e45f83309a12afbfc9e222c78a",
-    "semantic_hash": "a43e43e45f83309a12afbfc9e222c78a"
+    "mtime": 1795469050.4996514,
+    "seen": 1795794569.0323486,
+    "ast_hash": "466434da35563629e63dd6ee75342b42",
+    "semantic_hash": "466434da35563629e63dd6ee75342b42"
   },
   "TeacherERP.Infrastructure/Repositories/Students/StudentRepository.cs": {
     "mtime": 1795438982.771013,
@@ -4554,5 +4547,23 @@
     "seen": 1795450201.257969,
     "ast_hash": "21f66a3ef7c2e7b8d1f1a422b20a5119",
     "semantic_hash": "21f66a3ef7c2e7b8d1f1a422b20a5119"
+  },
+  "TeacherERP.Tests/Integration/Sessions/RefreshTokenRotationIntegrationTests.cs": {
+    "mtime": 1795469173.7851596,
+    "seen": 1795794569.0462096,
+    "ast_hash": "d65bc51a767993876c1dc91aa661d6ff",
+    "semantic_hash": "d65bc51a767993876c1dc91aa661d6ff"
+  },
+  "TeacherERP.Tests/Unit/Sessions/RefreshTokenRotationTests.cs": {
+    "mtime": 1795469173.5468905,
+    "seen": 1795794569.051371,
+    "ast_hash": "6328445037f593fab8aa44fec9e69445",
+    "semantic_hash": "6328445037f593fab8aa44fec9e69445"
+  },
+  "README.md": {
+    "mtime": 1791224180.7637029,
+    "seen": 1795469522.537495,
+    "ast_hash": "ef17a2b71cf72d2fe74e62d30c01e3c0",
+    "semantic_hash": ""
   }
 }
