@@ -1,33 +1,5 @@
-## .NET Core / Visual Studio GitIgnore
-[Oo]bj/
-[Bb]in/
-.vs/
-*.user
-*.suo
-*.userosscache
-*.sln.docstates
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
 
-## Entity Framework Core Migrations Design-time files (Optional, but good if needed)
-# *.sqlite
-
-## User-specific properties files (Very Important to prevent leaking local DB connections & secrets)
-**/appsettings.Development.json
-**/appsettings.json
-*.env
-*.secret
-
-## OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-# Local AI & Planning files
-PLAN.md
-AGENTS.md
-CLAUDE_CONTEXT.md
-graphify-out
-Scripts
-ATTENDANCE_RULES.md
+/.vs
