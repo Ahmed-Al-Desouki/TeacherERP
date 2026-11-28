@@ -1,0 +1,64 @@
+// موجود (تعديل) — TeacherERP.Application/Interfaces/IAttendanceRepository.cs
+using TeacherERP.Application.Common;
+using TeacherERP.Domain.Entities;
+
+namespace TeacherERP.Application.Interfaces
+{
+    public record AttendanceSettingsInfo(
+        Guid TenantId, TenantStatus TenantStatus, AttendanceMode Mode, string QrSecret, bool RejectMockLocations,
+        bool AutoRegisterOnScan, bool AutoApproveGroupAdminScans);
+
+    public record RunningSessionInfo(
+        Guid SessionId, Guid GroupId, string GroupName, DateTime StartTime, DateTime EndTime,
+        double? Latitude, double? Longitude, int GeofenceRadiusMeters);
+
+    public record AttendanceListItem(
+        Guid RecordId, Guid StudentId, string StudentName, string? ProfileImageUrl, AttendanceStatus Status, ScanMethod ScannedVia,
+        DateTime RecordedAt, Guid? CompensatesSessionId);
+
+    public record PendingCompensationItem(
+        Guid RecordId, Guid StudentId, string StudentName, string? ProfileImageUrl, Guid SessionId, string GroupName, DateTime SessionStart,
+        Guid? CompensatesSessionId, DateTime? CompensatesSessionStart, string? CompensatesGroupName, DateTime RecordedAt);
+
+    // الاستعلامات اللي تأخذ tenantId صراحةً تعمل عبر المدرسين بقصد لأن الطالب ليس عضواً بعد
+    public interface IAttendanceRepository
+    {
+        Task<AttendanceSettingsInfo?> GetSettingsAsync(Guid tenantId, CancellationToken cancellationToken);
+
+        // إعدادات المدرس الحالي متتبَّعة للتعديل (يتفلتر بالمدرس الحالي)
+        Task<TenantSettings?> GetTrackedSettingsAsync(CancellationToken cancellationToken);
+
+        // الحصص الجارية الآن (من قبل البداية بدقائق الدخول المبكر حتى النهاية). onlyGroupId يقصرها على مجموعة واحدة (للأدمن ستودنت)
+        Task<List<RunningSessionInfo>> GetRunningSessionsAsync(
+            Guid tenantId, DateTime nowUtc, int earlyMinutes, Guid? onlyGroupId, CancellationToken cancellationToken);
+
+        Task<AttendanceRecord?> GetRecordAsync(Guid sessionId, Guid studentId, CancellationToken cancellationToken);
+
+        // يحفظ التغييرات المعلقة؛ يعيد سجل الفائز إذا سبق طلب متزامن لنفس الطالب والحصة.
+        Task<AttendanceRecord?> SaveChangesForAttendanceAsync(
+            AttendanceRecord attemptedRecord, CancellationToken cancellationToken);
+
+        // أقرب حصة لمجموعة الطالب الأصلية لم يحضرها (ماضية أو قادمة داخل النافذة)، ليعوّضها
+        Task<Guid?> FindCompensableSessionAsync(
+            Guid tenantId, Guid groupId, Guid studentId, DateTime nowUtc, int windowDays, CancellationToken cancellationToken);
+
+        Task<Guid?> GetStudentIdByQrAsync(string studentQrCode, CancellationToken cancellationToken);
+
+        // أي من هذه الحصص عليها تعويض معلّق (كحصة حضرها الطالب تعويضاً، أو كحصة أصلية يعوّضها)، فلا يصح إلغاؤها
+        Task<HashSet<Guid>> GetSessionIdsWithPendingCompensationAsync(
+            IReadOnlyCollection<Guid> sessionIds, CancellationToken cancellationToken);
+
+        void AddRecord(AttendanceRecord record);
+
+        // للموظفين داخل المدرس الحالي
+        Task<AttendanceRecord?> GetTrackedRecordAsync(Guid recordId, CancellationToken cancellationToken);
+
+        // سجلات حضور حصة بصفحات، مرتبة بوقت التسجيل ثم الـ Id
+        Task<PagedResult<AttendanceListItem>> GetSessionAttendancePageAsync(
+            Guid sessionId, PageRequest page, CancellationToken cancellationToken);
+
+        // طلبات التعويض المعلّقة بصفحات، الأقدم أولاً
+        Task<PagedResult<PendingCompensationItem>> GetPendingCompensationsPageAsync(
+            PageRequest page, CancellationToken cancellationToken);
+    }
+}

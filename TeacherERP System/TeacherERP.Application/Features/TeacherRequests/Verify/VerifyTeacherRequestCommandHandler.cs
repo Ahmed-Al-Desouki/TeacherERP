@@ -1,0 +1,83 @@
+// جديد — TeacherERP.Application/Features/TeacherRequests/Verify/VerifyTeacherRequestCommandHandler.cs
+using System.Data;
+using MediatR;
+using TeacherERP.Application.Interfaces;
+using TeacherERP.Domain.Entities;
+using TeacherERP.Domain.Shared;
+
+namespace TeacherERP.Application.Features.TeacherRequests.Verify
+{
+    public class VerifyTeacherRequestCommandHandler : IRequestHandler<VerifyTeacherRequestCommand, Result<TeacherRequestQrDto>>
+    {
+        private readonly ITransientAuthStateStore _authStateStore;
+        private readonly IOtpService _otpService;
+        private readonly ITeacherAccessRequestRepository _requestRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly TimeProvider _timeProvider;
+
+        public VerifyTeacherRequestCommandHandler(
+            ITransientAuthStateStore authStateStore,
+            IOtpService otpService,
+            ITeacherAccessRequestRepository requestRepository,
+            IUnitOfWork unitOfWork,
+            TimeProvider timeProvider)
+        {
+            _authStateStore = authStateStore;
+            _otpService = otpService;
+            _requestRepository = requestRepository;
+            _unitOfWork = unitOfWork;
+            _timeProvider = timeProvider;
+        }
+
+        public async Task<Result<TeacherRequestQrDto>> Handle(VerifyTeacherRequestCommand request, CancellationToken cancellationToken)
+        {
+            var email = request.Email.Trim().ToLowerInvariant();
+
+            // 1. البيانات المعلقة أولاً (قبل الكود) حتى لا يُستهلك كود بلا داعٍ. غيابها = لم يُرسل أو إيميل غير مسموح
+            var data = await _authStateStore.GetPayloadAsync<PendingTeacherRequestData>(OtpPurpose.TeacherRequest.ToString(), email, cancellationToken);
+            if (data is null)
+            {
+                return Result<TeacherRequestQrDto>.Failure(TeacherRequestErrors.SubmissionExpired);
+            }
+
+            // 2. الكود (يشمل حد المحاولات والقفل)
+            var otpResult = await _otpService.VerifyAsync(OtpPurpose.TeacherRequest, email, request.OtpCode, cancellationToken);
+            if (otpResult.IsFailure)
+            {
+                return Result<TeacherRequestQrDto>.Failure(otpResult.Error);
+            }
+
+            // 3. سر جديد للـ QR (نخزّن بصمته فقط)
+            var token = TeacherRequestToken.Generate();
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+            var expiresAt = now + TeacherRequestPolicy.RequestLifetime;
+
+            // 4. طلب معلّق واحد لكل إيميل: أي طلب سابق يُنهى ثم يُنشأ الجديد
+            // (حفظان منفصلان داخل Transaction واحدة، حتى لا يتعارض الفهرس الفريد المرشَّح أثناء الاستبدال)
+            await _unitOfWork.ExecuteInTransactionAsync(async () =>
+            {
+                var previous = await _requestRepository.GetPendingByEmailAsync(email, cancellationToken);
+                if (previous.Count > 0)
+                {
+                    foreach (var old in previous)
+                    {
+                        old.MarkExpired();
+                    }
+
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                }
+
+                _requestRepository.Add(TeacherAccessRequest.Create(
+                    data.FullName, data.Email, data.Subject, data.Note, data.TimeZoneId,
+                    TeacherRequestToken.Hash(token), expiresAt));
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                return true;
+            }, IsolationLevel.ReadCommitted, cancellationToken);
+
+            await _authStateStore.RemovePayloadAsync(OtpPurpose.TeacherRequest.ToString(), email, cancellationToken);
+
+            return Result<TeacherRequestQrDto>.Success(new TeacherRequestQrDto(token, expiresAt));
+        }
+    }
+}

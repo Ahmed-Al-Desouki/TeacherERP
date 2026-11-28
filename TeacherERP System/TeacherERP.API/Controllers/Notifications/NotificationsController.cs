@@ -1,0 +1,58 @@
+// موجود (تعديل) — TeacherERP.API/Controllers/NotificationsController.cs
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using TeacherERP.Application.Common;
+using TeacherERP.Application.Features.Notifications.GetMyNotifications;
+using TeacherERP.Application.Features.Notifications.GetWhatsAppShare;
+using TeacherERP.Application.Features.Notifications.MarkAllNotificationsRead;
+using TeacherERP.Application.Features.Notifications.MarkNotificationRead;
+
+namespace TeacherERP.API.Controllers
+{
+    // إشعاراتي (عبر كل مدرسيّ، بدون تحديد مدرس)
+    [Authorize]
+    public class NotificationsController : BaseApiController
+    {
+        private readonly IMediator _mediator;
+
+        public NotificationsController(IMediator mediator)
+        {
+            _mediator = mediator;
+        }
+
+        // ?unreadOnly=true&page=1&pageSize=20
+        [HttpGet]
+        public async Task<IActionResult> GetMine(
+            [FromQuery] bool unreadOnly,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = PageRequest.DefaultPageSize,
+            CancellationToken cancellationToken = default)
+        {
+            var result = await _mediator.Send(new GetMyNotificationsQuery(unreadOnly, page, pageSize), cancellationToken);
+            return ToResponse(result);
+        }
+
+        // يُرجع الرسالة الجاهزة ورابط المجموعة لإشعار مملوك للمستخدم الحالي
+        [HttpGet("{id:guid}/whatsapp-share")]
+        public async Task<IActionResult> GetWhatsAppShare(Guid id, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new GetNotificationWhatsAppShareQuery(id), cancellationToken);
+            return ToResponse(result);
+        }
+
+        [HttpPost("{id:guid}/read")]
+        public async Task<IActionResult> MarkRead(Guid id, CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new MarkNotificationReadCommand(id), cancellationToken);
+            return ToResponse(result, new { Message = "Marked as read." });
+        }
+
+        [HttpPost("read-all")]
+        public async Task<IActionResult> MarkAllRead(CancellationToken cancellationToken)
+        {
+            var result = await _mediator.Send(new MarkAllNotificationsReadCommand(), cancellationToken);
+            return ToResponse(result, new { Message = "All notifications were marked as read." });
+        }
+    }
+}

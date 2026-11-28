@@ -1,0 +1,28 @@
+﻿using TeacherERP.Domain.Entities;
+
+namespace TeacherERP.Application.Interfaces
+{
+    // عضوية المستخدم في سنتر مع بيانات السنتر اللازمة للعرض والتحقق
+    public record TenantMembershipInfo(Guid TenantId, string TenantName, TenantRole Role, MembershipStatus MemberStatus, TenantStatus TenantStatus, string? Subject, bool HasFinancialDelegation);
+
+    public interface ITenantRepository
+    {
+        // null لو المستخدم مش عضو أو السنتر غير موجود (نفس النتيجة عمداً، حتى لا نكشف وجود سناتر)
+        Task<TenantMembershipInfo?> GetMembershipAsync(Guid userId, Guid tenantId, CancellationToken cancellationToken);
+
+        // مساحة المدرس متتبَّعة للتعديل. الحفظ يتم عبر IUnitOfWork
+        Task<Tenant?> GetByIdAsync(Guid tenantId, CancellationToken cancellationToken);
+
+        // مساحات المدرسين النشطة (للمهام الدورية، وتعمل بلا سنتر محدد)
+        Task<List<Guid>> GetActiveTenantIdsAsync(CancellationToken cancellationToken);
+
+        // كل عضويات المستخدم (للعرض أو التحديد التلقائي لو عضوية واحدة)
+        Task<List<TenantMembershipInfo>> GetMembershipsAsync(Guid userId, CancellationToken cancellationToken);
+
+        // مساحة المدرس بمالكها (متتبّعة)، لأوامر مدير النظام التي تعمل بلا سنتر محدد. null لو الحساب ليس مدرساً
+        Task<Tenant?> GetByOwnerIdAsync(Guid ownerUserId, CancellationToken cancellationToken);
+
+        // مساحة مدرس جديدة كاملة: المساحة نفسها + عضوية Owner + إعدادات الحضور. الحفظ يتم عبر IUnitOfWork
+        void AddTeacherSpace(Tenant tenant, TenantMember ownerMembership, TenantSettings settings);
+    }
+}

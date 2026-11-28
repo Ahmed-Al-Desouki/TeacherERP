@@ -1,0 +1,241 @@
+// موجود (تعديل) — TeacherERP.Application/Attendance/AttendanceRecorder.cs
+using TeacherERP.Application.Features.Attendance;
+using TeacherERP.Application.Features.Enrollment;
+using TeacherERP.Application.Interfaces;
+using TeacherERP.Domain.Entities;
+using TeacherERP.Domain.Shared;
+using Microsoft.Extensions.Logging;
+
+namespace TeacherERP.Application.Attendance
+{
+    public class AttendanceRecorder : IAttendanceRecorder
+    {
+        private readonly IAttendanceRepository _attendanceRepository;
+        private readonly IEnrollmentRepository _enrollmentRepository;
+        private readonly IEnrollmentService _enrollmentService;
+        private readonly INotificationService _notificationService;
+        private readonly IUserRepository _userRepository;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly TimeProvider _timeProvider;
+        private readonly IFinancialLedgerService _financialLedger;
+        private readonly ILogger<AttendanceRecorder> _logger;
+
+        public AttendanceRecorder(
+            IAttendanceRepository attendanceRepository,
+            IEnrollmentRepository enrollmentRepository,
+            IEnrollmentService enrollmentService,
+            INotificationService notificationService,
+            IUserRepository userRepository,
+            IUnitOfWork unitOfWork,
+            TimeProvider timeProvider,
+            IFinancialLedgerService financialLedger,
+            ILogger<AttendanceRecorder> logger)
+        {
+            _attendanceRepository = attendanceRepository;
+            _enrollmentRepository = enrollmentRepository;
+            _enrollmentService = enrollmentService;
+            _notificationService = notificationService;
+            _userRepository = userRepository;
+            _unitOfWork = unitOfWork;
+            _timeProvider = timeProvider;
+            _financialLedger = financialLedger;
+            _logger = logger;
+        }
+
+        public Task RecordFinancialAttendanceAsync(Guid tenantId, Guid studentId, Guid sessionId,
+            Guid? compensatesSessionId, CancellationToken cancellationToken) =>
+            _financialLedger.RecordPresentAttendanceAsync(tenantId, studentId, sessionId, compensatesSessionId, cancellationToken);
+
+        public async Task<Result<AttendanceResultDto>> RecordAsync(AttendanceRequest request, CancellationToken cancellationToken)
+        {
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+            var running = await _attendanceRepository.GetRunningSessionsAsync(
+                request.TenantId, now, AttendancePolicy.EarlyCheckInMinutes, request.RestrictToGroupId, cancellationToken);
+            if (running.Count == 0)
+            {
+                return Reject(request, AttendanceErrors.NoSessionNow);
+            }
+
+            // حالة الطالب عند هذا المدرس: المحظور مرفوض، والموقوف (غياب) لا يحضر حتى يفك المدرس إيقافه
+            var member = await _enrollmentRepository.GetMemberAsync(request.TenantId, request.StudentId, cancellationToken);
+            if (member is { Status: MembershipStatus.Blacklisted })
+            {
+                return Reject(request, EnrollmentErrors.NotAllowed);
+            }
+
+            if (member is { Status: MembershipStatus.Suspended })
+            {
+                return Reject(request, AttendanceErrors.Suspended);
+            }
+
+            var active = await _enrollmentRepository.GetActiveEnrollmentAsync(request.TenantId, request.StudentId, cancellationToken);
+
+            // 1) اختيار الحصة (بدون أي أثر جانبي)
+            var session = active is null ? null : running.FirstOrDefault(s => s.GroupId == active.GroupId);
+            var isOwnGroup = session is not null;
+
+            if (session is null)
+            {
+                if (request.PreferredGroupId is { } preferred)
+                {
+                    session = running.FirstOrDefault(s => s.GroupId == preferred);
+                    if (session is null)
+                    {
+                        return Reject(request, AttendanceErrors.NoSessionNow, request.PreferredGroupId);
+                    }
+                }
+                else if (running.Count == 1)
+                {
+                    session = running[0];
+                }
+                else
+                {
+                    return Reject(request, AttendanceErrors.ChooseGroup);
+                }
+            }
+
+            // 2) الحماية الجغرافية (من موقع سنتر المجموعة)
+            if (request.EnforceGeofence)
+            {
+                if (session.Latitude is not { } centerLat || session.Longitude is not { } centerLon)
+                {
+                    return Reject(request, AttendanceErrors.CenterLocationNotSet, session.GroupId, session.SessionId);
+                }
+
+                if (request.Latitude is not { } lat || request.Longitude is not { } lon)
+                {
+                    return Reject(request, AttendanceErrors.LocationRequired, session.GroupId, session.SessionId);
+                }
+
+                if (request.AccuracyMeters is { } accuracy
+                    && accuracy > AttendancePolicy.MaximumLocationAccuracyMeters)
+                {
+                    return Reject(request, AttendanceErrors.LocationAccuracyInsufficient, session.GroupId, session.SessionId);
+                }
+
+                if (GeoDistance.Meters(lat, lon, centerLat, centerLon) > session.GeofenceRadiusMeters)
+                {
+                    return Reject(request, AttendanceErrors.OutOfRange, session.GroupId, session.SessionId);
+                }
+            }
+
+            // 3) تكرار المسح ينجح بدون تغيير (Idempotent)
+            var existing = await _attendanceRepository.GetRecordAsync(session.SessionId, request.StudentId, cancellationToken);
+            if (existing is not null)
+            {
+                LogCompleted(request, session.GroupId, session.SessionId, AttendanceOutcome.AlreadyRecorded);
+                return Result<AttendanceResultDto>.Success(
+                    new AttendanceResultDto(AttendanceOutcome.AlreadyRecorded, session.SessionId, session.GroupName, existing.Status, request.StudentId));
+            }
+
+            var student = await _userRepository.GetByIdAsync(request.StudentId, cancellationToken);
+            var studentName = student?.FullName ?? "A student";
+
+            // 4) طالب غير مسجل (Walk-in): تسجيل فوري لو مسموح، وإلا طلب معلّق ينتظر الموافقة
+            if (active is null)
+            {
+                if (!request.RegisterImmediately)
+                {
+                    if (!await _enrollmentRepository.HasPendingRequestAsync(request.TenantId, request.StudentId, cancellationToken))
+                    {
+                        // الطلب يفتكر الحصة وطريقة المسح ومن سجّله، فالموافقة عليه تسجل الحضور بنفس البيانات
+                        var pending = EnrollmentRequest.Create(
+                            request.TenantId, request.StudentId, session.GroupId, EnrollmentRequestType.Join,
+                            session.SessionId, request.Method, request.RecordedByUserId,
+                            request.Latitude, request.Longitude);
+                        _enrollmentRepository.AddRequest(pending);
+
+                        await _notificationService.NotifyStaffAsync(
+                            request.TenantId, NotificationType.EnrollmentRequested,
+                            $"{studentName} asked to join {session.GroupName} by scanning the code.", pending.Id, cancellationToken);
+
+                        await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    }
+
+                    LogCompleted(request, session.GroupId, session.SessionId, AttendanceOutcome.PendingApproval);
+                    return Result<AttendanceResultDto>.Success(
+                        new AttendanceResultDto(AttendanceOutcome.PendingApproval, session.SessionId, session.GroupName, null, request.StudentId));
+                }
+
+                var joinRequest = EnrollmentRequest.Create(request.TenantId, request.StudentId, session.GroupId, EnrollmentRequestType.Join);
+                _enrollmentRepository.AddRequest(joinRequest);
+
+                var approved = await _enrollmentService.ApproveAsync(joinRequest, request.RecordedByUserId, cancellationToken);
+                if (approved.IsFailure)
+                {
+                    return Reject(request, approved.Error, session.GroupId, session.SessionId);
+                }
+
+                if (request.Method == ScanMethod.SelfScan)
+                {
+                    await _notificationService.NotifyStaffAsync(
+                        request.TenantId, NotificationType.StudentAutoRegistered,
+                        $"{studentName} was registered in {session.GroupName} by scanning the code.", joinRequest.Id, cancellationToken);
+                }
+            }
+
+            // 5) حضور عادي لمجموعته، أو تعويض لو الحصة لمجموعة أخرى عند نفس المدرس (معلّق، أو معتمد فوراً لمسح الأدمن المفعّل له ذلك)
+            var status = AttendanceStatus.Present;
+            Guid? compensates = null;
+
+            if (active is not null && !isOwnGroup)
+            {
+                status = request.AutoApproveCompensation ? AttendanceStatus.Present : AttendanceStatus.PendingCompensation;
+                compensates = await _attendanceRepository.FindCompensableSessionAsync(
+                    request.TenantId, active.GroupId, request.StudentId, now, AttendancePolicy.CompensationWindowDays, cancellationToken);
+            }
+
+            var record = AttendanceRecord.RecordPresence(
+                request.TenantId, session.SessionId, request.StudentId, request.Method,
+                request.Latitude, request.Longitude, request.RecordedByUserId, status, compensates);
+            _attendanceRepository.AddRecord(record);
+
+            if (status == AttendanceStatus.Present)
+                await RecordFinancialAttendanceAsync(request.TenantId, request.StudentId, session.SessionId, compensates, cancellationToken);
+
+            if (status == AttendanceStatus.Present)
+            {
+                // الحضور يصفّر عداد الغياب المتتالي عند هذا المدرس
+                var tracked = await _enrollmentRepository.GetMemberAsync(request.TenantId, request.StudentId, cancellationToken);
+                if (tracked is { ConsecutiveAbsences: > 0 })
+                {
+                    tracked.ResetAbsence();
+                }
+            }
+            else
+            {
+                await _notificationService.NotifyStaffAsync(
+                    request.TenantId, NotificationType.CompensationRequested,
+                    $"{studentName} attended {session.GroupName} as a compensation session.", record.Id, cancellationToken);
+            }
+
+            var concurrentRecord = await _attendanceRepository.SaveChangesForAttendanceAsync(record, cancellationToken);
+            if (concurrentRecord is not null)
+            {
+                LogCompleted(request, session.GroupId, session.SessionId, AttendanceOutcome.AlreadyRecorded);
+                return Result<AttendanceResultDto>.Success(
+                    new AttendanceResultDto(AttendanceOutcome.AlreadyRecorded, session.SessionId,
+                        session.GroupName, concurrentRecord.Status, request.StudentId));
+            }
+
+            var outcome = status == AttendanceStatus.Present ? AttendanceOutcome.Recorded : AttendanceOutcome.PendingCompensation;
+            LogCompleted(request, session.GroupId, session.SessionId, outcome);
+            return Result<AttendanceResultDto>.Success(new AttendanceResultDto(outcome, session.SessionId, session.GroupName, status, request.StudentId));
+        }
+
+        private Result<AttendanceResultDto> Reject(
+            AttendanceRequest request, Error error, Guid? groupId = null, Guid? sessionId = null)
+        {
+            AttendanceScanLogging.Rejected(
+                _logger, error, request.TenantId, request.RecordedByUserId ?? request.StudentId,
+                request.StudentId, groupId ?? request.PreferredGroupId ?? request.RestrictToGroupId,
+                sessionId, request.Method);
+            return Result<AttendanceResultDto>.Failure(error);
+        }
+
+        private void LogCompleted(
+            AttendanceRequest request, Guid groupId, Guid sessionId, AttendanceOutcome outcome) =>
+            AttendanceScanLogging.Completed(_logger, request, groupId, sessionId, outcome);
+    }
+}

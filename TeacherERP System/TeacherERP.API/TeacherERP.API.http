@@ -1,0 +1,907 @@
+@TeacherERP.API_HostAddress = http://localhost:5210
+
+### Student registration starts the OTP flow; optionally add profileImage as a file part
+POST {{TeacherERP.API_HostAddress}}/api/Users/students
+Content-Type: multipart/form-data; boundary=ProfileImageBoundary
+
+--ProfileImageBoundary
+Content-Disposition: form-data; name="fullName"
+
+Student Name
+--ProfileImageBoundary
+Content-Disposition: form-data; name="email"
+
+student@example.test
+--ProfileImageBoundary
+Content-Disposition: form-data; name="password"
+
+ReplaceWithTestPassword1
+--ProfileImageBoundary--
+
+### Profile update accepts the same CompleteProfileCommand fields plus optional profileImage file part
+PUT {{TeacherERP.API_HostAddress}}/api/Users/me/profile
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=ProfileUpdateBoundary
+
+--ProfileUpdateBoundary
+Content-Disposition: form-data; name="phoneNumber"
+
++201000000001
+--ProfileUpdateBoundary
+Content-Disposition: form-data; name="guardianName"
+
+Guardian Name
+--ProfileUpdateBoundary
+Content-Disposition: form-data; name="guardianPhoneNumber"
+
++201000000002
+--ProfileUpdateBoundary
+Content-Disposition: form-data; name="guardianRelation"
+
+Mother
+--ProfileUpdateBoundary
+Content-Disposition: form-data; name="gender"
+
+Female
+--ProfileUpdateBoundary
+Content-Disposition: form-data; name="dateOfBirth"
+
+2010-01-01
+--ProfileUpdateBoundary--
+
+### Basic liveness probe (no authentication required)
+GET {{TeacherERP.API_HostAddress}}/health/live
+Accept: application/json
+
+### Readiness probe (database, core authentication configuration, and Hangfire worker in non-test environments)
+GET {{TeacherERP.API_HostAddress}}/health/ready
+Accept: application/json
+
+### Component diagnostics (includes SMTP reachability and optional integration configuration)
+GET {{TeacherERP.API_HostAddress}}/health/components
+Accept: application/json
+
+GET {{TeacherERP.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+# ============================================================
+# متغيرات الطلبات التالية (غيّرها بقيمك)
+# token = Access Token من /api/Auth/login
+# teacherId = Id مساحة المدرس (X-Teacher-Id)
+# ============================================================
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxODIwNGEyMC0xZDkxLTQ5NWQtYjBiOC0wYTA5YzM4ZTAzZDIiLCJlbWFpbCI6InRlYWNoZXIuMUBtYWlsbmEuY28iLCJqdGkiOiJkN2RmMTA3NC1lODVmLTQwZjItYjkzNy1jMzQyYzIyMTdlMDkiLCJuYW1laWQiOiIxODIwNGEyMC0xZDkxLTQ5NWQtYjBiOC0wYTA5YzM4ZTAzZDIiLCJ1bmlxdWVfbmFtZSI6IlRlYWNoZXItMSIsInNlc3Npb25faWQiOiJkNDdiZjBiYS1kY2I4LTRkODMtODJhYy1kMjQ4YWI2YjA5NmIiLCJyb2xlIjoiU3VwZXJBZG1pbiIsIm5iZiI6MTc5NDgzNjU2NCwiZXhwIjoxNzk0ODQwMTY0LCJpYXQiOjE3OTQ4MzY1NjQsImlzcyI6IlRlYWNoZXJFUlAiLCJhdWQiOiJUZWFjaGVyRVJQX1VzZXJzIn0.qNUeg2UZzrT7vVGToEMS0earwRldI_i46VfBnEBrCeg
+@teacherId = EC617B4A-D1F1-4621-9708-DC0B1C9FDC95
+@sessionId = D47FF7F3-0B91-4577-8FB3-A1A554414E21
+@studentId = 00000000-0000-0000-0000-000000000000
+@currentSessionStart = 2026-12-01T15:00:00Z
+@requestId = 00000000-0000-0000-0000-000000000000
+@notificationId = 00000000-0000-0000-0000-000000000000
+@studentToken = PASTE_STUDENT_ACCESS_TOKEN
+@timeZoneId = Africa/Cairo
+@loginEmail = REPLACE_WITH_EMAIL
+@loginPassword = REPLACE_WITH_PASSWORD
+@deviceId = local-device-id
+@centerId = 00000000-0000-0000-0000-000000000000
+@compensationId = FA8907C8-350F-4363-A0B4-3C4D361CA050
+
+### Login returns TimeZoneId for consistent client-side formatting of UTC timestamps
+POST {{TeacherERP.API_HostAddress}}/api/Auth/login
+Content-Type: application/json
+X-Time-Zone: {{timeZoneId}}
+
+{
+  "email": "{{loginEmail}}",
+  "password": "{{loginPassword}}",
+  "deviceId": "{{deviceId}}",
+  "deviceInfo": "Local development client"
+}
+
+# Result errors share { errorCode, errorMessage } across controllers.
+# Status families: 401 authentication, 403 permission, 404 missing resource,
+# 409 conflicting state, 400 invalid request; external Paymob outages remain 503.
+
+### F3: إعدادات الحضور (المدرس): الكود الثابت يظهر في الوضع الثابت فقط
+GET {{TeacherERP.API_HostAddress}}/api/Attendance/settings
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### F3: تحويل الوضع للكود المتغير (DynamicScreenQR) أو الثابت (StaticGlobalQR)
+PUT {{TeacherERP.API_HostAddress}}/api/Attendance/settings
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "mode": "DynamicScreenQR",
+  "rejectMockLocations": true,
+  "autoRegisterOnScan": true,
+  "autoApproveGroupAdminScans": false
+}
+
+### F3: الكود المتغير الحالي لشاشة السنتر (مشتق بـ HMAC، يتجدد كل 30 ثانية)
+GET {{TeacherERP.API_HostAddress}}/api/Attendance/display-code
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### F3 + F5 + F7: مسح الطالب للكود بموقعه (دقة الموقع مطلوبة وبحد أقصى 100 متر). غير المسجّل (Walk-in) يُحفظ موقعه في طلبه المعلّق
+POST {{TeacherERP.API_HostAddress}}/api/Attendance/scan
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "teacherId": "{{teacherId}}",
+  "code": "PASTE_CODE",
+  "latitude": 30.0444,
+  "longitude": 31.2357,
+  "accuracyMeters": 10,
+  "isMockLocation": false,
+  "groupId": null
+}
+
+### F4: إلغاء حصة (يرفض لو عليها تعويض معلّق: Session.HasPendingCompensations)
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/cancel
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "reason": "Holiday"
+}
+
+### F4: إلغاء جماعي لنطاق (للمدرس فقط، إما الكل أو لا شيء لو في تعويض معلّق)
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/bulk-cancel
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "from": "2026-12-01T00:00:00Z",
+  "to": "2026-12-08T00:00:00Z",
+  "groupIds": null,
+  "reason": "Vacation"
+}
+
+### F4: طلبات التعويض المعلّقة
+GET {{TeacherERP.API_HostAddress}}/api/Attendance/compensations/pending?page=1&pageSize=20
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### F4: قبول تعويض معلّق
+POST {{TeacherERP.API_HostAddress}}/api/Attendance/compensations/{{compensationId}}/approve
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### F4: رفض تعويض معلّق (بعده يصح إلغاء الحصة)
+POST {{TeacherERP.API_HostAddress}}/api/Attendance/compensations/{{compensationId}}/reject
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### F5: الطلبات المعلّقة (فيها طلبات الـ Walk-in)
+GET {{TeacherERP.API_HostAddress}}/api/Enrollment/requests?status=Pending&page=1&pageSize=20
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### F5: الموافقة على طلب Walk-in (تسجل الطالب وتنقل موقع مسحه لسجل الحضور)
+POST {{TeacherERP.API_HostAddress}}/api/Enrollment/requests/{{requestId}}/approve
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+
+### A5: إنشاء سنتر للمدرس (الموقع إلزامي) [AUTO-INTEGRATION: الموقع مطلوب، منع التكرار ضمن 50م، والإنشاء بموقع مختلف]
+POST {{TeacherERP.API_HostAddress}}/api/Centers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "سنتر النور",
+  "address": "العاشر من رمضان، الشرقية",
+  "latitude": 30.296,
+  "longitude": 31.743,
+  "geofenceRadiusMeters": 50
+}
+
+### A5: تعديل موقع السنتر (الإحداثيات إلزامية) [AUTO-INTEGRATION: تحديث الإحداثيات ونطاق Geofence]
+PUT {{TeacherERP.API_HostAddress}}/api/Centers/{{centerId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "سنتر النور",
+  "address": "العاشر من رمضان، الشرقية",
+  "latitude": 30.296,
+  "longitude": 31.743,
+  "geofenceRadiusMeters": 50
+}
+
+### A5: إرسال طلب انضمام لسنتر [AUTO-INTEGRATION: إنشاء الطلب وسقف 3 طلبات]
+# MANUAL REQUIRED: تأكد من وصول رسالة الطلب الفعلية إلى بريد صاحب السنتر عبر SMTP.
+POST {{TeacherERP.API_HostAddress}}/api/Centers/{{centerId}}/join-requests
+Authorization: Bearer {{token}}
+
+### A5: طلباتي وحالتها [AUTO-INTEGRATION: ظهور حالة الرفض وسببه]
+GET {{TeacherERP.API_HostAddress}}/api/Centers/join-requests/mine?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+### A5: الطلبات الواردة لسنتراتي (لصاحب السنتر) [AUTO-INTEGRATION: استعلام الطلبات المعلقة]
+GET {{TeacherERP.API_HostAddress}}/api/Centers/join-requests/received?page=1&pageSize=20&status=Pending
+Authorization: Bearer {{token}}
+
+### A5: تذكير صاحب السنتر بالطلب (مرة كل 24 ساعة) [AUTO-INTEGRATION: نجاح التذكير ورفض التكرار قبل 24 ساعة]
+# MANUAL REQUIRED: تأكد من وصول رسالة التذكير الفعلية عبر SMTP.
+POST {{TeacherERP.API_HostAddress}}/api/Centers/join-requests/{{requestId}}/resend
+Authorization: Bearer {{token}}
+
+### A5: إلغاء طلبي المعلّق [AUTO-INTEGRATION: الإلغاء يحرر مكانًا من سقف الطلبات]
+DELETE {{TeacherERP.API_HostAddress}}/api/Centers/join-requests/{{requestId}}
+Authorization: Bearer {{token}}
+
+### A5: موافقة صاحب السنتر [AUTO-INTEGRATION: تفعيل عضوية المدرس]
+POST {{TeacherERP.API_HostAddress}}/api/Centers/join-requests/{{requestId}}/approve
+Authorization: Bearer {{token}}
+
+### A5: رفض صاحب السنتر [AUTO-INTEGRATION: الرفض وظهور السبب لصاحب الطلب]
+POST {{TeacherERP.API_HostAddress}}/api/Centers/join-requests/{{requestId}}/reject
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "reason": "التخصص غير مناسب حالياً" }
+
+### A5: إنشاء دعوة خاصة (أرسل الرمز للمدرس المقصود فقط) [AUTO-INTEGRATION: إنشاء الدعوة]
+POST {{TeacherERP.API_HostAddress}}/api/Centers/{{centerId}}/invitations
+Authorization: Bearer {{token}}
+
+### A5: قبول دعوة [AUTO-INTEGRATION: تفعيل العضوية ومنع إعادة استخدام الرمز]
+POST {{TeacherERP.API_HostAddress}}/api/Centers/invitations/accept
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "token": "PASTE_PRIVATE_INVITATION_TOKEN" }
+
+# MANUAL REQUIRED: اختبر إنشاء QR وقراءته بكاميرا تطبيق Flutter؛ قبول الرمز عبر API مغطى آليًا.
+
+
+### A3: مدير النظام (Administrator): توكن حسابه من /api/Auth/login
+@adminToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmMWVkZGFlZi0yOWVhLTRlYTctYTI0OS1iNDJlMTA0YTc1OGEiLCJlbWFpbCI6ImFkbWluQHNtYXJ0dGVhY2hlcmVycC5jb20iLCJqdGkiOiI2NTAxNWUwOC1lOTQyLTQ3NTEtOTM1Ny05M2Q2Yzg0MDc5YmQiLCJuYW1laWQiOiJmMWVkZGFlZi0yOWVhLTRlYTctYTI0OS1iNDJlMTA0YTc1OGEiLCJ1bmlxdWVfbmFtZSI6IlN5c3RlbSBNYWluIEFkbWluaXN0cmF0b3IiLCJzZXNzaW9uX2lkIjoiYjgyNjdiN2UtZmQwYS00NGFkLWIwZTAtZjQyZjI4YjRhYmMwIiwicm9sZSI6IlN1cGVyQWRtaW4iLCJuYmYiOjE3OTQ3NjExMDIsImV4cCI6MTc5NDc2NDcwMiwiaWF0IjoxNzk0NzYxMTAyLCJpc3MiOiJUZWFjaGVyRVJQIiwiYXVkIjoiVGVhY2hlckVSUF9Vc2VycyJ9.XkvPQs4XT1fBHFNcDIJJkFf7_iwf7q-ACLjNahfkoYU
+@newTeacherUserId = 00000000-0000-0000-0000-000000000000
+@centerId = 00000000-0000-0000-0000-000000000000
+
+### A3: إضافة مدرس بإيميله (باسورد مؤقت يصله على الإيميل). TimeZoneId اختياري (الافتراضي Africa/Cairo)
+POST {{TeacherERP.API_HostAddress}}/api/Administration/teachers
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "fullName": "Ahmed Teacher",
+  "email": "new.teacher@example.com",
+  "timeZoneId": "Africa/Cairo"
+}
+
+### A3: إنشاء سنتر مملوك لمدرس موجود (يصير مؤسسه ونشطاً فيه)
+POST {{TeacherERP.API_HostAddress}}/api/Administration/centers
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Al-Nour Center",
+  "ownerUserId": "{{newTeacherUserId}}",
+  "address": "Nasr City, Cairo",
+  "latitude": 30.0561,
+  "longitude": 31.3301,
+  "geofenceRadiusMeters": 50
+}
+
+### A3: ربط مدرس موجود بسنتر (مدرس إضافي في نفس المكان، نشط فوراً)
+POST {{TeacherERP.API_HostAddress}}/api/Administration/centers/{{centerId}}/teachers
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "teacherUserId": "{{newTeacherUserId}}"
+}
+
+
+
+### A4: صاحب الطلب (بلا حساب): الخطوة 1، يرسل بياناته ويصله كود على إيميله [AUTO-INTEGRATION للمنطق؛ MANUAL REQUIRED لتأكيد وصول OTP عبر SMTP]
+@requestEmail = teacher.3@mailna.co
+POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/submit
+Content-Type: application/json
+
+{
+  "fullName": "Teatcher-3",
+  "email": "{{requestEmail}}",
+  "subject": "Science",
+  "note": "Teaching at Al-Nawras center",
+  "timeZoneId": "Africa/Cairo"
+}
+
+### A4: الخطوة 2، تأكيد الكود فيرجع سر الـ QR (يظهر مرة واحدة وصلاحيته 72 ساعة): خذ token من الرد
+POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/verify
+Content-Type: application/json
+
+{
+  "email": "{{requestEmail}}",
+  "otpCode": "193188"
+}
+
+### A4: صاحب الطلب يتابع حالته بنفس السر (Pending / Approved / Rejected / Expired)
+@requestToken = UjLTielPPQRQIRN2wIH01YkBxeU-g_sdhCMVkOCLepo
+POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/status
+Content-Type: application/json
+
+{
+  "token": "{{requestToken}}"
+}
+
+### A4: المدرس الذي مسح الـ QR يعاين بيانات صاحب الطلب (لا يُنشأ شيء). توكن مدرس (SuperAdmin) بلا X-Teacher-Id
+POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/preview
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "token": "{{requestToken}}"
+}
+
+### A4: المدرس يقبل: يُنشأ حساب المدرس الجديد ومساحته [AUTO-INTEGRATION للإنشاء؛ MANUAL REQUIRED لوصول إيميل الباسورد المؤقت وتجربة تسجيل الدخول به]
+POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/approve
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "token": "{{requestToken}}"
+}
+
+### A4: المدرس يرفض (السبب اختياري ويظهر لصاحب الطلب)
+POST {{TeacherERP.API_HostAddress}}/api/TeacherRequests/reject
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "token": "{{requestToken}}",
+  "reason": "I do not know this teacher"
+}
+
+### A4: مدير النظام: قائمة الطلبات بصفحات (status اختياري: Pending / Approved / Rejected / Expired)
+GET {{TeacherERP.API_HostAddress}}/api/Administration/teacher-requests?status=Pending&page=1&pageSize=20
+Authorization: Bearer {{adminToken}}
+
+### A4: مدير النظام يوافق على طلب بمعرّفه (بلا سقف شهري)
+@teacherRequestId = 00000000-0000-0000-0000-000000000000
+POST {{TeacherERP.API_HostAddress}}/api/Administration/teacher-requests/{{teacherRequestId}}/approve
+Authorization: Bearer {{adminToken}}
+
+### A4: مدير النظام يرفض طلباً
+POST {{TeacherERP.API_HostAddress}}/api/Administration/teacher-requests/{{teacherRequestId}}/reject
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "reason": "Duplicate request"
+}
+
+### B4: المدرس أو المساعد ينقل طالباً لمجموعة أخرى في نفس مساحة المدرس
+POST {{TeacherERP.API_HostAddress}}/api/Enrollment/students/{{studentId}}/move
+Authorization: Bearer {{staffToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "targetGroupId": "{{targetGroupId}}"
+}
+
+### A7: حساب Google: إضافة أول كلمة مرور بعد تسجيل الدخول
+POST {{TeacherERP.API_HostAddress}}/api/Users/me/set-password
+Authorization: Bearer {{googleAccessToken}}
+Content-Type: application/json
+
+{
+  "newPassword": "{{newPassword}}"
+}
+
+### A7: تغيير كلمة المرور لحساب لديه كلمة مرور محلية (يتطلب الحالية)
+POST {{TeacherERP.API_HostAddress}}/api/Users/me/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "currentPassword": "{{currentPassword}}",
+  "newPassword": "{{newPassword}}"
+}
+
+### B4: إنشاء مجموعة بمرحلة وصف منظّمين (Primary 1-6, Preparatory 1-3, Secondary 1-3)
+POST {{TeacherERP.API_HostAddress}}/api/Groups
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "name": "Preparatory Grade 1",
+  "grade": {
+    "stage": "Preparatory",
+    "number": 1
+  },
+  "centerId": "{{centerId}}",
+  "room": "Room 1",
+  "capacity": 20,
+  "perSessionPrice": 100,
+  "monthlyPrice": 500,
+  "whatsAppGroupLink": null,
+  "slots": [
+    { "day": "Monday", "startTime": "15:00:00", "durationMinutes": 60 }
+  ]
+}
+
+### B4: تعديل مرحلة وصف مجموعة
+PUT {{TeacherERP.API_HostAddress}}/api/Groups/{{groupId}}
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "name": "Preparatory Grade 2",
+  "grade": {
+    "stage": "Preparatory",
+    "number": 2
+  },
+  "centerId": "{{centerId}}",
+  "room": "Room 1",
+  "capacity": 20,
+  "perSessionPrice": 100,
+  "monthlyPrice": 500,
+  "whatsAppGroupLink": null,
+  "isActive": true
+}
+
+### B6: إعادة جدولة حصة — في حال تعارض غرفة مشتركة يرجع 409 بالتفاصيل؛ أعد الطلب مع التأكيد
+PUT {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/reschedule
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "newStartTime": "2026-12-01T15:00:00Z",
+  "durationMinutes": 60,
+  "confirmRoomConflicts": false
+}
+
+### B6: بعد مراجعة تفاصيل 409، أعد الطلب نفسه بتأكيد إشغال الغرفة
+PUT {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/reschedule
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "newStartTime": "2026-12-01T15:00:00Z",
+  "durationMinutes": 60,
+  "confirmRoomConflicts": true
+}
+
+### B9: غيّر currentSessionStart إلى وقت بداية الحصة الحالي قبل الإرسال
+PUT {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/reschedule
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "newStartTime": "{{currentSessionStart}}",
+  "durationMinutes": 90,
+  "confirmRoomConflicts": false
+}
+
+### B6: الحصة الإضافية — تحذير الغرفة المشتركة يتطلب إعادة الطلب مع confirmRoomConflicts=true
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "groupId": "{{groupId}}",
+  "startTime": "2026-12-01T15:00:00Z",
+  "durationMinutes": 60,
+  "confirmRoomConflicts": false
+}
+
+### B8: نقل حصة واحدة لمجموعة أخرى كاستثناء لموعدها؛ عند تعارض الغرفة راجع 409 ثم أكّد
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/move
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "targetGroupId": "{{targetGroupId}}",
+  "newStartTime": "2026-12-03T16:00:00Z",
+  "durationMinutes": null,
+  "confirmRoomConflicts": false
+}
+
+### B8: بعد مراجعة تفاصيل تعارض الغرفة، أعد الطلب مع التأكيد
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/move
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "targetGroupId": "{{targetGroupId}}",
+  "newStartTime": "2026-12-03T16:00:00Z",
+  "durationMinutes": null,
+  "confirmRoomConflicts": true
+}
+
+### B6: التحريك الجماعي — إذا ظهر 409 بالتفاصيل، أعد الدفعة نفسها مع التأكيد
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/bulk-shift
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "from": "2026-12-01T00:00:00Z",
+  "to": "2026-12-08T00:00:00Z",
+  "groupIds": ["{{groupId}}"],
+  "shiftMinutes": 30,
+  "confirmRoomConflicts": true
+}
+
+### B6: تعديل قالب المجموعة أو إنشاؤه يقبل confirmRoomConflicts؛ تعارض المدرس يرجع 400
+PUT {{TeacherERP.API_HostAddress}}/api/Groups/{{groupId}}/schedule
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "effectiveFrom": null,
+  "confirmRoomConflicts": true,
+  "slots": [
+    { "day": "Monday", "startTime": "15:00:00", "durationMinutes": 60 }
+  ]
+}
+
+### B11: تبديل المواعيد الأسبوعية من تاريخ سريان — أرسل القالب كاملًا، مع كل المواعيد التي تريد الإبقاء عليها
+PUT {{TeacherERP.API_HostAddress}}/api/Groups/{{groupId}}/schedule
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "effectiveFrom": "2026-12-07",
+  "confirmRoomConflicts": false,
+  "slots": [
+    { "day": "Monday", "startTime": "16:00:00", "durationMinutes": 90 },
+    { "day": "Wednesday", "startTime": "10:00:00", "durationMinutes": 60 }
+  ]
+}
+
+### B6: استعادة حصة ملغاة بعد مراجعة التحذير
+POST {{TeacherERP.API_HostAddress}}/api/Schedule/sessions/{{sessionId}}/restore?confirmRoomConflicts=true
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+### C2 - Read student balance, outstanding session debts, monthly coverage and recent payments
+GET {{TeacherERP.API_HostAddress}}/api/Finance/students/{{studentId}}/sessions/{{sessionId}}/payment-options
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### C2 - Collect an old debt (partial payment is allowed; excess becomes wallet credit)
+POST {{TeacherERP.API_HostAddress}}/api/Finance/cash-payments
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "studentId": "{{studentId}}",
+  "sessionId": "{{sessionId}}",
+  "paymentType": "DebtSettlement",
+  "amount": 100.00
+}
+
+### C2 - Collect today's session (prior debts must be settled first; excess becomes wallet credit)
+POST {{TeacherERP.API_HostAddress}}/api/Finance/cash-payments
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "studentId": "{{studentId}}",
+  "sessionId": "{{sessionId}}",
+  "paymentType": "PerSession",
+  "amount": 50.00
+}
+
+### C2 - Buy the selected group's calendar-month subscription (includes today's session)
+POST {{TeacherERP.API_HostAddress}}/api/Finance/cash-payments
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "studentId": "{{studentId}}",
+  "sessionId": "{{sessionId}}",
+  "paymentType": "MonthlySubscription",
+  "amount": 500.00
+}
+
+### C3: الطالب يعرض خيارات الدفع وإعدادات InstaPay للسنتر
+GET {{TeacherERP.API_HostAddress}}/api/StudentPayments/sessions/{{sessionId}}/payment-options
+Authorization: Bearer {{studentToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C3: الطالب يرفع إيصال InstaPay (PaymentType: PerSession, MonthlySubscription, DebtSettlement)
+POST {{TeacherERP.API_HostAddress}}/api/StudentPayments/receipts
+Authorization: Bearer {{studentToken}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: multipart/form-data; boundary=InstaPayReceiptBoundary
+
+--InstaPayReceiptBoundary
+Content-Disposition: form-data; name="sessionId"
+
+{{sessionId}}
+--InstaPayReceiptBoundary
+Content-Disposition: form-data; name="type"
+
+PerSession
+--InstaPayReceiptBoundary
+Content-Disposition: form-data; name="amount"
+
+75.00
+--InstaPayReceiptBoundary
+Content-Disposition: form-data; name="receipt"; filename="receipt.png"
+Content-Type: image/png
+
+< ./receipt.png
+--InstaPayReceiptBoundary--
+
+### C3: المدرس يقرأ إعدادات InstaPay
+GET {{TeacherERP.API_HostAddress}}/api/Finance/instapay-settings
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C3: المدرس يحفظ رابط InstaPay ويرفع صورة QR (الصورة اختيارية بعد الإعداد الأول)
+PUT {{TeacherERP.API_HostAddress}}/api/Finance/instapay-settings
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: multipart/form-data; boundary=InstaPaySettingsBoundary
+
+--InstaPaySettingsBoundary
+Content-Disposition: form-data; name="instaPayLink"
+
+https://example.com/instapay-link
+--InstaPaySettingsBoundary
+Content-Disposition: form-data; name="qrImage"; filename="instapay-qr.png"
+Content-Type: image/png
+
+< ./instapay-qr.png
+--InstaPaySettingsBoundary--
+
+### C5: الطالب ينشئ نية دفع Paymob (يتطلب أن يكون إشعار HTTPS العام مضبوطاً بعد النشر)
+POST {{TeacherERP.API_HostAddress}}/api/StudentPayments/paymob/intents
+Authorization: Bearer {{studentToken}}
+Idempotency-Key: {{$guid}}
+Content-Type: application/json
+
+{
+  "sessionId": "{{sessionId}}",
+  "type": "PerSession",
+  "amount": 75.00,
+  "integration": "VpcOnlineNonShopify"
+}
+
+### C5: عنوان الـWebhook الذي سيُضبط في Paymob أو يُرسل داخل notification_url
+# POST https://{{publicApiHost}}/api/paymob/webhooks/transaction?hmac={{paymobHmac}}
+# Body: Paymob Transaction Processed Callback JSON (استخدم عينة من Paymob، ولا تعتمد على redirect لتأكيد الدفع)
+
+### C5: عنوان الرجوع العام الذي يُضبط كـ Redirect URL في تكامل Paymob
+GET https://{{publicApiHost}}/api/paymob/return
+
+### C3: المدرس يعرض إيصالات الدفع المعلقة
+GET {{TeacherERP.API_HostAddress}}/api/Finance/instapay-receipts/pending?page=1&pageSize=20
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C3: المدرس يقبل أو يرفض الإيصال بعد مراجعته يدوياً
+POST {{TeacherERP.API_HostAddress}}/api/Finance/instapay-receipts/{{transactionId}}/approve
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
+POST {{TeacherERP.API_HostAddress}}/api/Finance/instapay-receipts/{{transactionId}}/reject
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C4: المدرس يمنح المساعد تفويضاً مالياً (القيمة false تسحب التفويض)
+PUT {{TeacherERP.API_HostAddress}}/api/Team/{{assistantId}}/financial-delegation
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "granted": true
+}
+
+### C6: مدير النظام يعرض عمولات شهرية غير مسددة
+GET {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions?year=2026&month=11&unsettledOnly=true&page=1&pageSize=20
+Authorization: Bearer {{adminToken}}
+
+### C6: مدير النظام يعرض إعدادات العمولة الحالية (الافتراضي 1 و5 جنيه)
+GET {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions/settings
+Authorization: Bearer {{adminToken}}
+
+### C6: تعديل العمولة؛ التغيير يسري على الاستحقاقات الجديدة فقط
+PUT {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions/settings
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "perSessionAmount": 1.00,
+  "monthlySubscriptionAmount": 5.00
+}
+
+### C6: ملخص إجمالي العمولات والمسدّد والمتبقي لكل مدرس خلال الشهر
+GET {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions/summary?year=2026&month=11
+Authorization: Bearer {{adminToken}}
+
+### C6: مدير النظام يرسل طلب تحصيل عمولات الشهر للمدرس (إشعار داخل التطبيق)
+POST {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions/request-month
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "tenantId": "{{tenantId}}",
+  "year": 2026,
+  "month": 11
+}
+
+### C6: المدرس يعرض ملخص عمولاته الشهرية داخل مساحته فقط
+GET {{TeacherERP.API_HostAddress}}/api/Finance/platform-commissions/summary?year=2026&month=11
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C6: المدرس يعرض تفاصيل العمولات وحالة طلب التحصيل
+GET {{TeacherERP.API_HostAddress}}/api/Finance/platform-commissions?year=2026&month=11&unsettledOnly=false&page=1&pageSize=20
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C6: مدير النظام يؤكد استلام تسوية عمولات مدرس للشهر
+POST {{TeacherERP.API_HostAddress}}/api/administration/platform-commissions/settle-month
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "tenantId": "{{tenantId}}",
+  "year": 2026,
+  "month": 11,
+  "settlementReference": "INSTAPAY-TRANSFER-REFERENCE"
+}
+
+### C7: تسجيل دفعة يدوية تمت خارج بوابة الدفع (مثل محفظة أو تحويل آخر)؛ الكاش يستخدم /cash-payments
+POST {{TeacherERP.API_HostAddress}}/api/Finance/manual-payments
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+Content-Type: application/json
+
+{
+  "studentId": "{{studentId}}",
+  "sessionId": "{{sessionId}}",
+  "paymentType": "PerSession",
+  "amount": 75.00,
+  "method": "Other"
+}
+
+### C7: تقرير تحصيل المدرس ومديونيات حضوره للشهر (المعاملات والمديونيات كلٌ في صفحة)
+GET {{TeacherERP.API_HostAddress}}/api/Finance/monthly-collections?year=2026&month=11&page=1&pageSize=20&debtPage=1&debtPageSize=20
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C7: تقرير المدير لكل المدرسين أو فلترة مدرس واحد بـ tenantId
+GET {{TeacherERP.API_HostAddress}}/api/administration/financial-reports/monthly-collections?year=2026&month=11&page=1&pageSize=20&debtPage=1&debtPageSize=20
+Authorization: Bearer {{adminToken}}
+
+### D1: الطالب يعرض Timeline حصصه وموادها في السنتر الحالي (الافتراضي: 30 يوماً للخلف و90 يوماً للأمام)
+GET {{TeacherERP.API_HostAddress}}/api/students/me/timeline?page=1&pageSize=20
+Authorization: Bearer {{studentToken}}
+X-Teacher-Id: {{teacherId}}
+
+### D1: فلترة Timeline بمجموعة ونطاق زمني محدد (الأوقات UTC)
+GET {{TeacherERP.API_HostAddress}}/api/students/me/timeline?from=2026-11-01T00:00:00Z&to=2026-12-01T00:00:00Z&groupId={{groupId}}&page=1&pageSize=20
+
+### D2: إشعاراتي (استخدم توكن الطالب لاستلام إشعارات مجموعاته)
+GET {{TeacherERP.API_HostAddress}}/api/Notifications?page=1&pageSize=20
+Authorization: Bearer {{studentToken}}
+
+### D2: بيانات مشاركة ملف الحصة — ShareText للنسخ، WhatsAppGroupLink لفتح الجروب، وWhatsAppComposeUrl لاختيار محادثة وإرسال النص الجاهز
+GET {{TeacherERP.API_HostAddress}}/api/Notifications/{{notificationId}}/whatsapp-share
+Authorization: Bearer {{studentToken}}
+Authorization: Bearer {{studentToken}}
+X-Teacher-Id: {{teacherId}}
+
+### C8: المدير يراجع الاستردادات/الإلغاءات الموثقة من Paymob قبل تعديل أي رصيد
+GET {{TeacherERP.API_HostAddress}}/api/administration/paymob-adjustments/pending?page=1&pageSize=20
+Authorization: Bearer {{adminToken}}
+
+### C8: اعتماد بعد مراجعة حساب التاجر، مع تحديد الدين والعمولة اللذين يجب تسويتهما
+POST {{TeacherERP.API_HostAddress}}/api/administration/paymob-adjustments/{{paymobAdjustmentReviewId}}/resolve
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "approved": true,
+  "studentDebtAdjustmentAmount": 75.00,
+  "commissionReversalAmount": 1.00,
+  "decisionNote": "تم التحقق من الاسترداد ومراجعة أثره المالي"
+}
+
+### C8: رفض إشعار استرداد غير مؤكد بدون تطبيق أي تعديل مالي
+POST {{TeacherERP.API_HostAddress}}/api/administration/paymob-adjustments/{{paymobAdjustmentReviewId}}/resolve
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "approved": false,
+  "studentDebtAdjustmentAmount": 0,
+  "commissionReversalAmount": 0,
+  "decisionNote": "لم يتم تأكيد الاسترداد في حساب التاجر"
+}
+
+### E1: كارت QR للطالب الحالي فقط (استخدم studentToken وtenantId لعضويته)
+GET {{TeacherERP.API_HostAddress}}/api/students/me/card
+Authorization: Bearer {{studentToken}}
+X-Teacher-Id: {{tenantId}}
+
+### E1: الجدول الأسبوعي للمجموعات النشطة في السنتر الحالي (الأوقات حسب timeZoneId في الرد)
+GET {{TeacherERP.API_HostAddress}}/api/students/me/schedule
+Authorization: Bearer {{studentToken}}
+X-Teacher-Id: {{tenantId}}
+
+
+### E2: قائمة طلاب المجموعة للمدرس أو المساعد (مغطاة بالتستات الآلية)
+@groupId = 00000000-0000-0000-0000-000000000000
+GET {{TeacherERP.API_HostAddress}}/api/Students?groupId={{groupId}}&page=1&pageSize=20
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### E2: تفاصيل طالب داخل مساحة المدرس الحالية (يرجع 404 إذا لم يكن الطالب ضمن المساحة)
+GET {{TeacherERP.API_HostAddress}}/api/Students/{{studentId}}/details
+Authorization: Bearer {{token}}
+X-Teacher-Id: {{teacherId}}
+
+### E4: المالك يعرض كود الانضمام الثابت والمتغير وروابطهما للمجموعة
+GET {{TeacherERP.API_HostAddress}}/api/Groups/{{groupId}}/join-codes
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+
+### E4: المالك يفعّل/يعطّل الأكواد أو يدوّر أحدها (تدوير الثابت يبطل الرابط القديم)
+PUT {{TeacherERP.API_HostAddress}}/api/Groups/{{groupId}}/join-codes
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+Content-Type: application/json
+
+{
+  "staticEnabled": true,
+  "dynamicEnabled": true,
+  "rotateStaticCode": false,
+  "rotateDynamicCode": false
+}
+
+### E4: الطالب يطلب الانضمام باستخدام الكود الثابت؛ نفس قواعد السعة والحظر والموافقة المعتادة
+POST {{TeacherERP.API_HostAddress}}/api/Enrollment/requests/by-code
+Authorization: Bearer {{studentToken}}
+Content-Type: application/json
+
+{
+  "code": "{{staticJoinCode}}"
+}
+
+### E4: الطالب يطلب الانضمام باستخدام الكود المتغير؛ يقبل الكود الحالي والسابق خلال نافذة السماح فقط
+POST {{TeacherERP.API_HostAddress}}/api/Enrollment/requests/by-code
+Authorization: Bearer {{anotherStudentToken}}
+Content-Type: application/json
+
+{
+  "code": "{{dynamicJoinCode}}"
+}
+
+### E5: ملخص Dashboard للمدرس في مساحة واحدة (المؤشرات المالية تخص الشهر الحالي UTC)
+GET {{TeacherERP.API_HostAddress}}/api/dashboard/teacher
+Authorization: Bearer {{teacherToken}}
+X-Teacher-Id: {{tenantId}}
+
+### E5: ملخص Dashboard لمدير النظام (مؤشرات إجمالية على مستوى المنصة)
+GET {{TeacherERP.API_HostAddress}}/api/dashboard/administrator
+Authorization: Bearer {{adminToken}}

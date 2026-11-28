@@ -1,0 +1,34 @@
+﻿// موجود (تعديل) — TeacherERP.Application/Interfaces/IAttendanceRecorder.cs
+using TeacherERP.Domain.Entities;
+using TeacherERP.Domain.Shared;
+
+namespace TeacherERP.Application.Interfaces
+{
+    // Corrected: تصحيح غياب (أو إدخال متأخر) لحصة انتهت، بواسطة موظف
+    public enum AttendanceOutcome { Recorded, PendingCompensation, PendingApproval, AlreadyRecorded, Corrected }
+
+    public record AttendanceResultDto(AttendanceOutcome Outcome, Guid? SessionId, string? GroupName, AttendanceStatus? Status, Guid? StudentId = null);
+
+    // طلب تسجيل حضور بعد التحقق من الكود والصلاحيات (مسؤولية المستدعي)
+    // AutoApproveCompensation: تعويض الطالب من مجموعة تانية يُعتمد فوراً (حاضر) بدل ما يستنى موافقة الموظف
+    public record AttendanceRequest(
+        Guid TenantId,
+        Guid StudentId,
+        ScanMethod Method,
+        double? Latitude,
+        double? Longitude,
+        Guid? RecordedByUserId,
+        Guid? PreferredGroupId,
+        bool EnforceGeofence,
+        bool RegisterImmediately,
+        Guid? RestrictToGroupId,
+        bool AutoApproveCompensation = false,
+        double? AccuracyMeters = null);
+
+    // مصدر واحد لقواعد الحضور: اختيار الحصة، الموقع، التسجيل التلقائي، التعويض، والإشعارات
+    public interface IAttendanceRecorder
+    {
+        Task<Result<AttendanceResultDto>> RecordAsync(AttendanceRequest request, CancellationToken cancellationToken);
+        Task RecordFinancialAttendanceAsync(Guid tenantId, Guid studentId, Guid sessionId, Guid? compensatesSessionId, CancellationToken cancellationToken);
+    }
+}

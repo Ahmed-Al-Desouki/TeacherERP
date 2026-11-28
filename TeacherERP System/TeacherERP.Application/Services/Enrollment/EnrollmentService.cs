@@ -1,0 +1,167 @@
+﻿// جديد — TeacherERP.Application/Enrollment/EnrollmentService.cs
+using System.Data;
+using TeacherERP.Application.Features.Enrollment;
+using TeacherERP.Application.Interfaces;
+using TeacherERP.Domain.Entities;
+using TeacherERP.Domain.Shared;
+
+namespace TeacherERP.Application.Enrollment
+{
+    public class EnrollmentService : IEnrollmentService
+    {
+        private readonly IEnrollmentRepository _repository;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly TimeProvider _timeProvider;
+        private readonly INotificationService _notificationService;
+
+        public EnrollmentService(
+            IEnrollmentRepository repository,
+            IUnitOfWork unitOfWork,
+            TimeProvider timeProvider,
+            INotificationService notificationService)
+        {
+            _repository = repository;
+            _unitOfWork = unitOfWork;
+            _timeProvider = timeProvider;
+            _notificationService = notificationService;
+        }
+
+        public Task<Result<bool>> ApproveAsync(EnrollmentRequest request, Guid? decidedByUserId, CancellationToken cancellationToken)
+        {
+            // Serializable: فحص السعة والتسجيل معاً بدون أن يسبقنا طلب متزامن على آخر مقعد
+            return _unitOfWork.ExecuteInTransactionAsync(
+                () => ApproveCoreAsync(request, decidedByUserId, cancellationToken),
+                IsolationLevel.Serializable,
+                cancellationToken);
+        }
+
+        public Task<Result<bool>> MoveStudentAsync(
+            Guid tenantId, Guid studentId, Guid targetGroupId, Guid movedByUserId, CancellationToken cancellationToken)
+        {
+            return _unitOfWork.ExecuteInTransactionAsync(async () =>
+            {
+                var group = await _repository.GetGroupJoinInfoAsync(targetGroupId, cancellationToken);
+                if (group is null || group.TenantId != tenantId || !group.GroupIsActive || group.TenantStatus != TenantStatus.Active)
+                    return Result<bool>.Failure(EnrollmentErrors.GroupNotFound);
+
+                var member = await _repository.GetMemberAsync(tenantId, studentId, cancellationToken);
+                if (member is null || member.Status == MembershipStatus.Blacklisted)
+                    return Result<bool>.Failure(EnrollmentErrors.NotAllowed);
+
+                var active = await _repository.GetActiveEnrollmentAsync(tenantId, studentId, cancellationToken);
+                if (active is null)
+                    return Result<bool>.Failure(EnrollmentErrors.NotEnrolled);
+                if (active.GroupId == targetGroupId)
+                    return Result<bool>.Failure(EnrollmentErrors.SameGroup);
+
+                var gradeError = await ValidateTransferGradeAsync(tenantId, active, group, cancellationToken);
+                if (gradeError is not null)
+                    return Result<bool>.Failure(gradeError);
+
+                if (group.Capacity is { } capacity
+                    && await _repository.CountActiveAsync(tenantId, targetGroupId, cancellationToken) >= capacity)
+                    return Result<bool>.Failure(EnrollmentErrors.GroupFull);
+
+                var now = _timeProvider.GetUtcNow().UtcDateTime;
+                var pendingRequest = await _repository.GetPendingRequestAsync(tenantId, studentId, cancellationToken);
+                pendingRequest?.Cancel(now);
+
+                active.End(now);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                _repository.AddEnrollment(GroupEnrollment.Create(tenantId, targetGroupId, studentId, now, movedByUserId));
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+                return Result<bool>.Success(true);
+            }, IsolationLevel.Serializable, cancellationToken);
+        }
+
+        private async Task<Result<bool>> ApproveCoreAsync(EnrollmentRequest request, Guid? decidedByUserId, CancellationToken cancellationToken)
+        {
+            var group = await _repository.GetGroupJoinInfoAsync(request.GroupId, cancellationToken);
+            if (group is null || group.TenantId != request.TenantId || !group.GroupIsActive || group.TenantStatus != TenantStatus.Active)
+            {
+                return Result<bool>.Failure(EnrollmentErrors.GroupNotFound);
+            }
+
+            var member = await _repository.GetMemberAsync(request.TenantId, request.StudentId, cancellationToken);
+            if (member is { Status: MembershipStatus.Blacklisted })
+            {
+                return Result<bool>.Failure(EnrollmentErrors.NotAllowed);
+            }
+
+            var active = await _repository.GetActiveEnrollmentAsync(request.TenantId, request.StudentId, cancellationToken);
+
+            if (request.Type == EnrollmentRequestType.Join)
+            {
+                if (active is not null)
+                {
+                    return Result<bool>.Failure(EnrollmentErrors.AlreadyEnrolled);
+                }
+            }
+            else
+            {
+                if (active is null)
+                {
+                    return Result<bool>.Failure(EnrollmentErrors.NotEnrolled);
+                }
+
+                if (active.GroupId == request.GroupId)
+                {
+                    return Result<bool>.Failure(EnrollmentErrors.SameGroup);
+                }
+
+                var gradeError = await ValidateTransferGradeAsync(request.TenantId, active, group, cancellationToken);
+                if (gradeError is not null)
+                {
+                    return Result<bool>.Failure(gradeError);
+                }
+            }
+
+            if (group.Capacity is { } capacity
+                && await _repository.CountActiveAsync(request.TenantId, request.GroupId, cancellationToken) >= capacity)
+            {
+                return Result<bool>.Failure(EnrollmentErrors.GroupFull);
+            }
+
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+            // أول انضمام عند هذا المدرس يُنشئ عضوية الطالب (الغياب والمديونية تعيش عليها وتنتقل مع الطالب بين المجموعات)
+            if (member is null)
+            {
+                _repository.AddMember(TenantMember.Create(request.TenantId, request.StudentId, TenantRole.Student));
+            }
+
+            // النقل: ننهي القديم ونحفظ أولاً، حتى لا يتعارض الـ Index الفريد (تسجيل نشط واحد) مع الجديد
+            if (active is not null)
+            {
+                active.End(now);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
+            _repository.AddEnrollment(GroupEnrollment.Create(request.TenantId, request.GroupId, request.StudentId, now, decidedByUserId));
+            request.Approve(decidedByUserId, now);
+            await _notificationService.NotifyUserAsync(
+                request.TenantId, request.StudentId, NotificationType.EnrollmentApproved,
+                "Your request to join or transfer to the group was approved.", request.Id, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return Result<bool>.Success(true);
+        }
+
+        private async Task<Error?> ValidateTransferGradeAsync(
+            Guid tenantId, GroupEnrollment activeEnrollment, GroupJoinInfo targetGroup, CancellationToken cancellationToken)
+        {
+            if (targetGroup.EducationStage is not { } targetStage || targetGroup.GradeNumber is not { } targetGrade)
+                return EnrollmentErrors.GradeLevelNotConfigured;
+
+            var sourceGroup = await _repository.GetGroupJoinInfoAsync(activeEnrollment.GroupId, cancellationToken);
+            if (sourceGroup is null || sourceGroup.TenantId != tenantId
+                || sourceGroup.EducationStage is not { } sourceStage || sourceGroup.GradeNumber is not { } sourceGrade)
+                return EnrollmentErrors.GradeLevelNotConfigured;
+
+            return sourceStage == targetStage && sourceGrade == targetGrade
+                ? null
+                : EnrollmentErrors.GradeLevelMismatch;
+        }
+    }
+}

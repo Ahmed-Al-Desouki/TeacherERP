@@ -1,0 +1,35 @@
+// موجود (تعديل) — TeacherERP.Application/Interfaces/IGroupRepository.cs
+using TeacherERP.Application.Common;
+using TeacherERP.Domain.Entities;
+
+namespace TeacherERP.Application.Interfaces
+{
+    public record GroupJoinCodeLookup(
+        Guid GroupId, Guid TenantId, bool GroupIsActive, TenantStatus TenantStatus,
+        bool StaticJoinEnabled, bool DynamicJoinEnabled, string? StaticJoinCode, string? DynamicJoinSecret);
+
+    // كل الاستعلامات تتفلتر تلقائياً بالمدرس الحالي (الفلتر العام)
+    public interface IGroupRepository
+    {
+        void Add(Group group);
+
+        // للعرض فقط (بدون تتبع) مع حصص القالب بصفحات: كل مجموعات المدرس الحالي (المدرس ومساعدوه يرونها كلها). مرتبة بالاسم ثم الـ Id
+        Task<PagedResult<Group>> GetPageWithSlotsAsync(PageRequest page, CancellationToken cancellationToken);
+
+        // لتوليد الحصص
+        Task<List<Group>> GetActiveWithSlotsAsync(CancellationToken cancellationToken);
+        Task<Group?> GetWithSlotsAsync(Guid groupId, CancellationToken cancellationToken);
+
+        Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken);
+
+        // للتعديل: المجموعة متتبَّعة مع حصص القالب. الحفظ يتم عبر IUnitOfWork
+        Task<Group?> GetTrackedWithSlotsAsync(Guid groupId, CancellationToken cancellationToken);
+        Task<GroupJoinCodeLookup?> GetJoinCodeLookupAsync(Guid groupId, CancellationToken cancellationToken);
+        Task<GroupJoinCodeLookup?> GetJoinCodeLookupByStaticCodeAsync(string normalizedCode, CancellationToken cancellationToken);
+        Task<bool> NameExistsExceptAsync(string name, Guid excludeGroupId, CancellationToken cancellationToken);
+
+        // حصة قالب جديدة تُتتبَّع صراحةً (Added)، وحذف حصص القالب
+        void TrackNewSlot(GroupScheduleSlot slot);
+        void RemoveSlots(IEnumerable<GroupScheduleSlot> slots);
+    }
+}
